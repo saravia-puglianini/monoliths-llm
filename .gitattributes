@@ -1,0 +1,21 @@
+# Archivo generado automáticamente para mapear scripts de shell a los lenguajes que ejecutan/utilizan
+# Esto ayuda a Linguist (GitHub) a mostrar los porcentajes de lenguajes correctos.
+
+debian-run-all.sh linguist-language=Emacs Lisp
+start_reader_system.sh linguist-language=Python
+ocr_traducir_captura_HP_googletranslate.sh linguist-language=C
+Rocky-linux-8--gnumeric.sh linguist-language=Python
+ubuntu-generate-missing.sh linguist-language=Emacs Lisp
+debian-00-hacer-carpeta-de-trabajo.sh linguist-language=Emacs Lisp
+ubuntu-00-hacer-carpeta-de-trabajo.sh linguist-language=Emacs Lisp
+ubuntu-run-all.sh linguist-language=Emacs Lisp
+ubuntu-check-running.sh linguist-language=Emacs Lisp
+Rocky-linux-8-abiword.sh linguist-language=Python
+_dialog.sh linguist-language=Emacs Lisp
+ubuntu-01-emacs-29.sh linguist-language=Emacs Lisp
+debian-01-emacs-30.sh linguist-language=Emacs Lisp
+dialog.sh linguist-language=Emacs Lisp
+ubuntu-O3-firefox.sh linguist-language=Python
+script-literatura-yad.sh linguist-language=Python
+vociferate-pdf.sh linguist-language=Python
+_antigravity_ubuntu-05-chromium.sh linguist-language=Python
