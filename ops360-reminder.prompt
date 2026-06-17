@@ -1,0 +1,86 @@
+Aquí tienes el flujo verbal y lógico de las preguntas que te hará el script a lo
+largo del día.
+
+El script se activa en cuatro momentos específicos (Entrada, Inicio de Almuerzo,
+Fin de Almuerzo y Salida). Para cada uno de estos eventos, sigue exactamente
+este flujo de dos pasos:
+
+### **Paso 1: El Primer Recordatorio**
+Aparece una ventana en tu pantalla mostrándote tu progreso del día (qué
+marcaciones ya hiciste y cuáles faltan) y te hace la primera pregunta:
+
+[ ] Ingreso
+[ ] Inicio almuerzo
+[ ] Fin almuerzo
+[ ] Salida
+
+> **"¿Ya registró el ops entelgy?"** *(Mostrando de qué toque se trata en ese
+    momento, por ejemplo: "→ Inicio Almuerzo ←")*
+
+Tus opciones y lo que ocurre:
+* **Si respondes "No":** El script asume que necesitas hacerlo en ese
+    instante. Cierra la ventana emergente, abre automáticamente el navegador
+    Chrome en la página de Ops360 (`https://ops360.entelgy.pe`) para que hagas
+    el registro, y **te volverá a preguntar** casi de inmediato (en el siguiente
+    ciclo de 5 segundos) porque aún no has confirmado la acción.
+* **Si respondes "Sí":** El script pasa inmediatamente a la segunda pregunta de
+    validación.
+
+y muestra
+
+[x] Ingreso
+[x] Inicio almuerzo
+[ ] Fin almuerzo
+[ ] Salida
+
+ya que Ingreso... al momento de la pregunta de inicio almuerzo... es secuencial
+digamos que tuvimos que poner ingreso... antes de que pregunte inicio almuerzo
+
+las horas son para Ingreso → 09:00:00am para Inicio almuerzo 01:00:00pm
+para Fin almuerzo 02:00:00pm para salida 06:00:00pm
+
+estás preguntas se van a hacer exactamente a la hora que corresponde... y si
+
+no son respondidas con si... no se van a marcar... digamos que...
+
+el usuario a la hora que entre en pantalla script.htm... se verificará que es:
+
+...o lunes, martes, miercoles, jueves ...o viernes  y revisará la hora para
+lanzar las preguntas... si por ejemplo... no es la hora... simplemente se
+visulalizará algo así:
+
+[ ] Ingreso
+[ ] Inicio almuerzo
+[ ] Fin almuerzo
+[ ] Salida
+
+08:45:03am
+
+por ejemplo y el script detras tendrá un setInterval... que irá consultando la
+hora para lanzar la notificación... y una notificación se quedará pegada en
+la pantalla del usuario... cuestión de que el usuario... hasta que no responda
+la pregunta... la notificación será persistente en pantalla
+
+---
+
+### **Paso 2: La Confirmación Final**
+Si dijiste que "Sí" en el paso anterior, el script quiere asegurarse de que no
+fue un "Sí" automático por costumbre o un error, y te lanza una segunda ventana:
+
+> **"¿Confirmación final? ¿Ha verificado que su registro de [TIPO DE TOQUE]
+    quedó guardado correctamente?"**
+
+Tus opciones y lo que ocurre:
+* **Si respondes "No":** El script asume que dudaste o que hubo un problema al
+    guardar. Abre Chrome en la página de Ops360 para que vayas a revisar y,
+    nuevamente, **el script no se detiene**, te volverá a hacer todo el flujo de
+    preguntas en el siguiente ciclo.
+* **Si respondes "Sí":** ¡Proceso completado para ese bloque del día! El script
+    marca internamente ese "toque" como finalizado (creando un archivo bandera
+    en `/tmp/`) y se queda en silencio hasta que llegue la hora de tu siguiente
+    marcación.
+
+**En resumen:** Para que el script marque un toque como "completado"
+  exitosamente, tienes que responder **"Sí" a la primera pregunta y "Sí" a la
+  segunda pregunta**. Cualquier "No" te mandará directo a la web de Ops360 y
+  mantendrá la alarma activa.

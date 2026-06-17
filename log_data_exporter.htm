@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Interpreter | Generador de Resumen</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --accent: #0284c7;
+            --text: #0f172a;
+            --text-dim: #64748b;
+            --card: rgba(255, 255, 255, 0.9);
+            --border: rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.dark-theme {
+            --bg: #0f172a;
+            --accent: #38bdf8;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --card: rgba(30, 41, 59, 0.8);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--card);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: var(--text);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+            z-index: 1000;
+            border: 1px solid var(--border);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            background: rgba(128, 128, 128, 0.1);
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-image: radial-gradient(circle at top right, var(--accent), transparent);
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            transition: var(--transition);
+        }
+
+        body.dark-theme {
+            background-image: radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 2rem;
+            background: var(--card);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        body.dark-theme .container {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+
+        p {
+            color: var(--text-dim);
+            margin-bottom: 2rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            padding: 1rem;
+            font-family: monospace;
+            margin-bottom: 1rem;
+            resize: none;
+            transition: var(--transition);
+        }
+
+        body.dark-theme textarea {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        button, .upload-label {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: var(--accent);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.dark-theme button, body.dark-theme .upload-label {
+            color: #0f172a;
+        }
+
+        button:hover, .upload-label:hover {
+            opacity: 0.9;
+        }
+
+        .secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        #file-upload { display: none; }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle" id="theme-toggle">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Oscuro</span>
+    </div>
+    <div class="container">
+        <h1>Log Interpreter</h1>
+        <p>Convierte tus logs de sesión al formato resumido .txt</p>
+        
+        <textarea id="log-input" placeholder="Pega el contenido del log aquí..."></textarea>
+        
+        <div class="actions">
+            <label for="file-upload" class="upload-label secondary">Subir Archivo(s)</label>
+            <input type="file" id="file-upload" accept=".txt" multiple>
+            <button id="download-btn">Descargar .http</button>
+        </div>
+    </div>
+
+    <script>
+        // ---------- Theme Toggle ----------
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+        const body = document.body;
+
+        const savedTheme = localStorage.getItem('log_interpreter_theme');
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-theme');
+            themeIcon.textContent = '☀️';
+            themeText.textContent = 'Claro';
+        }
+
+        themeToggle.onclick = () => {
+            const isDark = body.classList.toggle('dark-theme');
+            themeIcon.textContent = isDark ? '☀️' : '🌙';
+            themeText.textContent = isDark ? 'Claro' : 'Oscuro';
+            localStorage.setItem('log_interpreter_theme', isDark ? 'dark' : 'light');
+        };
+
+        const logInput = document.getElementById('log-input');
+        const fileUpload = document.getElementById('file-upload');
+        const downloadBtn = document.getElementById('download-btn');
+
+        fileUpload.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            for (const file of files) {
+                const text = await file.text();
+                const outputName = file.name.replace(/\.[^/.]+$/, "") + ".http";
+                processTextAndDownload(text, outputName);
+            }
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            processTextAndDownload(logInput.value.trim(), 'log_summary.http');
+        });
+
+        function processTextAndDownload(text, filename) {
+            if (!text) return;
+
+            const events = parseLog(text);
+            const content = generateTxt(events);
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function parseLog(text) {
+            const cleanText = text.replace(/=== START SESSION LOG ===/, '');
+            // Dividimos por los marcadores principales de inicio de bloque
+            const blocks = cleanText.split(/(?=├─|┌─)/);
+            const events = [];
+
+            blocks.forEach(block => {
+                if (!block.trim()) return;
+                
+                if (block.includes('[NETWORK]')) {
+                    // Extraer URL y Método
+                    const urlMatch = block.match(/\[NETWORK\] (.*)/);
+                    if (!urlMatch) return;
+
+                    let method = 'GET', path = '/';
+                    const parts = urlMatch[1].trim().split(' ');
+                    method = parts[0];
+                    try {
+                        const urlObj = new URL(parts[1]);
+                        path = urlObj.pathname + urlObj.search;
+                    } catch(e) { path = parts[1]; }
+
+                    // Extraer Request (params o body)
+                    // Buscamos tanto "request params:" como "[# Request:]"
+                    const reqMatch = block.match(/request params: ([\{\[].*[\}\]])/) || 
+                                     block.match(/\[# Request:\] ([\{\[].*[\}\]])/);
+                    
+                    const reqData = reqMatch ? reqMatch[1] : null;
+
+                    events.push({ 
+                        type: 'network', 
+                        method, 
+                        path, 
+                        params: reqData 
+                    });
+
+                    // Algunos NETWORK blocks traen su propia respuesta
+                    extractResponses(block, events);
+
+                } else if (block.includes('[PAGE]') || block.includes('[ACTION]')) {
+                    // Los bloques PAGE y a veces ACTION traen las respuestas de los GET previos
+                    extractResponses(block, events);
+                }
+            });
+            return events;
+        }
+
+        function extractResponses(block, events) {
+            // Buscamos todas las ocurrencias de "data: ..."
+            // pero que estén precedidas por un [# Response:]
+            const responseRegex = /\[# Response:\] [\s\S]*?data: (null|[\{\[].*?[\}\]])(?=\s*│|\s*└|\s*$)/g;
+            let match;
+            while ((match = responseRegex.exec(block)) !== null) {
+                events.push({ type: 'response', data: match[1] === 'null' ? '{}' : match[1] });
+            }
+        }
+
+        function generateTxt(events) {
+            let out = '';
+            let requestQueue = [];
+            let results = [];
+
+            events.forEach(ev => {
+                if (ev.type === 'network') {
+                    requestQueue.push({ ...ev, response: null });
+                } else if (ev.type === 'response') {
+                    // Asignamos la respuesta al primer request de la cola que no tenga respuesta
+                    const pending = requestQueue.find(r => r.response === null);
+                    if (pending) {
+                        pending.response = ev.data;
+                    }
+                }
+            });
+
+            requestQueue.forEach(req => {
+                out += '###\n';
+                out += `${req.method} ${req.path}\n`;
+                
+                // Todo POST lleva Request (aunque sea {})
+                if (req.method !== 'GET') {
+                    out += `# Request:\n${req.params || '{}'}\n`;
+                }
+                
+                // Todo GET/POST lleva Response (aunque sea {})
+                out += `# Response:\n${req.response || '{}'}\n`;
+            });
+
+            return out;
+        }
+    </script>
+</body>
+</html>

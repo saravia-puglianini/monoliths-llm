@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ops360 & Jira Reminder</title>
+  <meta name="description"
+    content="Página web que reproduce la lógica de ops360‑reminder.sh y jira‑reminder.sh usando solo HTML, JavaScript vanilla, notificaciones del navegador y localStorage. Implementa un recordatorio persistente con dos‑pasos, reloj, fecha y botón de notirelampago.">
+  <style>
+    :root {
+      /* Aggressive Light Theme (High Contrast) */
+      --bg-gradient: linear-gradient(135deg, #FFFFFF, #E8E8E8);
+      --card-bg: #FFFFFF;
+      --card-blur: 0px;
+      --primary: #0044CC;
+      --accent: #CC0000;
+      --text-primary: #000000;
+      --text-muted: #444444;
+    }
+
+    body.dark-theme {
+      /* Aggressive Dark Theme (Deep Black) */
+      --bg-gradient: linear-gradient(135deg, #000000, #050505);
+      --card-bg: rgba(15, 15, 15, 0.95);
+      --card-blur: 10px;
+      --primary: #3388FF;
+      --accent: #FF3333;
+      --text-primary: #FFFFFF;
+      --text-muted: #BBBBBB;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    h1 {
+      margin: 0.5rem 0 0.2rem;
+      font-weight: 600;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .clock {
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+
+    .date {
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+
+    .container {
+      display: flex;
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    .column {
+      flex: 1;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: var(--card-blur);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .2);
+      margin-top: 1rem;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .3);
+    }
+
+    .status-list {
+      list-style: none;
+      margin-top: 0.5rem;
+    }
+
+    .status-list li {
+      margin: 0.4rem 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .status-list input {
+      margin-right: 0.5rem;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: .6rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .2s;
+      margin-top: 0.5rem;
+    }
+
+    .btn:hover {
+      background: hsl(210, 80%, 55%);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+
+    .modal.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      backdrop-filter: var(--card-blur);
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .4);
+      position: relative;
+    }
+
+    .close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: transparent;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--card-bg);
+      backdrop-filter: var(--card-blur);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      z-index: 1000;
+      border: 1px solid rgba(128, 128, 128, 0.2);
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.05);
+      background: rgba(128, 128, 128, 0.1);
+    }
+
+    .input-number {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: 6px;
+      border: 1px solid rgba(128, 128, 128, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      margin-top: 1rem;
+      font-size: 1rem;
+      outline: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="theme-toggle" id="theme-toggle">
+    <span id="theme-icon">🌙</span> <span id="theme-text">Oscuro</span>
+  </div>
+  <h1>Ops360 & Jira Reminder</h1>
+  <div class="header">
+    <div class="date" id="date"></div>
+    <div class="clock" id="clock"></div>
+  </div>
+  <div class="container">
+    <div class="column">
+      <div class="card" id="jira-card">
+        <h2>Jira</h2>
+        <ul class="status-list" id="jira-status"></ul>
+      </div>
+    </div>
+    <div class="column">
+      <div class="card" id="ops-card">
+        <h2>Ops360</h2>
+        <ul class="status-list" id="ops-status"></ul>
+      </div>
+    </div>
+  </div>
+  <button class="btn" id="notirelampago-btn" style="margin-top:1rem;">Notirelampago</button>
+
+  <!-- Modal -->
+  <div class="modal" id="answer-modal">
+    <div class="modal-content">
+      <button class="close" id="close-modal">&times;</button>
+      <h3 id="modal-title"></h3>
+      <div class="button-group" id="modal-buttons"></div>
+    </div>
+  </div>
+
+  <!-- Notirelampago Modal -->
+  <div class="modal" id="notirelampago-modal">
+    <div class="modal-content">
+      <button class="close" id="close-notirelampago">&times;</button>
+      <h3>¿en cuanto te notifico?</h3>
+      <input type="number" id="notirelampago-input" class="input-number" min="1" step="1" placeholder="Ej: 5">
+      <div class="button-group">
+        <button class="btn" id="btn-hours">Horas</button>
+        <button class="btn" id="btn-minutes">Minutos</button>
+        <button class="btn" id="btn-seconds">Segundos</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Theme Toggle ----------
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const themeText = document.getElementById('theme-text');
+    const body = document.body;
+
+    // Load initial theme
+    const savedTheme = localStorage.getItem('reminder_theme');
+    if (savedTheme === 'dark') {
+      body.classList.add('dark-theme');
+      themeIcon.textContent = '☀️';
+      themeText.textContent = 'Claro';
+    }
+
+    themeToggle.onclick = () => {
+      const isDark = body.classList.toggle('dark-theme');
+      themeIcon.textContent = isDark ? '☀️' : '🌙';
+      themeText.textContent = isDark ? 'Claro' : 'Oscuro';
+      localStorage.setItem('reminder_theme', isDark ? 'dark' : 'light');
+    };
+    // ---------- Configuración ----------
+    const OPS_STEPS = [
+      { type: 'ops', question: 'Entrada', time: '09:00:00' },
+      { type: 'ops', question: 'Inicio Almuerzo', time: '13:00:00' },
+      { type: 'ops', question: 'Fin Almuerzo', time: '14:00:00' },
+      { type: 'ops', question: 'Salida', time: '18:00:00' }
+    ];
+    const JIRA_TIMES = ['09:00:00', '10:00:00', '11:00:00', '12:00:00', '14:00:00', '15:00:00', '16:00:00', '17:00:00'];
+
+    const STORAGE = {
+      date: 'reminder_date',
+      ops: 'ops_status',
+      jira: 'jira_hours_status', // JSON {"09:00:00": 0, ...}
+      planning: 'planning_flag',
+      idx: 'reminder_current_index',
+      theme: 'reminder_theme'
+    };
+
+    // ---------- Utilidades de fecha/hora ----------
+    function formatDate(d) {
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      return d.toLocaleDateString('es-ES', options);
+    }
+    function pad(n) { return n.toString().padStart(2, '0'); }
+    function getTimeString(d) {
+      let h = d.getHours();
+      const m = d.getMinutes();
+      const s = d.getSeconds();
+      const ampm = h >= 12 ? 'pm' : 'am';
+      h = h % 12;
+      h = h ? h : 12; // el 0 debe ser 12
+      return `${pad(h)}:${pad(m)}:${pad(s)} ${ampm}`;
+    }
+    function formatTimeAMPM(timeStr) {
+      if (!timeStr) return '';
+      const parts = timeStr.split(':');
+      let h = parseInt(parts[0], 10);
+      const ampm = h >= 12 ? 'pm' : 'am';
+      h = h % 12;
+      h = h ? h : 12;
+      return `${pad(h)}:${parts[1]} ${ampm}`;
+    }
+
+    // ---------- LocalStorage ----------
+    function loadDate() { return localStorage.getItem(STORAGE.date); }
+    function saveDate(str) { localStorage.setItem(STORAGE.date, str); }
+    function loadOps() { const raw = localStorage.getItem(STORAGE.ops); return raw ? JSON.parse(raw) : {}; }
+    function saveOps(obj) { localStorage.setItem(STORAGE.ops, JSON.stringify(obj)); }
+    function loadJira() {
+      const raw = localStorage.getItem(STORAGE.jira);
+      if (!raw) return generateInitialJira();
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed !== 'object' || parsed === null) return generateInitialJira();
+        // Verificar si faltan llaves
+        JIRA_TIMES.forEach(t => { if (parsed[t] === undefined) parsed[t] = 0; });
+        return parsed;
+      } catch (e) {
+        return generateInitialJira();
+      }
+    }
+    function generateInitialJira() {
+      const initJira = {};
+      JIRA_TIMES.forEach(t => initJira[t] = 0);
+      return initJira;
+    }
+    function saveJira(obj) { localStorage.setItem(STORAGE.jira, JSON.stringify(obj)); }
+    function loadPlanning() { return parseInt(localStorage.getItem(STORAGE.planning) || '0', 10); }
+    function savePlanning(val) { localStorage.setItem(STORAGE.planning, val.toString()); }
+    function loadIndex() { const v = localStorage.getItem(STORAGE.idx); return v ? parseInt(v, 10) : 0; }
+    function saveIndex(i) { localStorage.setItem(STORAGE.idx, i); }
+    function loadAnswers() { const raw = localStorage.getItem(STORAGE.answers); return raw ? JSON.parse(raw) : {}; }
+    function saveAnswers(obj) { localStorage.setItem(STORAGE.answers, JSON.stringify(obj)); }
+
+    // ---------- Estado inicial ----------
+    const lNow = new Date();
+    const todayStr = `${lNow.getFullYear()}-${pad(lNow.getMonth() + 1)}-${pad(lNow.getDate())}`; // Correct local YYYY-MM-DD
+
+    if (loadDate() !== todayStr) {
+      // nuevo día: limpiar solo estado de recordatorios, mantener fecha y tema
+      saveDate(todayStr);
+      saveOps({});
+      // Init Jira hours to 0
+      saveJira(generateInitialJira());
+      savePlanning(0);
+      saveIndex(0);
+    }
+    let opsStatus = loadOps();
+    let jiraHours = loadJira();
+    let planningFlag = loadPlanning();
+    let currentIdx = loadIndex(); // index in combined steps array
+    const combinedSteps = [...OPS_STEPS];
+
+    // ---------- UI Rendering ----------
+    const opsListEl = document.getElementById('ops-status');
+    const jiraListEl = document.getElementById('jira-status');
+    function renderStatus() {
+      opsListEl.innerHTML = '';
+      OPS_STEPS.forEach(s => {
+        const li = document.createElement('li');
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.disabled = true;
+        chk.checked = !!opsStatus[s.question];
+        li.appendChild(chk);
+        li.appendChild(document.createTextNode(` ${s.question}`));
+        opsListEl.appendChild(li);
+      });
+
+      jiraListEl.innerHTML = '';
+      JIRA_TIMES.forEach(t => {
+        const li = document.createElement('li');
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.disabled = true;
+        chk.checked = !!jiraHours[t];
+        li.appendChild(chk);
+        li.appendChild(document.createTextNode(` Hora ${formatTimeAMPM(t)}`));
+        jiraListEl.appendChild(li);
+
+        if (t === '12:00:00') {
+          const sep = document.createElement('li');
+          sep.style.listStyleType = 'none';
+          sep.style.color = 'var(--text-muted)';
+          sep.style.fontStyle = 'italic';
+          sep.style.fontSize = '0.85em';
+          sep.style.marginLeft = '1.5rem';
+          sep.textContent = '→ 01:00 pm no se cobra el tiempo de refrigerio';
+          jiraListEl.appendChild(sep);
+        }
+      });
+
+      // Info de depuración/estado próximo
+      const nextOps = combinedSteps[currentIdx];
+      const statusTitle = document.querySelector('h1');
+      const debt = getJiraDebt();
+
+      if (debt.length > 0) {
+        statusTitle.textContent = `Deuda Jira: ${debt.length} hora(s)`;
+      } else if (nextOps) {
+        statusTitle.textContent = `Pendiente Ops: ${nextOps.question}`;
+      } else {
+        statusTitle.textContent = "Todo al día ✅";
+      }
+    }
+
+    function getJiraDebt() {
+      const now = new Date();
+      return JIRA_TIMES.filter(t => {
+        const tDate = new Date(`${todayStr}T${t}`);
+        return now >= tDate && jiraHours[t] === 0;
+      });
+    }
+    renderStatus();
+
+    // ---------- Reloj y fecha ----------
+    const dateEl = document.getElementById('date');
+    const clockEl = document.getElementById('clock');
+    function updateClock() {
+      const now = new Date();
+      dateEl.textContent = formatDate(now);
+      clockEl.textContent = getTimeString(now);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ---------- Notificaciones ----------
+    async function requestPermission() {
+      if (Notification.permission === 'default') await Notification.requestPermission();
+    }
+    function fireNotification(title, body) {
+      requestPermission().then(() => {
+        if (Notification.permission !== 'granted') return;
+        const notif = new Notification(title, {
+          body,
+          tag: 'main-reminder', // Use fixed tag to replace/refresh existing
+          renotify: true,
+          requireInteraction: true // Make it persistent on most browsers
+        });
+        notif.onclick = () => {
+          window.focus();
+        };
+      });
+    }
+
+    // ---------- Modal handling ----------
+    const modal = document.getElementById('answer-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalButtons = document.getElementById('modal-buttons');
+    const closeBtn = document.getElementById('close-modal');
+    closeBtn.onclick = () => modal.classList.remove('active');
+    let pendingStep = null; // step object currently being processed
+    let modalStage = 1; // 1 = first question, 2 = confirmation
+
+    function openFirstModal(step) {
+      pendingStep = step;
+      modalStage = 1;
+      modalTitle.textContent = `¿Ya registró el ops entelgy? – ${step.question}`;
+      modalButtons.innerHTML = '';
+      ['Si', 'No'].forEach(ans => {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.textContent = ans;
+        btn.onclick = () => handleFirstAnswer(ans);
+        modalButtons.appendChild(btn);
+      });
+      modal.classList.add('active');
+    }
+    function openSecondModal(step) {
+      modalStage = 2;
+      modalTitle.textContent = `¿Confirmación final? ¿Ha verificado que su registro de ${step.question} quedó guardado correctamente?`;
+      modalButtons.innerHTML = '';
+      ['Si', 'No'].forEach(ans => {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.textContent = ans;
+        btn.onclick = () => handleSecondAnswer(ans);
+        modalButtons.appendChild(btn);
+      });
+    }
+    function handleFirstAnswer(answer) {
+      if (answer === 'Si') {
+        openSecondModal(pendingStep);
+      } else {
+        window.open('https://ops360.entelgy.pe', '_blank');
+        modal.classList.remove('active');
+        // stay on same step, will be asked again later
+      }
+    }
+    function handleSecondAnswer(answer) {
+      if (answer === 'Si') {
+        opsStatus[pendingStep.question] = 1;
+        saveOps(opsStatus);
+        renderStatus();
+        modal.classList.remove('active');
+        advance();
+      } else {
+        window.open('https://ops360.entelgy.pe', '_blank');
+        modal.classList.remove('active');
+        // stay on same step
+      }
+    }
+
+
+
+    // ---------- Flujo de control ----------
+    function advance() {
+      currentIdx++;
+      if (currentIdx >= combinedSteps.length) {
+        saveIndex(combinedSteps.length);
+        fireNotification('✅', 'Todas los recordatorios respondidos');
+        return;
+      }
+      saveIndex(currentIdx);
+    }
+
+    // ---------- Loop principal (setInterval) ----------
+    function checkAndPrompt() {
+      if (modal.classList.contains('active') || notirelampagoModal.classList.contains('active')) return;
+
+      const now = new Date();
+      const hour = now.getHours();
+      const day = now.getDay();
+      if (day === 0 || day === 6) return; // weekend
+
+      // Planning Flag Logic (Only stop if everything is done OR it's very late and work is done)
+      const allOpsDone = currentIdx >= combinedSteps.length;
+      const debt = getJiraDebt();
+      const allJiraDone = debt.length === 0;
+
+      if (allOpsDone && allJiraDone) {
+        if (hour >= 20 || hour < 9) {
+          savePlanning(1);
+          planningFlag = 1;
+          const statusTitle = document.querySelector('h1');
+          if (statusTitle) statusTitle.textContent = "Todo completado ✅ - Modo Planning";
+          return;
+        }
+      }
+
+      // Prioridad 1: Ops (Secuencial)
+      if (currentIdx < combinedSteps.length) {
+        const step = combinedSteps[currentIdx];
+        const stepDate = new Date(`${todayStr}T${step.time}`);
+        if (now >= stepDate) {
+          if (!opsStatus[step.question]) {
+            fireNotification(`Ops360`, `Registrar ${step.question}`);
+            openFirstModal(step);
+            return; // Don't ask both at once
+          } else {
+            advance();
+          }
+        }
+      }
+
+      // Prioridad 2: Jira (Secuencial por horas)
+      for (const t of JIRA_TIMES) {
+        const tDate = new Date(`${todayStr}T${t}`);
+        if (now >= tDate && !jiraHours[t]) {
+          fireNotification(`Jira`, `¿Ya justificó la Hora ${formatTimeAMPM(t)}?`);
+          openJiraIndividualModal(t);
+          return;
+        }
+      }
+    }
+
+    function openJiraIndividualModal(t) {
+      modalTitle.textContent = `Jira: ¿Ya justificó la Hora ${formatTimeAMPM(t)}?`;
+      modalButtons.innerHTML = '';
+      const btnSi = document.createElement('button');
+      btnSi.className = 'btn';
+      btnSi.textContent = 'Si';
+      btnSi.onclick = () => {
+        const val = prompt('¿Cuántas horas justificaste?');
+        const num = parseInt(val, 10);
+        if (isNaN(num) || num <= 0) {
+          alert('Ingresa un número válido.');
+          return;
+        }
+
+        const debt = getJiraDebt();
+
+        if (num > 4) {
+          alert('La tarea es de más de 4 horas... debes de orquestar en tareas de menor tiempo...');
+          JIRA_TIMES.forEach(hour => jiraHours[hour] = 1);
+          saveJira(jiraHours);
+          renderStatus();
+          modal.classList.remove('active');
+          window.open('https://mipandero.atlassian.net/jira/for-you', '_blank'); // Web de Planning
+        } else {
+          // Marca 'num' horas de deuda cronológicamente
+          for (let i = 0; i < num && i < debt.length; i++) {
+            jiraHours[debt[i]] = 1;
+          }
+          saveJira(jiraHours);
+          renderStatus();
+          modal.classList.remove('active');
+        }
+      };
+      const btnNo = document.createElement('button');
+      btnNo.className = 'btn';
+      btnNo.textContent = 'No';
+      btnNo.onclick = () => {
+        window.open('https://mipandero.atlassian.net/jira/for-you', '_blank');
+        modal.classList.remove('active');
+      };
+      modalButtons.appendChild(btnSi);
+      modalButtons.appendChild(btnNo);
+      modal.classList.add('active');
+    }
+    setInterval(checkAndPrompt, 5000);
+
+    // ---------- Notirelampago logic ----------
+    const notirelampagoBtn = document.getElementById('notirelampago-btn');
+    const notirelampagoModal = document.getElementById('notirelampago-modal');
+    const notirelampagoInput = document.getElementById('notirelampago-input');
+    const closeNotirelampago = document.getElementById('close-notirelampago');
+
+    let notirelampagoInterval = null;
+    const originalBtnText = "Notirelampago";
+
+    notirelampagoBtn.onclick = () => {
+      notirelampagoModal.classList.add('active');
+    };
+
+    closeNotirelampago.onclick = () => {
+      notirelampagoModal.classList.remove('active');
+    };
+
+    function formatCountdown(seconds) {
+      if (seconds < 60) return `${seconds}s`;
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      if (m < 60) return `${m}m ${s}s`;
+      const h = Math.floor(m / 60);
+      const mm = m % 60;
+      return `${h}h ${mm}m ${s}s`;
+    }
+
+    function scheduleNotirelampago(factor) {
+      const value = parseInt(notirelampagoInput.value, 10);
+      if (isNaN(value) || value <= 0) {
+        alert('Por favor ingresa un número positivo.');
+        return;
+      }
+
+      let remainingSeconds = value * factor;
+      const initialValue = value;
+      const initialFactor = factor;
+      notirelampagoModal.classList.remove('active');
+
+      if (notirelampagoInterval) clearInterval(notirelampagoInterval);
+
+      const unitLabel = factor === 3600 ? 'horas' : (factor === 60 ? 'minutos' : 'segundos');
+
+      notirelampagoInterval = setInterval(() => {
+        remainingSeconds--;
+        if (remainingSeconds <= 0) {
+          clearInterval(notirelampagoInterval);
+          notirelampagoBtn.textContent = originalBtnText;
+          fireNotification('Notirelampago', `¡Han pasado ${initialValue} ${unitLabel}!`);
+          return;
+        }
+        notirelampagoBtn.textContent = `${originalBtnText} (${formatCountdown(remainingSeconds)})`;
+      }, 1000);
+
+      // Initial update
+      notirelampagoBtn.textContent = `${originalBtnText} (${formatCountdown(remainingSeconds)})`;
+    }
+
+    document.getElementById('btn-hours').onclick = () => scheduleNotirelampago(3600);
+    document.getElementById('btn-minutes').onclick = () => scheduleNotirelampago(60);
+    document.getElementById('btn-seconds').onclick = () => scheduleNotirelampago(1);
+  </script>
+</body>
+
+</html>

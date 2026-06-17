@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Escucharme - Loopback Puro con Filtros</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent: #10b981; /* Greenish for filtered version */
+            --border: #e2e8f0;
+            --glass-blur: blur(12px);
+        }
+
+        body.dark-theme {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #34d399;
+            --border: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .control-group {
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 12px;
+            border: none;
+            background: var(--accent);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+            filter: brightness(1.1);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.active {
+            background: #ef4444;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+        }
+
+        #statusText {
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            border: 1px solid var(--border);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            background: rgba(128, 128, 128, 0.05);
+        }
+    </style>
+<body>
+    <div class="theme-toggle" id="theme-toggle">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Oscuro</span>
+    </div>
+
+    <div class="container">
+        <h1>Escucharme</h1>
+        <p>Selecciona tu micrófono y activa el loopback con reducción de ruido. Retardo de 5 segundos con filtros de voz activos.</p>
+
+        <div class="control-group">
+            <label for="micSelect">Micrófono</label>
+            <select id="micSelect">
+                <option value="">Cargando...</option>
+            </select>
+        </div>
+
+        <button id="toggleBtn">Comenzar a escuchar</button>
+
+        <p id="statusText">Estado: Listo para iniciar</p>
+    </div>
+
+    <script>
+        // ---------- Theme Toggle ----------
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+        const body = document.body;
+
+        const savedTheme = localStorage.getItem('escucharme_filtrado_theme');
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-theme');
+            themeIcon.textContent = '☀️';
+            themeText.textContent = 'Claro';
+        }
+
+        themeToggle.onclick = () => {
+            const isDark = body.classList.toggle('dark-theme');
+            themeIcon.textContent = isDark ? '☀️' : '🌙';
+            themeText.textContent = isDark ? 'Claro' : 'Oscuro';
+            localStorage.setItem('escucharme_filtrado_theme', isDark ? 'dark' : 'light');
+        };
+
+        const micSelect = document.getElementById('micSelect');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const statusText = document.getElementById('statusText');
+
+        let audioContext = null;
+        let isListening = false;
+        let mediaStream = null;
+
+        async function getMicrophones() {
+            try {
+                // Pedimos permiso inicial
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const mics = devices.filter(device => device.kind === 'audioinput');
+
+                micSelect.innerHTML = '';
+                mics.forEach(mic => {
+                    const option = document.createElement('option');
+                    option.value = mic.deviceId;
+                    option.text = mic.label || 'Micrófono desconocido';
+                    micSelect.appendChild(option);
+                });
+            } catch (err) {
+                statusText.textContent = "Error: Permiso denegado.";
+            }
+        }
+
+	async function start() {
+        if (audioContext) audioContext.close();
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const deviceId = micSelect.value;
+        
+        try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: { 
+        deviceId: deviceId ? { exact: deviceId } : undefined,
+        noiseSuppression: true,  
+        echoCancellation: true,  
+        autoGainControl: true    
+        }
+        });
+        
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        const delayNode = audioContext.createDelay(10);
+        delayNode.delayTime.value = 5.0;
+
+        // --- NUEVOS FILTROS WEB AUDIO API ---
+
+        // 1. Filtro Pasa-altos: Corta zumbidos eléctricos, golpes en la mesa y ruido de viento (frecuencias bajas)
+        const lowCutFilter = audioContext.createBiquadFilter();
+        lowCutFilter.type = 'highpass';
+        lowCutFilter.frequency.value = 85; // Frecuencia típica para no afectar la voz humana
+
+        // 2. Filtro Pasa-bajos: Corta siseos agudos y estática de alta frecuencia
+        const highCutFilter = audioContext.createBiquadFilter();
+        highCutFilter.type = 'lowpass';
+        highCutFilter.frequency.value = 6000;
+
+        // 3. Compresor Dinámico: Suaviza los picos de volumen y ayuda a que la voz destaque sobre el fondo
+        const compressor = audioContext.createDynamicsCompressor();
+        compressor.threshold.value = -50;
+        compressor.knee.value = 40;
+        compressor.ratio.value = 12;
+        compressor.attack.value = 0;
+        compressor.release.value = 0.25;
+
+        // --- CONEXIÓN DE LOS NODOS ---
+        // source -> lowCut -> highCut -> compressor -> delay -> destination
+        source.connect(lowCutFilter);
+        lowCutFilter.connect(highCutFilter);
+        highCutFilter.connect(compressor);
+        compressor.connect(delayNode);
+        delayNode.connect(audioContext.destination);
+
+        isListening = true;
+        toggleBtn.textContent = 'Detener';
+        toggleBtn.classList.add('active');
+        statusText.textContent = 'Estado: Escuchando (retardo 5s y filtros de voz activos)';
+        } catch (err) {
+        alert("Error: " + err.message);
+        }
+        }
+
+        function stop() {
+            if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+            if (audioContext) audioContext.close();
+            isListening = false;
+            toggleBtn.textContent = 'Comenzar a escuchar';
+            toggleBtn.classList.remove('active');
+            statusText.textContent = 'Estado: Detenido';
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            if (!isListening) start(); else stop();
+        });
+
+        getMicrophones();
+    </script>
+</body>
+</html>

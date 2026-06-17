@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Visor de PDFs Locales</title>
+    <!-- Incluimos PDF.js para procesar los PDFs usando Javascript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        :root {
+            --bg: #f7f7f7;
+            --text-main: #333;
+            --text-muted: #444;
+            --card-bg: #fff;
+            --accent: #28a745;
+            --border: #ccc;
+            --loading-bg: #e9ecef;
+        }
+
+        body.dark-theme {
+            --bg: #121212;
+            --text-main: #e0e0e0;
+            --text-muted: #b0b0b0;
+            --card-bg: #1e1e1e;
+            --accent: #4caf50;
+            --border: #333;
+            --loading-bg: #2d2d2d;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: var(--bg);
+            color: var(--text-main);
+            text-align: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #instructions {
+            margin-bottom: 20px;
+            color: var(--text-muted);
+        }
+        /* Mínimo CSS para un botón decente */
+        input[type="file"] {
+            padding: 10px;
+            background: var(--accent);
+            color: white;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        /* Mínimo CSS para las tarjetas */
+        .pdf-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 10px;
+            width: 200px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .pdf-card:hover {
+            transform: scale(1.05);
+            border-color: var(--accent);
+        }
+        .pdf-card canvas {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid var(--border);
+            margin-bottom: 10px;
+            /* Se mostrará un pequeño bloque gris mientras carga la imagen */
+            background-color: var(--loading-bg); 
+        }
+        .pdf-title {
+            font-size: 13px;
+            color: var(--text-main);
+            word-wrap: break-word;
+        }
+        .loading {
+            display: none;
+            font-size: 18px;
+            font-weight: bold;
+            color: #0056b3;
+            margin: 20px 0;
+            animation: pulse 1.5s infinite;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--card-bg);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            border: 1px solid var(--border);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            background: rgba(128, 128, 128, 0.1);
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="theme-toggle" id="theme-toggle">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Oscuro</span>
+    </div>
+
+    <h1>Galería de Mis PDFs</h1>
+    <div id="instructions">
+        <strong>Nota de privacidad y uso:</strong><br>
+        1. Tus PDFs <strong>NO se suben a internet</strong>. Este archivo usa el poder de tu navegador para leer los archivos de tu computadora localmente por privacidad y seguridad.<br>
+        2. Debido a esto, <strong>al recargar o cerrar la página, se perderá la vista</strong>, ya que el navegador olvida los archivos temporales por seguridad. Tendrás que volver a seleccionar la carpeta la próxima vez.<br><br>
+        Haz clic en el botón de abajo y <strong>selecciona la carpeta</strong> en la que te encuentras para ver la primera página de todos los PDFs.
+    </div>
+
+    <!-- Se usa webkitdirectory para permitir seleccionar múltiples archivos dentro de la carpeta -->
+    <input type="file" id="folderInput" webkitdirectory directory multiple>
+
+    <div id="loading" class="loading">⏳ Cargando PDFs... leyendo archivos y generando miniaturas.</div>
+
+    <div id="gallery"></div>
+
+    <script>
+        // ---------- Theme Toggle ----------
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+        const body = document.body;
+
+        const savedTheme = localStorage.getItem('pdf_theme');
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-theme');
+            themeIcon.textContent = '☀️';
+            themeText.textContent = 'Claro';
+        }
+
+        themeToggle.onclick = () => {
+            const isDark = body.classList.toggle('dark-theme');
+            themeIcon.textContent = isDark ? '☀️' : '🌙';
+            themeText.textContent = isDark ? 'Claro' : 'Oscuro';
+            localStorage.setItem('pdf_theme', isDark ? 'dark' : 'light');
+        };
+
+        // Configurar el worker de PDF.js para el renderizado en segundo plano
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const folderInput = document.getElementById('folderInput');
+        const gallery = document.getElementById('gallery');
+        const loading = document.getElementById('loading');
+
+        folderInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+            gallery.innerHTML = ''; // Limpiar galería previa
+            loading.style.display = 'block'; // Mostrar mensaje de carga inmediatamente
+
+            // Usar setTimeout para permitir que el navegador dibuje el loading antes de congelarse procesando los archivos
+            setTimeout(() => {
+                // Filtrar y dejar únicamente los archivos con extensión PDF
+                const pdfFiles = Array.from(files).filter(file => 
+                    file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+                );
+
+                if (pdfFiles.length === 0) {
+                    loading.style.display = 'none';
+                    gallery.innerHTML = '<p>No se encontraron PDFs en esta carpeta.</p>';
+                    return;
+                }
+
+                // Array para guardar todas las promesas de carga individuales
+                const renderPromises = [];
+
+                // Recorrer cada archivo PDF encontrado usando Javascript
+                pdfFiles.forEach(file => {
+                    // Generar una URL temporal y local para poder acceder al archivo en el navegador
+                    const fileUrl = URL.createObjectURL(file);
+
+                    const card = document.createElement('div');
+                    card.className = 'pdf-card';
+                    card.title = "Haz clic para abrir: " + file.name;
+
+                    const canvas = document.createElement('canvas');
+                    // Tamaños base mientras carga
+                    canvas.width = 180;
+                    canvas.height = 240;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--loading-bg').trim();
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+                    ctx.font = '14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('Cargando...', canvas.width / 2, canvas.height / 2);
+
+                    const titleNode = document.createElement('div');
+                    titleNode.className = 'pdf-title';
+                    titleNode.textContent = file.name;
+
+                    card.appendChild(canvas);
+                    card.appendChild(titleNode);
+                    gallery.appendChild(card);
+
+                    // Función que abre el PDF en una nueva pestaña
+                    card.onclick = () => {
+                        window.open(fileUrl, '_blank');
+                    };
+
+                    // Lógica de PDF.js: Leer el PDF y extraer la primera página de manera asíncrona
+                    const renderPromise = pdfjsLib.getDocument(fileUrl).promise.then(pdf => {
+                        return pdf.getPage(1);
+                    }).then(page => {
+                        // Escalar la imagen al ancho del canvas (180px)
+                        const viewport = page.getViewport({ scale: 1.0 });
+                        const scale = 180 / viewport.width;
+                        const scaledViewport = page.getViewport({ scale: scale });
+
+                        canvas.width = scaledViewport.width;
+                        canvas.height = scaledViewport.height;
+
+                        const renderContext = {
+                            canvasContext: canvas.getContext('2d'),
+                            viewport: scaledViewport
+                        };
+                        
+                        // Renderizamos la imagen en el canvas
+                        return page.render(renderContext).promise;
+                    }).catch(err => {
+                        console.error('Error renderizando ' + file.name, err);
+                        titleNode.textContent += ' (Error imagen)';
+                    });
+
+                    renderPromises.push(renderPromise);
+                });
+
+                // Esperar a que todos los PDFs terminen de procesarse para ocultar el loading final
+                Promise.allSettled(renderPromises).then(() => {
+                    loading.style.display = 'none';
+                });
+            }, 100);
+        });
+    </script>
+</body>
+</html>

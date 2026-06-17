@@ -1,0 +1,24 @@
+;; Versión con procesamiento más completo
+(define (string-replace str old new)
+  (if (string-matches str old)
+      (string_substitute str old new)
+      str))
+
+(define (convert_german_text text)
+  (let ((result text))
+    ;; Aplicar todas las sustituciones
+    (set! result (string_substitute result "ä" "ae"))
+    (set! result (string_substitute result "ö" "oe"))
+    (set! result (string_substitute result "ü" "ue"))
+    (set! result (string_substitute result "ß" "ss"))
+    (set! result (string_substitute result "Ä" "Ae"))
+    (set! result (string_substitute result "Ö" "Oe"))
+    (set! result (string_substitute result "Ü" "Ue"))
+    (set! result (string_substitute result "ch" "kh"))
+    (set! result (string_substitute result "sch" "sh"))
+    (set! result (string_substitute result "eu" "oi"))
+    (set! result (string_substitute result "ei" "ai"))
+    result))
+
+(define (tts_german text)
+  (SayText (convert_german_text text)))

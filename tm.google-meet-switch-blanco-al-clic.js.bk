@@ -1,0 +1,121 @@
+// ==UserScript==
+// @name         Google Meet Varita Mágica Blanca (Video Fixed)
+// @namespace    http://tampermonkey.net/
+// @version      1.3
+// @description  Blanquea elementos y también oculta cuadros de video al hacer clic
+// @author       Tu AI de confianza
+// @match        https://meet.google.com/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    let varitaActiva = false;
+
+    const estiloVarita = document.createElement('style');
+    estiloVarita.textContent = `
+        .varita-cursor-activa {
+            cursor: crosshair !important;
+        }
+        .varita-highlight {
+            outline: 2px solid #4285f4 !important;
+            outline-offset: -2px;
+        }
+    `;
+    document.head.appendChild(estiloVarita);
+
+    const blanquearElemento = (e) => {
+        if (!varitaActiva) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const el = e.target;
+
+        // --- LÓGICA DE BLANQUEO ---
+
+        // 1. Aplicamos fondo blanco al elemento clicado
+        el.style.setProperty('background', 'white', 'important');
+        el.style.setProperty('background-color', 'white', 'important');
+        el.style.setProperty('color', '#202124', 'important');
+
+        // 2. Si el elemento es un VIDEO, lo ocultamos
+        if (el.tagName === 'VIDEO') {
+            el.style.setProperty('display', 'none', 'important');
+        }
+
+        // 3. Buscamos videos dentro del elemento (por si hiciste clic en el contenedor)
+        const videosInternos = el.querySelectorAll('video');
+        videosInternos.forEach(v => {
+            v.style.setProperty('display', 'none', 'important');
+        });
+
+        // 4. Si el elemento tiene un poster o canvas (a veces Meet usa esto para efectos)
+        const canvasInternos = el.querySelectorAll('canvas');
+        canvasInternos.forEach(c => {
+            c.style.setProperty('opacity', '0', 'important');
+        });
+
+        desactivarModoVarita();
+    };
+
+    const activarModoVarita = () => {
+        varitaActiva = true;
+        document.body.classList.add('varita-cursor-activa');
+        window.botonVarita.textContent = '🪄 Varita: LISTO';
+        window.botonVarita.style.background = '#fbbc04';
+
+        document.addEventListener('click', blanquearElemento, { capture: true, once: true });
+    };
+
+    const desactivarModoVarita = () => {
+        varitaActiva = false;
+        document.body.classList.remove('varita-cursor-activa');
+        window.botonVarita.textContent = '🪄 Varita Mágica';
+        window.botonVarita.style.background = '#5f6368';
+    };
+
+    const crearBotonVarita = () => {
+        const boton = document.createElement('button');
+        boton.id = 'varita-magica-btn';
+        boton.textContent = '🪄 Varita Mágica';
+        boton.style.cssText = `
+            position: fixed;
+            top: 70px;
+            left: 20px;
+            z-index: 9999;
+            padding: 10px 20px;
+            background: #5f6368;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        `;
+
+        boton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!varitaActiva) activarModoVarita();
+            else desactivarModoVarita();
+        });
+
+        return boton;
+    };
+
+    const iniciar = () => {
+        if (document.getElementById('varita-magica-btn')) return;
+        const btnVarita = crearBotonVarita();
+        document.body.appendChild(btnVarita);
+        window.botonVarita = btnVarita;
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciar);
+    } else {
+        iniciar();
+    }
+})();

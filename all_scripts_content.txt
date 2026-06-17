@@ -1,0 +1,363 @@
+--- linux-6-debian-auto-build.sh ---
+#!/bin/bash
+
+# README para Kernel en Debian Trixie
+# 1. mkdir $HOME/kernel-build && cd ~/kernel-build
+# 2. apt source linux
+# 3. ln -svf $HOME/monoliths-llm/linux-6-debian-auto-build.sh ~/kernel-build/REAMDE.md
+# 4. bash README.md
+
+# ==============================================================================
+# OPTIMIZACIÓN DE KERNEL VÍA LINUX-TKG PARA DEBIAN TRIXIE
+# ==============================================================================
+
+set -e
+
+echo "=== 1. Preparando el arsenal de dependencias para Debian ==="
+sudo apt update
+sudo apt install -y git build-essential bison flex libelf-dev bc \
+rsync dwarves libssl-dev libncurses-dev python3-minimal fakeroot \
+lz4 zstd pciutils cpio wget
+
+echo "=== 2. Obteniendo el motor Linux-TKG ==="
+# Clonamos el repositorio oficial de la comunidad Frogging-Family
+if [ ! -d "linux-tkg" ]; then
+    git clone https://github.com/Frogging-Family/linux-tkg.git
+else
+    echo "El directorio linux-tkg ya existe. Actualizando..."
+    cd linux-tkg
+    git pull
+    cd ..
+fi
+
+cd linux-tkg
+
+echo "=== 3. Instrucciones de Vuelo ==="
+echo "En unos segundos se lanzará la interfaz de TKG."
+echo "Para maximizar el rendimiento en tu ZenBook, cuando el script te pregunte, elige:"
+echo "  - CPU Scheduler: BORE o PDS (Excelentes para baja latencia en escritorio)"
+echo "  - CPU Architecture: Tiger Lake (¡Aquí es donde se activa el -march=native seguro!)"
+echo "  - Tickless: Full tickless"
+echo "  - Compiler: GCC (recomendado para máxima estabilidad en Debian)"
+echo ""
+read -p "Presiona ENTER cuando estés listo para iniciar el constructor..."
+
+echo "=== 4. ¡Iniciando el configurador interactivo! ==="
+# Lanzamos el script principal de TKG. 
+# Detectará que estás en Debian y te ofrecerá crear archivos .deb.
+./install.sh install
+--- peliculas.sh ---
+#!/bin/bash
+
+set -e
+
+doas bash $HOME/monoliths-hm/optime.clean-all-users.sh hdmi
+
+# Eliminar locks de X si existen
+for display in 11; do
+    lockfile="/tmp/.X${display}-lock"
+    [ -e "$lockfile" ] && doas rm "$lockfile"
+done
+
+# Iniciar Xephyr en displays seleccionados
+for display in 11; do
+    if echo -n $display | grep '11'; then
+	Xephyr -screen 832x604 :$display &
+    else
+	Xephyr :$display &
+    fi
+done
+
+# Permitir acceso a los usuarios locales
+for user in hdmi; do
+    xhost +SI:localuser:$user
+done
+
+sleep 0.5  # espera a que Xephyr arranque
+
+# Arrancar sshd si no está activo
+if ! pgrep -x 'sshd' >/dev/null; then
+    doas service sshd start
+fi
+
+# Iniciar Lumina para usuarios remotos usando ssh
+# el siguiente paso requiere configuraciones en /etc/sshd_config
+for user_display in 'hdmi:11'; do
+    IFS=":" read user display <<< "$user_display"
+    ssh -o StrictHostKeyChecking=no $user@localhost \
+        "DISPLAY=:$display start-lumina-desktop" &
+done
+
+echo 'Lumina sessions started on Xephyr displays.'
+
+--- emacs-30-debian-auto-build.sh ---
+#!/bin/bash
+
+# README
+# Asegúrate de tener: deb-src http://deb.debian.org/debian trixie main en sources.list
+# Y haber ejecutado previamente:
+# mkdir $HOME/emacs-build && cd ~/emacs-build && apt source emacs
+# wget http://saravia.org/monoliths-llm/plain/emacs-30-debian-auto-build.sh -O $HOME/emacs-build/README.md
+# wget http://saravia.org/bloat/plain/emacs-30/0001-frame-defaults-no-gui-bars.patch
+# ahora puedes correr
+# cd $HOME/emacs-build && bash README.md
+
+set -e
+
+echo "=== 1. Actualizando e instalando dependencias ==="
+sudo apt update
+sudo apt build-dep emacs -y
+sudo apt install devscripts quilt -y
+
+echo "=== 2. Entrando al directorio del código fuente ==="
+cd emacs-*/
+
+echo "=== 3. Aplicando el parche al sistema de Debian ==="
+# AQUÍ ESTÁ EL FIX: Creamos el archivo primero con la cabecera que exige Debian
+echo "Subject: Eliminar barras de la interfaz grafica" > debian/patches/0001-frame-defaults-no-gui-bars.patch
+# Y luego le pegamos tu parche original debajo
+cat ../0001-frame-defaults-no-gui-bars.patch >> debian/patches/0001-frame-defaults-no-gui-bars.patch
+
+if ! grep -q "0001-frame-defaults-no-gui-bars.patch" debian/patches/series; then
+    echo "0001-frame-defaults-no-gui-bars.patch" >> debian/patches/series
+fi
+
+echo "=== 4. Modificando el changelog para proteger el paquete ==="
+# Limpiamos el rastro de cualquier ejecución fallida anterior
+rm -f debian/changelog.dch
+
+# Ejecutamos dch de forma totalmente silenciosa y automática
+env DEBFULLNAME="Usuario Local" DEBEMAIL="local@localhost" EDITOR=true dch --local +miparche "Aplicado parche 0001-frame-defaults-no-gui-bars.patch"
+
+echo "=== 5. Compilando los paquetes .deb (IGNORANDO TESTS) ==="
+# DEB_BUILD_OPTIONS=nocheck ahorra mucho tiempo al no ejecutar tests unitarios
+DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -us -uc -b
+
+echo "=== 6. Instalando los paquetes generados ==="
+# Salimos al directorio superior donde dpkg-buildpackage dejó los .deb
+cd ..
+
+# Usamos comodines para que el script funcione aunque cambie ligeramente la versión
+# Instalamos solo los 4 paquetes que acordamos para X11
+sudo apt install ./emacs-gtk_*_amd64.deb \
+                 ./emacs-bin-common_*_amd64.deb \
+                 ./emacs-common_*_all.deb \
+                 ./emacs-el_*_all.deb --yes
+
+echo "=== ¡Proceso completado! Ya puedes ejecutar 'emacs' ==="
+--- english-or-german-to-clipboard-on-spanish.sh ---
+#!/bin/bash
+
+TEXT=$(yad --entry \
+           --title="Translate to Spanish" \
+           --text="Write something:")
+
+[ -z "$TEXT" ] && exit 0
+
+TRANSLATED=$("$HOME/googletrans/dist/googletrans-es" "$TEXT")
+
+printf "%s" "$TRANSLATED" | xclip -selection clipboard
+
+--- enfriar-asus.sh ---
+#!/bin/bash
+
+echo "--- MODO HIELO EXTREMO (Para Compilación) ---"
+
+# 1. Desactivar el Turbo Boost (El verdadero secreto)
+# Esto evita que el CPU suba de voltajes peligrosos
+echo "[1/3] Desactivando Intel/AMD Turbo Boost..."
+echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo 2>/dev/null || echo 0 | sudo tee /sys/devices/system/cpu/cpufreq/boost 2>/dev/null
+
+# 2. Forzar frecuencia mínima
+echo "[2/3] Bajando frecuencia al mínimo..."
+sudo cpupower frequency-set -u 1.2GHz
+
+# 3. Perfil de ahorro
+powerprofilesctl set power-saver
+
+echo "------------------------------------------------"
+echo "¡Turbo Boost DESACTIVADO! Ahora puedes compilar sin quemarte."
+echo "Al reiniciar, el Turbo Boost se reactivará solo."
+
+--- simple_second_counter_xterm-N-yad.sh ---
+#!/bin/bash
+
+num=$(yad --entry \
+  --title="Ingrese un numero entero (Segundos)" \
+  --text="Escriba un numero entero (Segundos) o use los botones:" \
+  --entry-text="0" \
+  --width=350 \
+  --height=120 \
+  --button="1m:10" \
+  --button="4m:11" \
+  --button="15m:12" \
+  --button="Aceptar:0" \
+  --button="Cancelar:1")
+
+ret=$?
+
+case "$ret" in
+    0)  # Aceptar (valor escrito)
+        [[ -n "$num" ]] && dash "$HOME/monoliths-llm/simple_second_counter_xterm-N.sh" "$num"
+        ;;
+    10) # 1 minuto
+        dash "$HOME/monoliths-llm/simple_second_counter_xterm-N.sh" 60
+        ;;
+    11) # 4 minutos
+        dash "$HOME/monoliths-llm/simple_second_counter_xterm-N.sh" 360
+        ;;
+    12) # 15 minutos
+        dash "$HOME/monoliths-llm/simple_second_counter_xterm-N.sh" 900
+        ;;
+esac
+
+--- special_minute_counter_xtimemon-N-yad.sh ---
+#!/bin/bash
+
+# Mostrar un cuadro de diálogo para ingresar un entero
+num=$(yad --entry \
+	  --title="Ingrese un numero entero mayor a 2 (Minutos)" \
+	  --text="Escriba un numero entero mayor a 2 (Minutos):" \
+	  --entry-text="0" \
+	  --width=300 \
+	  --height=100)
+
+# Comprobar que se ingresó algo
+if [[ -n "$num" ]]; then
+    # Ejecutar el script con el número ingresado
+    dash $HOME/monoliths-llm/training-on-left-seconds-a-range-of-N-minute.sh $num
+fi
+
+--- simple_second_counter.sh ---
+#!/bin/bash
+
+# Duración total en segundos (primer argumento)
+DURATION=$1
+
+# Tamaño de la barra
+BAR_LENGTH=20
+
+# Validar que se pase un argumento
+if [[ -z "$DURATION" ]]; then
+  echo "Uso: $0 <segundos>"
+  exit 1
+fi
+
+# Calcular tiempo por "paso" de la barra
+STEP_TIME=$(echo "$DURATION / $BAR_LENGTH" | bc -l)
+
+for ((i=0; i<=BAR_LENGTH; i++)); do
+  # Cantidad de "=" y "_"
+  FILLED=$(printf "%0.s=" $(seq 1 $i))
+  EMPTY=$(printf "%0.s_" $(seq 1 $((BAR_LENGTH - i))))
+  
+  # Mostrar barra
+  printf "\r[%s%s]" "$FILLED" "$EMPTY"
+  
+  # Esperar el tiempo del paso
+  sleep $STEP_TIME
+done
+
+# Nueva línea al terminar
+echo
+--- simple_second_feh_counter.sh ---
+#!/bin/bash
+
+# Duración total en segundos (primer argumento)
+DURATION=$1
+
+# Validar que se pase un argumento
+if [[ -z "$DURATION" ]]; then
+  echo "Uso: $0 <segundos>"
+  exit 1
+fi
+
+# Calcular tiempo entre imágenes (considerando 21 imágenes: 0, 5, 10, ..., 100)
+NUM_IMAGES=21
+STEP_TIME=$(echo "$DURATION / ($NUM_IMAGES - 1)" | bc -l)
+
+# Mostrar las imágenes
+for i in $(seq 0 $((NUM_IMAGES - 1))); do
+  # Calcular número de imagen (0, 5, 10, ..., 100)
+  IMG_NUM=$((i * 5))
+  
+  # Construir nombre del archivo
+  IMG_FILE="$HOME/monoliths-hm/${IMG_NUM}.jpg"
+  
+  # Verificar si el archivo existe
+  if [[ -f "$IMG_FILE" ]]; then
+    # Cerrar feh anterior si está abierto
+    pkill feh 2>/dev/null
+    
+    # Mostrar nueva imagen (en segundo plano)
+    feh --fullscreen "$IMG_FILE" &
+    
+    # Registrar el PID de feh para poder cerrarlo después
+    FEH_PID=$!
+  else
+    echo "Advertencia: Archivo $IMG_FILE no encontrado"
+  fi
+  
+  # Esperar el tiempo calculado (excepto en la última iteración)
+  if [[ $i -lt $((NUM_IMAGES - 1)) ]]; then
+    sleep $STEP_TIME
+  fi
+done
+
+# Cerrar la última imagen después de la duración total
+sleep $STEP_TIME
+pkill feh 2>/dev/null
+
+echo "Presentación completada"
+--- festival-de.sh ---
+#!/bin/bash
+# festival_de_ffmpeg.sh
+TEXTO="$1"
+SALIDA="$2"
+TMP_RAW="/tmp/festival_de_raw.wav"
+
+if [ -z "$TEXTO" ] || [ -z "$SALIDA" ]; then
+    echo "Uso: $0 \"texto en alemán\" salida.wav"
+    exit 1
+fi
+
+# Generar WAV con voz inglesa
+echo "$TEXTO" | text2wave -o "$TMP_RAW" -eval "(set! voice_default 'kal_diphone)"
+
+# Ajustar velocidad/pitch/volumen
+ffmpeg -y -i "$TMP_RAW" -af "asetrate=44100*0.95,aresample=44100,volume=1.4" "$SALIDA"
+
+rm "$TMP_RAW"
+
+--- simple_second_counter-N-yad.sh ---
+#!/bin/bash
+
+num=$(yad --entry \
+  --title="Ingrese un numero entero (Segundos)" \
+  --text="Escriba un numero entero (Segundos) o use los botones:" \
+  --entry-text="0" \
+  --width=350 \
+  --height=120 \
+  --button="1m:10" \
+  --button="4m:11" \
+  --button="15m:12" \
+  --button="Aceptar:0" \
+  --button="Cancelar:1")
+
+ret=$?
+
+case "$ret" in
+    0)  # Aceptar (valor escrito)
+        [[ -n "$num" ]] && dash "$HOME/monoliths-llm/simple_second_counter-N.sh" "$num"
+        ;;
+    10) # 1 minuto
+        dash "$HOME/monoliths-llm/simple_second_counter-N.sh" 60
+        ;;
+    11) # 4 minutos
+        dash "$HOME/monoliths-llm/simple_second_counter-N.sh" 360
+        ;;
+    12) # 15 minutos
+        dash "$HOME/monoliths-llm/simple_second_counter-N.sh" 900
+        ;;
+esac
+

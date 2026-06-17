@@ -1,0 +1,57 @@
+#!/usr/bin/env sh
+set -e
+
+# Remote CLI (VSCode-like behavior)
+if [ -n "$VSCODE_IPC_HOOK_CLI" ]; then
+	REMOTE_CLI="$(command -v antigravity | grep /remote-cli/ || true)"
+	if [ -n "$REMOTE_CLI" ]; then
+		exec "$REMOTE_CLI" "$@"
+	fi
+fi
+
+# WSL check (optional warning)
+if grep -qi Microsoft /proc/version 2>/dev/null && [ -z "$DONT_PROMPT_WSL_INSTALL" ]; then
+	echo "Running inside WSL is not recommended." 1>&2
+	printf "Continue anyway? [y/N] " 1>&2
+	read -r YN
+	YN=$(printf '%s' "$YN" | tr '[:upper:]' '[:lower:]')
+	case "$YN" in
+		y|yes) ;;
+		*) exit 1 ;;
+	esac
+fi
+
+# Root check (safe)
+if [ "$(id -u)" = "0" ]; then
+	for i in "$@"; do
+		case "$i" in
+			--user-data-dir|--user-data-dir=*|--file-write|tunnel|serve-web)
+				CAN_LAUNCH_AS_ROOT=1
+				;;
+		esac
+	done
+
+	if [ -z "$CAN_LAUNCH_AS_ROOT" ]; then
+		echo "Refusing to run as root without proper flags." 1>&2
+		exit 1
+	fi
+fi
+
+# 🔥 FORZAMOS ruta correcta (evita loops)
+VSCODE_PATH="/usr/share/antigravity"
+ELECTRON="$VSCODE_PATH/bin/antigravity"
+CLI="$VSCODE_PATH/resources/app/out/cli.js"
+
+# Validaciones reales (esto te salva de errores silenciosos)
+if [ ! -x "$ELECTRON" ]; then
+	echo "Error: no se encontró el binario en $ELECTRON" 1>&2
+	exit 1
+fi
+
+if [ ! -f "$CLI" ]; then
+	echo "Error: no se encontró CLI en $CLI" 1>&2
+	exit 1
+fi
+
+# Ejecutar
+exec env ELECTRON_RUN_AS_NODE=1 "$ELECTRON" "$CLI" "$@"

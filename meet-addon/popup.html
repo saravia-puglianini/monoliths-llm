@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meet & Calendar Checker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>Workspace Sync</h1>
+      <p class="subtitle">Verificación de pestañas activas</p>
+    </header>
+
+    <!-- Banner de Permisos Dinámicos -->
+    <div id="permission-banner" class="banner hidden">
+      <div class="banner-content">
+        <span class="banner-icon">⚠️</span>
+        <div class="banner-text">
+          <span class="banner-title">Permisos Requeridos</span>
+          <span class="banner-desc" id="permission-desc">Se necesita acceso para abrir algunos sitios.</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-grant-permissions" style="padding: 4px 8px; font-size: 0.75rem;">Permitir</button>
+    </div>
+
+    <main>
+      <!-- Google Meet Card -->
+      <div class="card" id="card-meet">
+        <div class="card-header">
+          <div class="icon-wrapper meet-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24">
+              <path fill="currentColor"
+                d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4zM14 16H5V8h9v8z" />
+            </svg>
+          </div>
+          <div class="card-title-group">
+            <h3>Google Meet</h3>
+            <span class="url-hint">meet.google.com</span>
+          </div>
+        </div>
+        <div class="card-status">
+          <span class="status-indicator" id="status-meet">
+            <span class="dot"></span>
+            <span class="text">Comprobando...</span>
+          </span>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-secondary" id="btn-meet" disabled>Abrir / Enfocar</button>
+        </div>
+      </div>
+
+      <!-- Google Calendar Card -->
+      <div class="card" id="card-calendar">
+        <div class="card-header">
+          <div class="icon-wrapper calendar-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24">
+              <path fill="currentColor"
+                d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5z" />
+            </svg>
+          </div>
+          <div class="card-title-group">
+            <h3>Google Calendar</h3>
+            <span class="url-hint">calendar.google.com</span>
+          </div>
+        </div>
+        <div class="card-status">
+          <span class="status-indicator" id="status-calendar">
+            <span class="dot"></span>
+            <span class="text">Comprobando...</span>
+          </span>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-secondary" id="btn-calendar" disabled>Abrir / Enfocar</button>
+        </div>
+
+      <!-- Settings Panel -->
+      <div class="settings-panel">
+        <label class="switch">
+          <input type="checkbox" id="chk-auto-reopen" checked>
+          <span class="slider"></span>
+        </label>
+        <div class="settings-text">
+          <span class="settings-title">Reapertura automática</span>
+          <span class="settings-desc">Reabre pestañas si se cierran por accidente</span>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <button class="btn btn-primary btn-block" id="btn-sync-all">
+        <svg viewBox="0 0 24 24" width="16" height="16" class="btn-icon">
+          <path fill="currentColor"
+            d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
+        </svg>
+        Sincronizar Ambos
+      </button>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+
+</html>

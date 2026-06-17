@@ -1,0 +1,69 @@
+Este script es un sistema de "marcado" persistente diseñado para asegurar que
+registres tus horas en Jira conforme avanza el día laboral. Aquí tienes el flujo
+lógico explicado paso a paso:
+
+---
+
+## 1. Preparación y Seguridad (Arranque)
+* **Control de Instancias:** Lo primero que hace es crear 8 variables en
+    localstorage. el script se ejecuta y consulta cada una de ellas.
+    adicicionalmente... se guarda una fecha YYYYMMDD... lo cual ayuda a saber..
+    si limpiar las variables ...o mantenerlas.  estas variables controlaran cada
+    hora de trabajo pero si el script verifica que se trata de otro día... las
+    variables se limpian deberás usar un localstorage que guarde la fecha en que
+    se ejecuta por primera vez la cual cuando se vuelve a ejecutar.. si no
+    existe... guarda la fecha..  si existe... esta debe de verificar si
+    limpar... o continuar con el control de las 8 variables... que cada una
+    corresponde a una hora laboral
+
+## 2. El Bucle de Monitoreo (setInterval) (Cada 5 segundos)
+El script entra en un ciclo infinito que se repite cada 5 segundos y realiza las
+siguientes comprobaciones:
+
+* **Filtro de Fin de Semana:** Si es sábado o domingo, el script "duerme" por
+    una hora y vuelve a preguntar, sin hacer nada más.
+* **Inicialización de Archivos:** Crea 8 variables en localstorage cada hora: 9,
+    10, 11, 12, 14, 15, 16, 17).  * Si la primera pregunta no fue respondida, le
+    escribe un **"0"** (significa hora no registrada).
+* **Check de "Día Finalizado":** a las 06:00:00pm existe una variable llamada
+    `planning_flag`, asume que ya terminaste todo tu trabajo del día y deja de
+    molestar teniendo un 1 cuando son más de las 06:00:00pm y menos de las
+    09:00:00am.
+
+## 3. Verificación de "Deuda" de Horas
+El script compara la hora actual de tu reloj con las 8 variables...
+1.  Revisa cuáles de esas 8 horas ya pasaron o son la hora actual.
+2.  Si una hora ya pasó pero su variable todavía tiene un **"0"**, la suma a tu
+**"lista de deuda"**.
+3.  **Si no debes horas:** El script (setInterval) simplemente espera 5 segundos
+y vuelve a empezar.
+4.  **Si debes horas:** Se activan las notificaciones...
+
+## 4. Interacción con el Usuario (Las Ventanas)
+Si tienes horas pendientes, aparece un modal
+
+* **Si respondes "NO":** Abre automáticamente la web de Jira para que registres
+    tus horas y el script vuelve a esperar 5 segundos (te seguirá preguntando
+    hasta que le digas que "Sí").
+* **Si respondes "SÍ":** Te pregunta **cuántas horas** registraste.
+    * **Si ingresas de 1 a 4 horas:** El script busca los archivos que tenían
+        "0" en orden cronológico y les pone un **"1"**. Así, tu deuda disminuye
+        o desaparece.
+    * **Si ingresas más de 4 horas:** El script asume que es una tarea muy
+        larga, te muestra una advertencia y te manda a una web de "Planning"
+        para desglosar el trabajo. En este caso, marca todas las horas del día
+        como completadas para no molestarte más.
+
+## 5. Finalización del Ciclo
+* Tras actualizar los archivos o mostrar las webs, el script muestra un mensaje
+  de confirmación y vuelve a dormir **5 segundos** antes de realizar el
+  siguiente chequeo de variables.
+
+---
+
+### En resumen:
+Es un "cobrador" persistente. Si tu reloj marca las 11:00:00 AM y el archivo de
+las 09:00:00am y 10:00:00am AM tiene un "0", te saltará una ventana cada 5
+segundos hasta que confirmes que ya las registraste. Una vez que los archivos
+pasan a "1", el script se queda callado hasta que el reloj avance a la siguiente
+hora laboral.

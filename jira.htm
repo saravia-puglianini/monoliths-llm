@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jira Task Manager - Premium Experience</title>
+    <style>
+        :root {
+            --primary-bg: #f8fafc;
+            --accent-color: #2563eb;
+            --accent-glow: rgba(37, 99, 235, 0.2);
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.dark-theme {
+            --primary-bg: #0f172a;
+            --accent-color: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.2);
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+            z-index: 1000;
+            border: 1px solid var(--border-color);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            background: rgba(128, 128, 128, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(147, 51, 234, 0.05) 0px, transparent 50%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            z-index: 10;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #1d4ed8, #7e22ce);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+        }
+
+        .action-button {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px var(--accent-glow);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--accent-glow);
+            filter: brightness(1.05);
+        }
+
+        #stories-list {
+            margin-top: 3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .story-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: var(--transition);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .story-header {
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .story-header:hover {
+            background: var(--primary-bg);
+        }
+
+        .story-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-primary);
+        }
+
+        .story-icon {
+            color: var(--accent-color);
+            background: rgba(37, 99, 235, 0.1);
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .chevron {
+            transition: var(--transition);
+            color: var(--text-secondary);
+        }
+
+        .story-card.active .chevron {
+            transform: rotate(180deg);
+        }
+
+        .story-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.4s ease-in-out;
+            background: var(--card-bg);
+            opacity: 0.8;
+        }
+
+        .story-card.active .story-content {
+            max-height: 1000px;
+            padding: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .task-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            padding: 0.6rem 0.75rem;
+            border-radius: 10px;
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .task-item:hover {
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            transform: translateX(5px);
+        }
+
+        .ceremony-task {
+            color: var(--accent-color) !important;
+            font-weight: 600;
+            background: rgba(37, 99, 235, 0.05);
+            margin-bottom: 5px;
+        }
+
+        .ceremony-task:hover {
+            background: rgba(37, 99, 235, 0.1) !important;
+        }
+
+        .copy-tooltip {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f172a;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        .copy-tooltip.show {
+            opacity: 1;
+            top: -30px;
+        }
+
+        /* Modal custom aesthetic */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 2.5rem;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 440px;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal.show {
+            transform: translateY(0);
+        }
+
+        .modal h2 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--primary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .modal input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-confirm {
+            flex: 1;
+            padding: 0.75rem;
+            background: var(--accent-color);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            padding: 0.75rem;
+            background: var(--primary-bg);
+            border: none;
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="theme-toggle" id="theme-toggle">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Oscuro</span>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Plantilla de horas por historia</h1>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Gestiona tus historias de usuario con
+                elegancia</p>
+            <button class="action-button" id="btn-start">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 5v14M5 12h14" />
+                </svg>
+                Definir historias
+            </button>
+        </header>
+
+        <div id="stories-container">
+            <div id="stories-list">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </div>
+    </div> <!-- Custom Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal">
+            <h2>Configurar Sprint</h2>
+            <div style="margin-bottom: 2rem;">
+                <label style="color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">¿Cuántas historias
+                    tienes?</label>
+                <input type="number" id="story-count" placeholder="Ej: 5" min="1" step="1">
+
+                <label style="color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">¿Cuántas semanas
+                    dura el sprint?</label>
+                <input type="number" id="sprint-weeks" placeholder="Ej: 2" min="1" step="1">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="btn-cancel">Cancelar</button>
+                <button class="btn-confirm" id="btn-confirm">Generar Plantilla</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ---------- Theme Toggle ----------
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+        const body = document.body;
+
+        const savedTheme = localStorage.getItem('jira_theme');
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-theme');
+            themeIcon.textContent = '☀️';
+            themeText.textContent = 'Claro';
+        }
+
+        themeToggle.onclick = () => {
+            const isDark = body.classList.toggle('dark-theme');
+            themeIcon.textContent = isDark ? '☀️' : '🌙';
+            themeText.textContent = isDark ? 'Claro' : 'Oscuro';
+            localStorage.setItem('jira_theme', isDark ? 'dark' : 'light');
+        };
+
+        const btnStart = document.getElementById('btn-start');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modal = document.getElementById('modal');
+        const btnCancel = document.getElementById('btn-cancel');
+        const btnConfirm = document.getElementById('btn-confirm');
+        const storyInput = document.getElementById('story-count');
+        const weekInput = document.getElementById('sprint-weeks');
+        const storiesList = document.getElementById('stories-list');
+
+        function showModal() {
+            modalOverlay.style.display = 'flex';
+            setTimeout(() => {
+                modalOverlay.style.opacity = '1';
+                modal.classList.add('show');
+                storyInput.focus();
+            }, 10);
+        }
+
+        function hideModal() {
+            modalOverlay.style.opacity = '0';
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modalOverlay.style.display = 'none';
+            }, 300);
+        }
+
+        function generateStories(count, weeks) {
+            storiesList.innerHTML = '';
+            
+            const loremTasks = [
+                "Análisis inicial de requerimientos - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                "Diseño de flujo lógico del sistema - Lorem ipsum dolor sit amet, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+                "Coordinación de dependencia 1 - Lorem ipsum dolor sit amet, duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
+                "Implementación de funcionalidad base - Lorem ipsum dolor sit amet, excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+                "Regularización de dependencia 1 - Lorem ipsum dolor sit amet, integer nec odio praesent libero sed cursus ante dapibus diam.",
+                "Validación de integraciones internas - Lorem ipsum dolor sit amet, sed nisi nulla quis sem at nibh elementum imperdiet.",
+                "Gestión de errores y logging - Lorem ipsum dolor sit amet, duis sagittis ipsum praesent mauris fusce nec tellus sed augue semper porta.",
+                "Optimización de rendimiento general - Lorem ipsum dolor sit amet, mauris massa vestibulum lacinia arcu eget nulla.",
+                "Revisión cruzada de código (peer review) - Lorem ipsum dolor sit amet, class aptent taciti sociosqu ad litora torquent per conubia nostra.",
+                "Preparación para despliegue - Lorem ipsum dolor sit amet, curabitur sodales ligula in libero sed dignissim lacinia nunc.",
+                "Pruebas de regresión automatizadas - Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                "Ajuste de configuración de entorno - Lorem ipsum dolor sit amet, sed do eiusmod tempor.",
+                "Sincronización de base de datos - Lorem ipsum dolor sit amet, sed diam nonummy nibh euismod.",
+                "Monitoreo de latencia en servicios - Lorem ipsum dolor sit amet, tation ullamcorper suscipit.",
+                "Refactorización de módulos legados - Lorem ipsum dolor sit amet, feugait nulla facilisi."
+            ];
+
+            const minTargetTotal = weeks * 30;
+            // Añadimos un pequeño margen extra de 1 a 4 tareas como pidió el usuario
+            const targetTotal = minTargetTotal + 1 + Math.floor(Math.random() * 4);
+            const fixedCeremonies = 3; // 1 en la primera, 2 en la última
+            const loremNeeded = Math.max(0, targetTotal - fixedCeremonies);
+            
+            // Calculamos cuántas tareas lorem poner por historia para llegar al total
+            const basicLoremPerStory = Math.floor(loremNeeded / count);
+            let extraLorem = loremNeeded % count;
+
+            let globalTaskCounter = 0;
+            let tempHTML = '';
+
+            for (let i = 1; i <= count; i++) {
+                let specificTasks = [];
+                
+                if (i === 1) specificTasks.push("Registro de todas mis tareas planificadas para todo el sprint");
+                if (i === count) {
+                    specificTasks.push("Reunión de refinamiento");
+                    specificTasks.push("Reunión de planning");
+                }
+
+                // Determinamos cuántas tareas lorem le tocan a esta historia
+                let numLoremForThisStory = basicLoremPerStory + (extraLorem > 0 ? 1 : 0);
+                if (extraLorem > 0) extraLorem--;
+
+                let tasksHTML = '<ul class="task-list">';
+                
+                // Tareas específicas (Ceremonias)
+                specificTasks.forEach(t => {
+                    globalTaskCounter++;
+                    tasksHTML += `<li class="task-item ceremony-task">
+                        <span style="opacity: 0.5; margin-right: 8px;">#${globalTaskCounter}</span> [Ceremonia] ${t}
+                    </li>`;
+                });
+
+                // Tareas Lorem Ipsum
+                for (let j = 0; j < numLoremForThisStory; j++) {
+                    globalTaskCounter++;
+                    const taskText = loremTasks[(globalTaskCounter) % loremTasks.length];
+                    tasksHTML += `<li class="task-item">
+                        <span style="opacity: 0.5; margin-right: 8px;">#${globalTaskCounter}</span> ${taskText}
+                    </li>`;
+                }
+
+                tasksHTML += '</ul>';
+
+                tempHTML += `
+                    <div class="story-card animate-in" style="animation-delay: ${i * 0.1}s">
+                        <div class="story-header" onclick="this.parentElement.classList.toggle('active')">
+                            <div class="story-title">
+                                <span class="story-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                                </span>
+                                Historia ${i} <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left:10px;">(${specificTasks.length + numLoremForThisStory} tareas)</span>
+                            </div>
+                            <div class="chevron">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </div>
+                        <div class="story-content">
+                            ${tasksHTML}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Lógica de validación de cuota y semanas
+            const targetTasks = weeks * 30;
+            const diffTasks = targetTasks - globalTaskCounter;
+            let warningHTML = '';
+
+            if (weeks > 3) {
+                warningHTML += `
+                    <div style="margin-bottom: 10px; color: #fbbf24; font-weight: 600; font-size: 0.9rem;">
+                        ⚠️ ¿Estás seguro? Más de 3 semanas... Tu enfócate en tener al menos 90 tareas.
+                    </div>
+                `;
+            }
+
+            if (diffTasks > 0) {
+                warningHTML += `
+                    <div style="color: #f87171; font-size: 0.9rem;">
+                        Te faltan <strong>${diffTasks}</strong> tareas para el objetivo (${targetTasks} total por ser ${weeks} semanas).
+                    </div>
+                `;
+            } else {
+                warningHTML += `
+                    <div style="color: #4ade80; font-size: 0.9rem;">
+                        ¡Objetivo de tareas cumplido! (${globalTaskCounter}/${targetTasks})
+                    </div>
+                `;
+            }
+
+            // Insertamos el resumen mejorado y las historias
+            storiesList.innerHTML = `
+                <div class="animate-in" style="margin-bottom: 2rem; padding: 1.5rem; background: var(--card-glass); border-radius: 16px; border: 1px solid var(--accent-glow); text-align: center;">
+                    ${warningHTML}
+                    <div style="margin-top: 10px;">
+                        <span style="color: var(--text-secondary)">Total generado:</span>
+                        <strong style="color: var(--accent-color); font-size: 1.8rem; margin-left: 10px;">${globalTaskCounter}</strong>
+                    </div>
+                </div>
+                ${tempHTML}
+            `;
+        }
+
+        // Copy to clipboard functionality
+        async function copyToClipboard(text, element) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showTooltip(element);
+            } catch (err) {
+                console.error('Error al copiar: ', err);
+            }
+        }
+
+        function showTooltip(element) {
+            const existing = element.querySelector('.copy-tooltip');
+            if (existing) existing.remove();
+
+            const tooltip = document.createElement('div');
+            tooltip.className = 'copy-tooltip';
+            tooltip.innerText = '¡Copiado!';
+            element.appendChild(tooltip);
+
+            // Reflow
+            tooltip.offsetHeight;
+            tooltip.classList.add('show');
+
+            setTimeout(() => {
+                tooltip.classList.remove('show');
+                setTimeout(() => tooltip.remove(), 300);
+            }, 1200);
+        }
+
+        document.addEventListener('click', (e) => {
+            const taskItem = e.target.closest('.task-item');
+            if (taskItem) {
+                // Remove the #N prefix and cerimonia tag if needed, but usually full text is better
+                let textToCopy = taskItem.innerText.trim();
+                // Limpiamos el prefijo de número #1, #2, etc.
+                textToCopy = textToCopy.replace(/^#\d+\s+/, '');
+                copyToClipboard(textToCopy, taskItem);
+            }
+        });
+
+        btnStart.addEventListener('click', showModal);
+        btnCancel.addEventListener('click', hideModal);
+
+        btnConfirm.addEventListener('click', () => {
+            const count = parseInt(storyInput.value);
+            const weeks = parseInt(weekInput.value);
+
+            if (!isNaN(count) && count > 0 && !isNaN(weeks) && weeks > 0) {
+                generateStories(count, weeks);
+                hideModal();
+                storyInput.value = '';
+                weekInput.value = '';
+            } else {
+                alert('Por favor, ingresa números enteros válidos en ambos campos.');
+            }
+        });
+
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) hideModal();
+        });
+
+        // Event listener for Enter key in inputs
+        [storyInput, weekInput].forEach(el => {
+            el.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') btnConfirm.click();
+            });
+        });
+    </script>
+</body>
+
+</html>
