@@ -672,13 +672,39 @@
             fullscreenText.style.fontSize = `${size}vw`;
         }
 
+        function filtrarTexto(contenido) {
+            const permitidos = "0123456789abcdefghijklmnñopqrstuvwxyzäöüáéíóúßABCDEFGHIJKLMNÑOPQRSTUVWXYZÄÖÜÁÉÍÓÚ!?.,:;ʼ”“()- ";
+            const setPermitidos = new Set(permitidos);
+            const signosPuntuacion = ["!", "?", ".", ",", ":", ";", "ʼ", "”", "“", "(", ")", "-"];
+
+            // 1. Filtrar caracteres: lo no permitido se convierte en espacio
+            let texto = Array.from(contenido)
+                .map(c => setPermitidos.has(c) ? c : " ")
+                .join("");
+
+            // 2. Colapsar todos los espacios y saltos de línea en uno solo
+            texto = texto.replace(/\s+/g, ' ');
+
+            // 3. Regla de puntuación:
+            for (const signo of signosPuntuacion) {
+                // Quita espacio antes: " . " -> "."
+                texto = texto.replaceAll(" " + signo, signo);
+                // Asegura espacio después: "." -> ". "
+                texto = texto.replaceAll(signo, signo + " ");
+            }
+
+            // 4. Limpieza final de espacios dobles y bordes
+            return texto.replace(/\s+/g, ' ').trim();
+        }
+
         // Speech synthesis trigger
         function speak() {
             if (speechSynthesis.speaking) {
                 speechSynthesis.cancel();
             }
 
-            const text = textInput.value.trim();
+            const rawText = textInput.value;
+            const text = filtrarTexto(rawText);
             if (!text) return;
 
             const chunks = parseChunks(text);
