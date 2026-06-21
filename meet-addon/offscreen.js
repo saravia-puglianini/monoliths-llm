@@ -1,5 +1,10 @@
 async function runCheck() {
   try {
+    const now = new Date();
+    const day = now.getDay(); // 0 is Sunday, 6 is Saturday
+    if (day === 0 || day === 6) {
+      return;
+    }
     const csvUrl = chrome.runtime.getURL('preferencias.csv');
     const response = await fetch(`${csvUrl}?_t=${Date.now()}`, { cache: 'no-cache' });
     if (!response.ok) {

@@ -141,6 +141,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'PROCESS_ACTIVE_ROWS') {
     (async () => {
       try {
+        const now = new Date();
+        const day = now.getDay(); // 0 is Sunday, 6 is Saturday
+        if (day === 0 || day === 6) {
+          sendResponse({ success: true, message: 'Skipped on weekend' });
+          return;
+        }
+        
         const tabs = await chrome.tabs.query({});
         const { executedKeys = {}, autoReopen = true } = await chrome.storage.local.get(['executedKeys', 'autoReopen']);
         
