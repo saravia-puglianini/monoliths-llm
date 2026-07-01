@@ -13,7 +13,6 @@ async function runCheck() {
     }
     const csvText = await response.text();
     const rows = parseCSV(csvText);
-    const now = new Date();
     
     // Find rows that are currently active
     const activeRows = [];

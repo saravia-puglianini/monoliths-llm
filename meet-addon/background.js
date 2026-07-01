@@ -142,8 +142,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       try {
         const now = new Date();
-        const day = now.getDay(); // 0 is Sunday, 6 is Saturday
-        if (day === 0 || day === 6) {
+        const dayOfWeek = now.getDay(); // 0 is Sunday, 6 is Saturday
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
           sendResponse({ success: true, message: 'Skipped on weekend' });
           return;
         }
@@ -151,11 +151,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const tabs = await chrome.tabs.query({});
         const { executedKeys = {}, autoReopen = true } = await chrome.storage.local.get(['executedKeys', 'autoReopen']);
         
-        const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const todayStr = `${year}-${month}-${day}`;
+        const dayOfMonth = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${dayOfMonth}`;
         
         // Clean up keys from previous days to save space
         const updatedExecutedKeys = {};
