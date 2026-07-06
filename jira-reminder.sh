@@ -99,6 +99,11 @@ while true; do
     CURRENT_HOUR_STR=$(date +%H)
     CURRENT_HOUR=$((10#$CURRENT_HOUR_STR))
 
+    if [ "$CURRENT_HOUR" -lt 9 ] || [ "$CURRENT_HOUR" -ge 18 ]; then
+        sleep 300
+        continue
+    fi
+
     if pgrep -af "yad --title Ops360" > /dev/null || pgrep -af "yad --title Jira" > /dev/null || pgrep -af "yad --title 'Log de Horas'" > /dev/null; then
         sleep 5; continue
     fi
@@ -121,13 +126,18 @@ while true; do
     $YAD_BIN --title "Jira - Control de Horas" \
         --window-icon "appointment-reminder" \
         --text "<b>Control de Tareas</b>\n\n$MSG_BODY" \
+        --button="Hoy es Feriado:3" \
         --button="Ver Log:2" \
         --button="No:1" \
         --button="Si:0" \
         --center --width=420 --timeout=120 --always-on-top
 
     RESP=$?
-    if [ $RESP -eq 2 ]; then
+    if [ $RESP -eq 3 ]; then
+        echo "$TodayMMDD" >> "$HOME/.holidays"
+        sleep 3600
+        continue
+    elif [ $RESP -eq 2 ]; then
         "$DIR/ver-horas.sh" &
         sleep 5; continue
     elif [ $RESP -eq 1 ]; then
@@ -162,8 +172,8 @@ while true; do
         if [ "$HAS_JIRA" -eq 1 ]; then
             if [[ "$LAST_PROJ" =~ ^[A-Za-z0-9]+-[0-9]+$ ]]; then
                 $YAD_BIN --title "Jira - Tarea Anterior" \
-                    --text "¿Terminó la tarea anterior <b>$LAST_PROJ</b>?" \
-                    --button="No:1" --button="Sí:0" --center --width=400 --always-on-top
+                    --text "¿Está seguro que terminó la tarea: <b>$LAST_PROJ</b>?" \
+                    --button="Aún no he terminado:1" --button="Confirmar:0" --center --width=400 --always-on-top
                 if [ $? -eq 0 ]; then
                     # Transition previous task to Done/Hecho!
                     python3 "$DIR/jira_helper.py" transition "$LAST_PROJ" hecho >/dev/null 2>&1
@@ -206,6 +216,8 @@ $TASKS_LIST"
                 
                 TICKET_KEY=$(echo "$SELECT_DATA" | cut -d'|' -f1)
                 PARENT_KEY=$(echo "$SELECT_DATA" | cut -d'|' -f3 | cut -d' ' -f1)
+                TASK_TITLE=$(echo "$SELECT_DATA" | cut -d'|' -f5)
+                TASK_TITLE="${TASK_TITLE% (*)}"
                 if [ "$TICKET_KEY" != "MANUAL" ]; then
                     FINAL_PROJ="$TICKET_KEY"
                     FINAL_PARENT="$PARENT_KEY"
@@ -223,7 +235,7 @@ $TASKS_LIST"
         if [ "$LOG_TO_JIRA" -eq 1 ]; then
             DESC_DATA=$($YAD_BIN --form --title "Jira - Descripción del Trabajo" \
                 --text "Ingrese el detalle de trabajo para la tarea $FINAL_PROJ:" \
-                --field="Descripción":ENTRY "" \
+                --field="Descripción":ENTRY "$TASK_TITLE" \
                 --center --width=500 --always-on-top)
             
             if [ $? -ne 0 ] || [ -z "$DESC_DATA" ]; then
