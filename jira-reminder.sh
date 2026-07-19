@@ -88,6 +88,20 @@ format_hour_csv() {
 }
 
 while true; do
+    # Check if reminders are paused
+    PAUSE_FILE="$HOME/.pause_until"
+    if [ -f "$PAUSE_FILE" ]; then
+        PAUSE_UNTIL=$(cat "$PAUSE_FILE")
+        if [ -n "$PAUSE_UNTIL" ]; then
+            CURRENT_TS=$(date +%s)
+            TARGET_TS=$(date -d "$PAUSE_UNTIL" +%s 2>/dev/null)
+            if [ $? -eq 0 ] && [ "$CURRENT_TS" -lt "$TARGET_TS" ]; then
+                sleep 300
+                continue
+            fi
+        fi
+    fi
+
     DayOfWeek=$(date +%u)
     TodayMMDD=$(date +%m-%d)
     if [ "$DayOfWeek" -gt 5 ] || grep -q "^$TodayMMDD$" "$HOME/.holidays" 2>/dev/null; then
@@ -134,9 +148,17 @@ while true; do
 
     RESP=$?
     if [ $RESP -eq 3 ]; then
-        echo "$TodayMMDD" >> "$HOME/.holidays"
-        sleep 3600
-        continue
+        $YAD_BIN --title "Confirmar Feriado" \
+            --text "¿Está seguro de que hoy es feriado?" \
+            --button="No:1" --button="Sí:0" \
+            --center --width=350 --always-on-top
+        if [ $? -eq 0 ]; then
+            echo "$TodayMMDD" >> "$HOME/.holidays"
+            sleep 3600
+            continue
+        else
+            sleep 5; continue
+        fi
     elif [ $RESP -eq 2 ]; then
         "$DIR/ver-horas.sh" &
         sleep 5; continue
@@ -291,23 +313,38 @@ $TASKS_LIST"
             fi
         fi
 
+        # Grabación real en Jira
+        WORKLOG_URL=""
+        if [ "$LOG_TO_JIRA" -eq 1 ]; then
+            WORKLOG_URL=$(python3 "$DIR/jira_helper.py" log-work "$FINAL_PROJ" "$HORAS_A_JUSTIFICAR" "$FINAL_DESC" 2>/dev/null)
+            if [[ ! "$WORKLOG_URL" =~ ^https?:// ]]; then
+                WORKLOG_URL=""
+            fi
+        fi
+
         # Grabación local
         PROCESADAS=0
         for h in "${HORAS_ADEUDADAS[@]}"; do
             if [ "$PROCESADAS" -lt "$HORAS_A_JUSTIFICAR" ]; then
                 H_STR=$(format_hour_csv "$h")
-                echo "$CURRENT_DATE;$H_STR;$FINAL_PROJ;$FINAL_DESC" >> "$JUSTIFICAR_CSV"
+                echo "$CURRENT_DATE;$H_STR;$FINAL_PROJ;$FINAL_DESC;$WORKLOG_URL" >> "$JUSTIFICAR_CSV"
                 PROCESADAS=$((PROCESADAS + 1))
             fi
         done
 
-        # Grabación real en Jira
-        if [ "$LOG_TO_JIRA" -eq 1 ]; then
-            python3 "$DIR/jira_helper.py" log-work "$FINAL_PROJ" "$HORAS_A_JUSTIFICAR" "$FINAL_DESC" >/dev/null 2>&1
-        fi
-
         $YAD_BIN --title "Jira - Éxito" --text "Registro completado y respaldado." \
             --button="OK:0" --center --width=300 --timeout=3 --always-on-top
+
+        # Verificar si se completó el registro de las 8 horas de hoy
+        TODAY_COUNT=$(grep -c "^$CURRENT_DATE;" "$JUSTIFICAR_CSV")
+        if [ "$TODAY_COUNT" -eq 8 ]; then
+            $YAD_BIN --title "Jira - Reporte Diario" \
+                --text "¡Has registrado las 8 horas de hoy!\n¿Deseas abrir todos los enlaces en Chrome?" \
+                --button="No:1" --button="Sí, abrir:0" --center --always-on-top
+            if [ $? -eq 0 ]; then
+                python3 "$DIR/jira_helper.py" open-report "$CURRENT_DATE" &
+            fi
+        fi
         break
     done
     sleep 5

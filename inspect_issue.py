@@ -39,6 +39,9 @@ def main():
             # Print parent, epic, issue type and links
             fields = data.get("fields", {})
             print("Issue Type:", fields.get("issuetype", {}).get("name"))
+            print("Status:", fields.get("status", {}).get("name"))
+            print("Status Category:", fields.get("status", {}).get("statusCategory", {}).get("name"))
+            print("Assignee:", fields.get("assignee", {}).get("displayName") if fields.get("assignee") else "None")
             print("Parent in fields:", fields.get("parent", {}).get("key"), fields.get("parent", {}).get("fields", {}).get("summary"))
             
             # Print links

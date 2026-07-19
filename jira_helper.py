@@ -62,7 +62,7 @@ def make_request(config, path, method="GET", payload=None):
 
 def get_issues():
     config = load_config()
-    jql = 'assignee = currentUser() AND statusCategory != Done AND issuetype in (Task, Tarea, "Sub-task", Subtarea) ORDER BY updated DESC'
+    jql = 'assignee = currentUser() AND (statusCategory != Done OR status = "En medición") AND issuetype in (Task, Tarea, "Sub-task", Subtarea) ORDER BY updated DESC'
     payload = {
         "jql": jql,
         "maxResults": 50,
@@ -154,7 +154,10 @@ def log_work(issue_key, hours, comment):
     
     path = f"/rest/api/2/issue/{issue_key}/worklog"
     res = make_request(config, path, method="POST", payload=payload)
-    print(f"SUCCESS: Horas registradas en {issue_key}")
+    worklog_id = res.get("id")
+    domain = config["JIRA_DOMAIN"].rstrip("/")
+    url = f"{domain}/browse/{issue_key}?focusedWorklogId={worklog_id}&page=com.atlassian.jira.plugin.system.issuetabpanels:worklog-tabpanel#worklog-{worklog_id}"
+    print(url)
 
 def transition_issue(issue_key, target_status):
     # target_status can be: 'in_progress', 'detenido', 'hecho'
@@ -252,9 +255,138 @@ def get_parent_key(issue_key):
     except Exception:
         return "N/A"
 
+def open_report(target_date=None):
+    import subprocess
+    csv_path = os.path.expanduser("~/.justificar/justificar.csv")
+    if not os.path.exists(csv_path):
+        subprocess.run(["yad", "--title=Error", "--text=No se encontró el archivo de log.", "--button=OK:0", "--center", "--always-on-top"])
+        return
+        
+    # Leer todas las entradas
+    entries = []
+    with open(csv_path, "r") as f:
+        for line in f:
+            parts = line.strip().split(";")
+            if len(parts) >= 4:
+                fecha = parts[0]
+                hora = parts[1]
+                proyecto = parts[2]
+                descripcion = parts[3]
+                link = parts[4] if len(parts) > 4 else ""
+                entries.append({
+                    "fecha": fecha,
+                    "hora": hora,
+                    "proyecto": proyecto,
+                    "descripcion": descripcion,
+                    "link": link
+                })
+                
+    if not entries:
+        subprocess.run(["yad", "--title=Error", "--text=El archivo de log está vacío.", "--button=OK:0", "--center", "--always-on-top"])
+        return
+
+    # Si no se pasó fecha, preguntar usando YAD
+    if not target_date:
+        # Agrupar por fecha para contar horas y listar
+        from collections import defaultdict
+        date_counts = defaultdict(int)
+        for entry in entries:
+            date_counts[entry["fecha"]] += 1
+            
+        # Obtener las últimas 7 fechas únicas en orden descendente
+        unique_dates = sorted(list(date_counts.keys()), reverse=True)[:7]
+        
+        if not unique_dates:
+            subprocess.run(["yad", "--title=Error", "--text=No hay fechas registradas.", "--button=OK:0", "--center", "--always-on-top"])
+            return
+            
+        # Determinar la fecha pre-seleccionada por defecto
+        # Si hoy tiene 8 horas, pre-seleccionar hoy. Si no, pre-seleccionar la última fecha que tenga 8 horas (o la última fecha registrada)
+        import datetime
+        today_str = datetime.date.today().strftime("%Y-%m-%d")
+        
+        default_date = unique_dates[0] # por defecto la más reciente
+        for d in unique_dates:
+            if d == today_str and date_counts[d] == 8:
+                default_date = d
+                break
+            elif date_counts[d] == 8:
+                default_date = d
+                break
+
+        # Construir argumentos para YAD
+        yad_args = ["yad", "--list", "--title=Seleccionar Fecha de Reporte", 
+                    "--text=Seleccione el día para abrir los reportes en Chrome:", 
+                    "--column=Fecha", "--column=Horas Registradas", 
+                    "--height=250", "--width=350", "--center", "--always-on-top",
+                    "--button=Cancelar:1", "--button=Abrir Reporte:0"]
+        
+        for d in unique_dates:
+            yad_args.extend([d, f"{date_counts[d]}/8 horas"])
+            
+        try:
+            res = subprocess.run(yad_args, capture_output=True, text=True)
+            if res.returncode != 0 or not res.stdout:
+                return # Cancelado
+            # YAD devuelve "fecha|horas|"
+            target_date = res.stdout.split("|")[0].strip()
+        except Exception as e:
+            subprocess.run(["yad", "--title=Error", "--text=Error al ejecutar YAD.", "--button=OK:0", "--center", "--always-on-top"])
+            return
+
+    # Obtener los enlaces para la fecha seleccionada
+    config = {}
+    try:
+        config = load_config()
+    except SystemExit:
+        pass
+    jira_domain = config.get("JIRA_DOMAIN", "https://mipandero.atlassian.net").rstrip("/")
+
+    links = []
+    import re
+    jira_key_pattern = re.compile(r'^[A-Za-z0-9]+-[0-9]+$')
+    
+    for entry in entries:
+        if entry["fecha"] == target_date:
+            link = entry["link"]
+            proyecto = entry["proyecto"]
+            if link and link.startswith("http"):
+                if "focusedWorklogId=" in link and "page=" not in link:
+                    import urllib.parse
+                    parsed = urllib.parse.urlparse(link)
+                    params = urllib.parse.parse_qs(parsed.query)
+                    wl_ids = params.get("focusedWorklogId", [])
+                    if wl_ids:
+                        wl_id = wl_ids[0]
+                        link = f"{link}&page=com.atlassian.jira.plugin.system.issuetabpanels:worklog-tabpanel#worklog-{wl_id}"
+                links.append(link)
+            elif jira_key_pattern.match(proyecto):
+                links.append(f"{jira_domain}/browse/{proyecto}")
+                
+    if not links:
+        subprocess.run(["yad", "--title=Información", "--text=No se encontraron enlaces de Jira para abrir para la fecha seleccionada.", "--button=OK:0", "--center", "--always-on-top"])
+        return
+
+    # Eliminar duplicados manteniendo el orden
+    unique_links = []
+    for l in links:
+        if l not in unique_links:
+            unique_links.append(l)
+
+    # Abrir en google-chrome-stable
+    chrome_bin = "/usr/bin/google-chrome-stable"
+    if not os.path.exists(chrome_bin):
+        chrome_bin = "google-chrome-stable"
+        
+    try:
+        subprocess.Popen([chrome_bin] + unique_links, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        for l in unique_links:
+            subprocess.Popen(["xdg-open", l], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: jira_helper.py [get-issues | log-work | transition | get-parent]")
+        print("Uso: jira_helper.py [get-issues | log-work | transition | get-parent | open-report]")
         sys.exit(1)
         
     cmd = sys.argv[1]
@@ -280,6 +412,9 @@ if __name__ == "__main__":
             print("Uso: jira_helper.py get-parent <key>")
             sys.exit(1)
         print(get_parent_key(sys.argv[2]))
+    elif cmd == "open-report":
+        target_date = sys.argv[2] if len(sys.argv) > 2 else None
+        open_report(target_date)
     else:
         print(f"Comando desconocido: {cmd}")
         sys.exit(1)

@@ -105,6 +105,20 @@ show_dialog() {
 
 # Bucle principal para ejecución continua (daemons)
 while true; do
+    # Check if reminders are paused
+    PAUSE_FILE="$HOME/.pause_until"
+    if [ -f "$PAUSE_FILE" ]; then
+        PAUSE_UNTIL=$(cat "$PAUSE_FILE")
+        if [ -n "$PAUSE_UNTIL" ]; then
+            CURRENT_TS=$(date +%s)
+            TARGET_TS=$(date -d "$PAUSE_UNTIL" +%s 2>/dev/null)
+            if [ $? -eq 0 ] && [ "$CURRENT_TS" -lt "$TARGET_TS" ]; then
+                sleep 300
+                continue
+            fi
+        fi
+    fi
+
     # Skip weekends
     DayOfWeek=$(date +%u)
     TodayMMDD=$(date +%m-%d)

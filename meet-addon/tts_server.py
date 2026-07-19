@@ -10,9 +10,37 @@ class TTSHandler(http.server.BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
+
+    def do_GET(self):
+        if self.path == '/is_paused':
+            paused = False
+            pause_file = os.path.expanduser('~/.pause_until')
+            if os.path.exists(pause_file):
+                try:
+                    with open(pause_file, 'r') as f:
+                        pause_until_str = f.read().strip()
+                    if pause_until_str:
+                        res = subprocess.run(['date', '-d', pause_until_str, '+%s'], capture_output=True, text=True)
+                        if res.returncode == 0:
+                            target_ts = int(res.stdout.strip())
+                            current_res = subprocess.run(['date', '+%s'], capture_output=True, text=True)
+                            current_ts = int(current_res.stdout.strip())
+                            if current_ts < target_ts:
+                                paused = True
+                except Exception as e:
+                    print(f"Error checking pause state: {e}")
+            
+            self.send_response(200)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"paused": paused}).encode('utf-8'))
+        else:
+            self.send_response(404)
+            self.end_headers()
 
     def do_POST(self):
         if self.path == '/speak':

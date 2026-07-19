@@ -141,6 +141,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'PROCESS_ACTIVE_ROWS') {
     (async () => {
       try {
+        // Check if paused via local Python TTS server
+        let isPaused = false;
+        try {
+          const pauseRes = await fetch('http://localhost:5005/is_paused');
+          if (pauseRes.ok) {
+            const pauseData = await pauseRes.json();
+            if (pauseData && pauseData.paused) {
+              isPaused = true;
+            }
+          }
+        } catch (e) {
+          console.warn('Could not check pause state from local server, proceeding as unpaused.', e);
+        }
+
+        if (isPaused) {
+          sendResponse({ success: true, message: 'Paused until configured date' });
+          return;
+        }
+
         const now = new Date();
         const dayOfWeek = now.getDay(); // 0 is Sunday, 6 is Saturday
         if (dayOfWeek === 0 || dayOfWeek === 6) {

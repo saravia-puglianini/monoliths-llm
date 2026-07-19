@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcriptor de Audio Español (Local)</title>
+    <script>
+        // Validación estricta para Google Chrome Stable
+        function checkChromeStable() {
+            const ua = navigator.userAgent;
+            const vendor = navigator.vendor;
+
+            const isChrome = /Chrome/.test(ua) && /Google Inc/.test(vendor);
+            const isEdge = /Edg/.test(ua);
+            const isOpera = /OPR/.test(ua) || /Opt\//.test(ua);
+            const isBrave = !!(navigator.brave && typeof navigator.brave.isBrave === 'function');
+            const isVivaldi = /Vivaldi/.test(ua);
+            const isCocCoc = /CocCoc/.test(ua);
+            const isYandex = /YaBrowser/.test(ua);
+
+            return isChrome && !isEdge && !isOpera && !isBrave && !isVivaldi && !isCocCoc && !isYandex;
+        }
+
+        if (!checkChromeStable()) {
+            window.stop(); // Detiene la carga del documento restante
+            document.documentElement.innerHTML = `
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Acceso no permitido</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+                    <style>
+                        body {
+                            margin: 0;
+                            font-family: 'Outfit', sans-serif;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            min-height: 100vh;
+                            background-color: #f8fafc;
+                            color: #0f172a;
+                            padding: 2rem;
+                        }
+                        .error-card {
+                            max-width: 480px;
+                            background: white;
+                            padding: 3rem 2rem;
+                            border-radius: 24px;
+                            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+                            border: 1px solid #e2e8f0;
+                            text-align: center;
+                        }
+                        .error-icon {
+                            font-size: 3rem;
+                            margin-bottom: 1.5rem;
+                        }
+                        h1 {
+                            font-size: 1.5rem;
+                            color: #e11d48;
+                            margin: 0 0 1rem 0;
+                            font-weight: 600;
+                        }
+                        p {
+                            color: #64748b;
+                            font-size: 1.1rem;
+                            line-height: 1.6;
+                            margin: 0;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="error-card">
+                        <div class="error-icon">⚠️</div>
+                        <h1>Navegador no compatible</h1>
+                        <p>Lo siento, este script solo funciona con google-chrome-stable</p>
+                    </div>
+                </body>
+            `;
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent: #4f46e5;
+            --accent-light: #e0e7ff;
+            --accent-hover: #4338ca;
+            --border: #e2e8f0;
+            --shadow: 0 10px 30px -10px rgba(79, 70, 229, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 3rem;
+            border-radius: 28px;
+            box-shadow: var(--shadow), 0 20px 40px -15px rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .drop-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #fafafa;
+            margin-bottom: 2rem;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            transform: scale(1.02);
+        }
+
+        .drop-zone-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .drop-zone-text {
+            font-weight: 500;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+            color: var(--text-main);
+        }
+
+        .drop-zone-subtext {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .file-info {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            background: #f1f5f9;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80%;
+        }
+
+        .btn-remove {
+            color: #ef4444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn-remove:hover {
+            opacity: 0.8;
+        }
+
+        .queue-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8fafc;
+            padding: 0.85rem 1.25rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .queue-item.processing {
+            background: var(--accent-light);
+            border-color: var(--accent);
+        }
+
+        .queue-item.completed {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+        }
+
+        .queue-item.error {
+            background: #fef2f2;
+            border-color: #fca5a5;
+        }
+
+        .queue-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            max-width: 75%;
+        }
+
+        .queue-item-name {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .queue-item-status {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .queue-item-status.processing {
+            color: var(--accent);
+        }
+
+        .queue-item-status.completed {
+            color: #10b981;
+        }
+
+        .queue-item-status.error {
+            color: #ef4444;
+        }
+
+        .status-container {
+            display: none;
+            margin-bottom: 2rem;
+            background: #fafafa;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 16px;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            border-radius: 99px;
+            transition: width 0.2s ease;
+        }
+
+        .status-detail {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .result-container {
+            display: none;
+            margin-top: 2rem;
+            border-top: 1px solid var(--border);
+            padding-top: 2rem;
+        }
+
+        .result-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-textarea {
+            width: 100%;
+            height: 150px;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #faf5ff;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn:disabled {
+            background: #cbd5e1;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Transcriptor de Voz</h1>
+            <p>Sube tu archivo de audio o video (MP4, WAV, M4A, etc.) para transcribirlo localmente de español a español.
+            </p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+            <label for="modelSelect" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-main);">Modelo de IA:</label>
+            <select id="modelSelect" style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--border); background: white; font-size: 0.95rem; outline: none; cursor: pointer;">
+                <option value="Xenova/whisper-tiny" selected>Whisper Tiny (~75 MB) - Rápido, menor precisión</option>
+                <option value="Xenova/whisper-base">Whisper Base (~140 MB) - Recomendado, buena precisión</option>
+                <option value="Xenova/whisper-small">Whisper Small (~460 MB) - Excelente precisión (requiere PC potente)</option>
+            </select>
+        </div>
+
+        <input type="file" id="fileInput" accept="audio/*,video/*,.mp4,.m4a,.wav" multiple style="display: none;">
+
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">🎙️</div>
+            <div class="drop-zone-text">Arrastra tus archivos aquí</div>
+            <div class="drop-zone-subtext">o haz clic para explorar (uno o varios archivos MP4, WAV, M4A, etc.)</div>
+        </div>
+
+        <div id="queueContainer" style="display: none; margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Cola de Archivos</h3>
+                <button class="btn-remove" id="btnClearQueue" style="font-size: 0.95rem;">Limpiar todo</button>
+            </div>
+            <div id="queueList" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 250px; overflow-y: auto; padding-right: 0.25rem;">
+                <!-- Elementos de la cola se renderizarán aquí -->
+            </div>
+        </div>
+
+        <div class="status-container" id="statusContainer">
+            <div class="status-header">
+                <span id="statusLabel">Cargando modelo...</span>
+                <span id="statusPercent">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+            <div class="status-detail" id="statusDetail">Descargando dependencias de IA directamente en tu navegador.
+                Esto puede tardar un momento la primera vez.</div>
+        </div>
+
+        <button class="btn" id="btnTranscribe" disabled>
+            <span>Iniciar Transcripción</span>
+        </button>
+
+        <div class="result-container" id="resultContainer">
+            <div class="result-title">
+                <span>Resultado (Texto en Español)</span>
+                <span style="font-weight: 500; font-size: 0.85rem; color: #10b981;">✓ Completado</span>
+            </div>
+            <textarea class="result-textarea" id="resultTextarea" readonly></textarea>
+            <button class="btn" id="btnDownload"
+                style="background: #10b981; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
+                <span>Descargar audio.spanish.txt</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const queueContainer = document.getElementById('queueContainer');
+        const queueList = document.getElementById('queueList');
+        const btnClearQueue = document.getElementById('btnClearQueue');
+        const btnTranscribe = document.getElementById('btnTranscribe');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusLabel = document.getElementById('statusLabel');
+        const statusPercent = document.getElementById('statusPercent');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const statusDetail = document.getElementById('statusDetail');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultTextarea = document.getElementById('resultTextarea');
+        const btnDownload = document.getElementById('btnDownload');
+
+        let fileQueue = [];
+        let currentFileIndex = -1;
+        let isProcessing = false;
+        let nextId = 0;
+        let worker = null;
+        let modelLoadingFinished = false;
+
+        // Inicializar Worker Embebido en un Blob para evitar problemas de CORS locales
+        const workerCode = `
+            import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+            
+            env.allowLocalModels = false;
+            
+            let transcriber = null;
+            let currentModel = null;
+            
+            async function getTranscriber(modelName, progressCallback) {
+                if (!transcriber || currentModel !== modelName) {
+                    currentModel = modelName;
+                    transcriber = await pipeline('automatic-speech-recognition', modelName, {
+                        progress_callback: progressCallback
+                    });
+                }
+                return transcriber;
+            }
+            
+            self.onmessage = async (e) => {
+                const { type, audio, model } = e.data;
+                
+                if (type === 'load') {
+                    try {
+                        await getTranscriber(model, (data) => {
+                            if (data.status === 'progress') {
+                                self.postMessage({ 
+                                    type: 'progress', 
+                                    file: data.file, 
+                                    progress: data.progress, 
+                                    loaded: data.loaded, 
+                                    total: data.total 
+                                });
+                            } else if (data.status === 'ready') {
+                                self.postMessage({ type: 'file_ready', file: data.file });
+                            }
+                        });
+                        self.postMessage({ type: 'ready' });
+                    } catch (err) {
+                        console.error('Error al cargar transcriptor:', err);
+                        self.postMessage({ type: 'error', error: err.message });
+                    }
+                } else if (type === 'transcribe') {
+                    try {
+                        const pipe = await getTranscriber(model);
+                        self.postMessage({ type: 'status', status: 'Transcribiendo audio...' });
+                        
+                        const output = await pipe(audio, {
+                            language: 'spanish',
+                            task: 'transcribe',
+                            chunk_length_s: 30,
+                            stride_length_s: 5,
+                        });
+                        
+                        self.postMessage({ type: 'result', text: output.text });
+                    } catch (err) {
+                        console.error('Error al transcribir:', err);
+                        self.postMessage({ type: 'error', error: err.message });
+                    }
+                }
+            };
+        `;
+
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+
+        const modelSelect = document.getElementById('modelSelect');
+
+        function initWorker(modelName) {
+            // Si ya hay un worker cargando o listo para este modelo, no hacer nada
+            if (worker && worker.modelName === modelName) return;
+
+            if (worker) {
+                worker.terminate();
+            }
+
+            modelLoadingFinished = false;
+            worker = new Worker(workerUrl, { type: 'module' });
+            worker.modelName = modelName;
+
+            worker.onmessage = (e) => {
+                const message = e.data;
+
+                if (message.type === 'progress') {
+                    statusContainer.style.display = 'block';
+                    const prog = Math.round(message.progress || 0);
+                    statusPercent.textContent = `${prog}%`;
+                    progressBarFill.style.width = `${prog}%`;
+                    statusLabel.textContent = `Descargando modelo...`;
+                    statusDetail.textContent = `Descargando archivo: ${message.file}`;
+                } else if (message.type === 'file_ready') {
+                    statusDetail.textContent = `Archivo cargado correctamente: ${message.file}`;
+                } else if (message.type === 'ready') {
+                    modelLoadingFinished = true;
+                    statusLabel.textContent = `Modelo listo`;
+                    statusPercent.textContent = '100%';
+                    progressBarFill.style.width = '100%';
+                    statusDetail.textContent = `El modelo de IA ${modelName.split('/').pop()} está completamente cargado en la memoria caché local.`;
+                    renderQueue();
+                } else if (message.type === 'status') {
+                    statusLabel.textContent = message.status;
+                    statusPercent.textContent = 'Procesando...';
+                    progressBarFill.style.width = '50%';
+                    statusDetail.textContent = 'Ejecutando transcripción matemática de las ondas sonoras...';
+                } else if (message.type === 'result') {
+                    statusLabel.textContent = 'Transcripción finalizada';
+                    statusPercent.textContent = '100%';
+                    progressBarFill.style.width = '100%';
+                    statusDetail.textContent = 'Operación completada exitosamente.';
+
+                    // Guardar resultado y actualizar item
+                    const item = fileQueue[currentFileIndex];
+                    if (item) {
+                        item.status = 'completed';
+                        item.text = message.text.trim();
+                        renderQueue();
+
+                        // Mostrar resultados en el textarea
+                        resultTextarea.value = item.text;
+                        resultContainer.style.display = 'block';
+
+                        // Configurar botón de descarga
+                        const baseName = item.file.name.substring(0, item.file.name.lastIndexOf('.')) || item.file.name;
+                        btnDownload.innerHTML = `<span>Descargar ${baseName}.txt</span>`;
+                        btnDownload.onclick = () => {
+                            downloadTxtFile(item.text, `${baseName}.txt`);
+                        };
+
+                        // Descargar automáticamente el archivo
+                        downloadTxtFile(item.text, `${baseName}.txt`);
+                    }
+
+                    // Pasar al siguiente archivo automáticamente
+                    setTimeout(() => {
+                        processNextInQueue();
+                    }, 1000);
+
+                } else if (message.type === 'error') {
+                    console.error('Error reportado por el Web Worker:', message.error);
+                    const item = fileQueue[currentFileIndex];
+                    if (item) {
+                        item.status = 'error';
+                        renderQueue();
+                    }
+
+                    statusLabel.textContent = 'Error';
+                    statusPercent.textContent = 'Falló';
+                    progressBarFill.style.backgroundColor = '#ef4444';
+                    statusDetail.textContent = `Ocurrió un error: ${message.error}`;
+                    
+                    // Pasar al siguiente de todos modos
+                    setTimeout(() => {
+                        processNextInQueue();
+                    }, 1500);
+                }
+            };
+
+            // Iniciar carga del modelo
+            worker.postMessage({ type: 'load', model: modelName });
+        }
+
+        // Manejo de cambio de modelo
+        modelSelect.onchange = () => {
+            if (fileQueue.length > 0) {
+                modelLoadingFinished = false;
+                btnTranscribe.disabled = true;
+                statusContainer.style.display = 'block';
+                statusLabel.textContent = 'Cambiando modelo...';
+                statusPercent.textContent = '0%';
+                progressBarFill.style.width = '0%';
+                statusDetail.textContent = 'Preparando el nuevo modelo para descarga.';
+                initWorker(modelSelect.value);
+            }
+        };
+
+        // Manejo de Selección de Archivos
+        dropZone.onclick = () => fileInput.click();
+
+        dropZone.ondragover = (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        };
+
+        dropZone.ondragleave = () => {
+            dropZone.classList.remove('dragover');
+        };
+
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
+            }
+        };
+
+        fileInput.onchange = (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        };
+
+        function handleFiles(files) {
+            for (const file of files) {
+                fileQueue.push({
+                    id: nextId++,
+                    file: file,
+                    status: 'pending',
+                    text: ''
+                });
+            }
+            renderQueue();
+            
+            // Inicializar el worker al cargar el primer archivo para ahorrar ancho de banda
+            initWorker(modelSelect.value);
+        }
+
+        function renderQueue() {
+            if (fileQueue.length === 0) {
+                queueContainer.style.display = 'none';
+                btnTranscribe.disabled = true;
+                return;
+            }
+
+            queueContainer.style.display = 'block';
+            queueList.innerHTML = '';
+
+            fileQueue.forEach((item) => {
+                const div = document.createElement('div');
+                div.className = `queue-item ${item.status}`;
+                div.id = `queue-item-${item.id}`;
+
+                let statusText = 'Pendiente';
+                if (item.status === 'processing') statusText = 'Procesando...';
+                else if (item.status === 'completed') statusText = 'Completado ✓';
+                else if (item.status === 'error') statusText = 'Error ⚠️';
+
+                div.innerHTML = `
+                    <div class="queue-item-info">
+                        <span class="queue-item-name" title="${item.file.name}">${item.file.name}</span>
+                        <span class="queue-item-status ${item.status}">${statusText}</span>
+                    </div>
+                    <button class="btn-remove" onclick="removeQueueItem(${item.id})">Quitar</button>
+                `;
+                queueList.appendChild(div);
+            });
+
+            // Actualizar botones
+            if (!isProcessing) {
+                const hasPending = fileQueue.some(item => item.status === 'pending');
+                btnTranscribe.disabled = !hasPending || !modelLoadingFinished;
+            }
+        }
+
+        window.removeQueueItem = (id) => {
+            const index = fileQueue.findIndex(item => item.id === id);
+            if (index === -1) return;
+
+            const item = fileQueue[index];
+            if (item.status === 'processing') {
+                alert('No se puede quitar el archivo que está siendo procesado en este momento.');
+                return;
+            }
+
+            fileQueue.splice(index, 1);
+            renderQueue();
+        };
+
+        btnClearQueue.onclick = () => {
+            if (isProcessing) {
+                if (!confirm('Se está realizando una transcripción. ¿Deseas detener todo y limpiar la cola?')) {
+                    return;
+                }
+            }
+            if (isProcessing && worker) {
+                worker.terminate();
+                worker = null;
+                modelLoadingFinished = false;
+            }
+            fileQueue = [];
+            isProcessing = false;
+            currentFileIndex = -1;
+            renderQueue();
+            statusContainer.style.display = 'none';
+            resultContainer.style.display = 'none';
+            btnTranscribe.textContent = 'Iniciar Transcripción';
+            btnTranscribe.disabled = true;
+        };
+
+        // Procesamiento del Audio y Transcripción
+        btnTranscribe.onclick = async () => {
+            if (isProcessing || fileQueue.length === 0 || !worker) return;
+
+            isProcessing = true;
+            btnTranscribe.disabled = true;
+            btnTranscribe.textContent = 'Procesando cola...';
+            resultContainer.style.display = 'none';
+
+            await processNextInQueue();
+        };
+
+        async function processNextInQueue() {
+            const nextIndex = fileQueue.findIndex(item => item.status === 'pending');
+            if (nextIndex === -1) {
+                isProcessing = false;
+                btnTranscribe.textContent = 'Iniciar Transcripción';
+                renderQueue();
+                
+                statusLabel.textContent = 'Cola finalizada';
+                statusPercent.textContent = '100%';
+                progressBarFill.style.width = '100%';
+                statusDetail.textContent = 'Se han procesado todos los archivos de la cola.';
+                return;
+            }
+
+            currentFileIndex = nextIndex;
+            const item = fileQueue[currentFileIndex];
+            item.status = 'processing';
+            renderQueue();
+
+            try {
+                statusContainer.style.display = 'block';
+                statusLabel.textContent = `[${nextIndex + 1}/${fileQueue.length}] Decodificando audio...`;
+                statusPercent.textContent = 'Procesando...';
+                statusDetail.textContent = `Decodificando y resampleando: ${item.file.name}`;
+
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const arrayBuffer = await item.file.arrayBuffer();
+                const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                const float32Array = audioBuffer.getChannelData(0);
+
+                // Cerrar AudioContext para ahorrar recursos
+                await audioCtx.close();
+
+                // Enviar audio al Web Worker para transcribir
+                worker.postMessage({
+                    type: 'transcribe',
+                    audio: float32Array,
+                    model: modelSelect.value
+                });
+
+            } catch (err) {
+                console.error('Error decodificando o procesando:', err);
+                item.status = 'error';
+                renderQueue();
+
+                statusLabel.textContent = 'Error';
+                statusPercent.textContent = 'Falló';
+                statusDetail.textContent = `Error decodificando ${item.file.name}: ${err.message}`;
+
+                // Pasar al siguiente archivo automáticamente
+                setTimeout(() => {
+                    processNextInQueue();
+                }, 1500);
+            }
+        }
+
+        // Descarga de Archivos
+        function downloadTxtFile(text, filename = 'audio.spanish.txt') {
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        btnDownload.onclick = () => {
+            const item = fileQueue[currentFileIndex];
+            if (item && item.text) {
+                const baseName = item.file.name.substring(0, item.file.name.lastIndexOf('.')) || item.file.name;
+                downloadTxtFile(item.text, `${baseName}.txt`);
+            } else {
+                downloadTxtFile(resultTextarea.value);
+            }
+        };
+    </script>
+</body>
+
+</html>
