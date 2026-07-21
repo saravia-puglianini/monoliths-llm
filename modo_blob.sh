@@ -40,6 +40,10 @@ else
   echo "Fallo la instalación. La versión del kernel instalada ($INSTALLED_VERSION) no coincide con $TARGET_VERSION."
   exit 1
 fi
+# Configurar/Restablecer driver de audio SOF para modo blob (kernel 6.x)
+echo "Configurando driver de audio SOF para modo blob..."
+echo -e "options snd-intel-dspcfg dsp_driver=3\ninstall snd_sof_intel_hda_common modprobe snd_hda_codec_alc269 && modprobe --ignore-install snd_sof_intel_hda_common" | doas tee /etc/modprobe.d/alsa-legacy.conf > /dev/null
+
 # Additional checks: ensure kernel and initramfs images exist
 KERNEL_PATH="/boot/vmlinuz-linux-libre-lts"
 INITRAMFS_PATH="/boot/initramfs-linux-libre-lts.img"
@@ -54,3 +58,4 @@ fi
 read -p "Precione Return para reiniciar..." _
 # Uncomment the next line to actually reboot
 doas reboot
+

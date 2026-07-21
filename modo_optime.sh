@@ -41,6 +41,22 @@ else
   exit 1
 fi
 
+# Configurar driver de audio genérico para modo optime (kernel 5.x)
+echo "Configurando driver de audio genérico para modo optime..."
+echo "options snd-intel-dspcfg dsp_driver=1" | doas tee /etc/modprobe.d/alsa-legacy.conf > /dev/null
+
+# Additional checks: ensure kernel and initramfs images exist
+KERNEL_PATH="/boot/vmlinuz-linux-libre-lts"
+INITRAMFS_PATH="/boot/initramfs-linux-libre-lts.img"
+FALLBACK_INITRAMFS_PATH="/boot/initramfs-linux-libre-lts-fallback.img"
+if [[ -f "$KERNEL_PATH" && ( -f "$INITRAMFS_PATH" || -f "$FALLBACK_INITRAMFS_PATH" ) ]]; then
+  echo "Instalación completada. Archivos de arranque verificados."
+else
+  echo "Fallo la instalación. Verifique los archivos en $MODE_DIR."
+  exit 1
+fi
+
 read -p "Precione Return para reiniciar..." _
 # Uncomment the next line to actually reboot
 doas reboot
+
