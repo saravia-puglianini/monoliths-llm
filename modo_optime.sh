@@ -7,10 +7,15 @@ MODE_DIR="$HOME/Mode"
 # Get current kernel version (strip possible extra suffixes)
 CURRENT_VERSION=$(uname -r | cut -d- -f1)
 
+# Configurar driver de audio genérico para modo optime (kernel 5.x)
+echo "Configurando driver de audio genérico para modo optime..."
+echo "options snd-intel-dspcfg dsp_driver=1" | doas tee /etc/modprobe.d/alsa-legacy.conf > /dev/null
+
 if [[ "$CURRENT_VERSION" == "$TARGET_VERSION" ]]; then
-  echo "Ya estamos en modo optime (kernel $TARGET_VERSION)."
+  echo "Ya estamos en modo optime (kernel $TARGET_VERSION). Configuración de audio aplicada."
   exit 0
 fi
+
 
 if [[ ! -d "$MODE_DIR" ]]; then
   echo "Error: directorio $MODE_DIR no existe. No se puede instalar kernel $TARGET_VERSION."
@@ -41,10 +46,6 @@ else
   exit 1
 fi
 
-# Configurar driver de audio genérico para modo optime (kernel 5.x)
-echo "Configurando driver de audio genérico para modo optime..."
-echo "options snd-intel-dspcfg dsp_driver=1" | doas tee /etc/modprobe.d/alsa-legacy.conf > /dev/null
-
 # Additional checks: ensure kernel and initramfs images exist
 KERNEL_PATH="/boot/vmlinuz-linux-libre-lts"
 INITRAMFS_PATH="/boot/initramfs-linux-libre-lts.img"
@@ -59,4 +60,3 @@ fi
 read -p "Precione Return para reiniciar..." _
 # Uncomment the next line to actually reboot
 doas reboot
-
