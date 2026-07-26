@@ -2,6 +2,7 @@
 
 # Script to switch to Linux kernel 6.18 (modo blob)
 TARGET_VERSION="6.18"
+TARGET_VERSION="7.1"
 MODE_DIR="$HOME/Mode"
 
 # Get current kernel version (strip possible extra suffixes)
@@ -40,7 +41,7 @@ else
   echo "Fallo la instalación. La versión del kernel instalada ($INSTALLED_VERSION) no coincide con $TARGET_VERSION."
   exit 1
 fi
-# Configurar/Restablecer driver de audio SOF para modo blob (kernel 6.x)
+# Configurar/Restablecer driver de audio SOF para modo blob (kernel 7.x)
 echo "Configurando driver de audio SOF para modo blob..."
 echo -e "options snd-intel-dspcfg dsp_driver=3\ninstall snd_sof_intel_hda_common modprobe snd_hda_codec_alc269 && modprobe --ignore-install snd_sof_intel_hda_common" | doas tee /etc/modprobe.d/alsa-legacy.conf > /dev/null
 

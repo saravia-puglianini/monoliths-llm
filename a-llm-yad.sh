@@ -7,6 +7,9 @@
 
 SOURCE_SCRIPT="$HOME/monoliths-hm/my.shell.sh"
 
+export XCURSOR_SIZE=128
+export XCURSOR_THEME=Premium
+
 # Verificar existencia de dependencias
 if ! command -v yad >/dev/null 2>&1; then
     printf "Error: 'yad' no está instalado en el sistema.\n" >&2
