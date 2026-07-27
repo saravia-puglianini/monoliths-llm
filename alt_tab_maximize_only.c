@@ -35,8 +35,8 @@ unsigned long get_color(const char *name) {
 }
 
 void init_colors() {
-    color_bg = get_color("#16161a");
-    color_fg = get_color("#ecefe4");
+    color_bg = get_color("#ecefe4");
+    color_fg = get_color("#16161a");
     color_sel_bg = get_color("#7209b7");
     color_sel_fg = get_color("#ffffff");
     color_border = get_color("#3f37c9");
