@@ -1,8 +1,7 @@
 #!/bin/bash
-# Script to run reminders every 5 seconds for 1 minute
+# Watchdog script to ensure reminders are running
 # Monday to Friday is handled in Crontab directly.
 
-# Paths to the reminder scripts
 DIR="/home/user/monoliths-llm"
 JIRA_REMINDER="$DIR/jira-reminder.sh"
 OPS360_REMINDER="$DIR/ops360-reminder.sh"
@@ -10,13 +9,24 @@ OPS360_REMINDER="$DIR/ops360-reminder.sh"
 # Ensure they are executable
 chmod +x "$JIRA_REMINDER" "$OPS360_REMINDER"
 
-# Loop for 1 minute (12 * 5 seconds = 60 seconds)
-for i in {1..12}; do
-    # Run in background so they don't block the next 5-second tick
-    # The lockfiles inside the scripts will prevent multiple dialogs
+# Check if Jira reminder is running
+JIRA_LOCK="/tmp/jira_reminder.pid"
+if [ -f "$JIRA_LOCK" ]; then
+    PID=$(cat "$JIRA_LOCK")
+    if ! ps -p "$PID" >/dev/null 2>&1; then
+        "$JIRA_REMINDER" &
+    fi
+else
     "$JIRA_REMINDER" &
+fi
+
+# Check if Ops360 reminder is running
+OPS_LOCK="/tmp/ops360_reminder.pid"
+if [ -f "$OPS_LOCK" ]; then
+    PID=$(cat "$OPS_LOCK")
+    if ! ps -p "$PID" >/dev/null 2>&1; then
+        "$OPS360_REMINDER" &
+    fi
+else
     "$OPS360_REMINDER" &
-    
-    # Tick every 5 seconds
-    sleep 5
-done
+fi
