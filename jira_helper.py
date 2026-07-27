@@ -62,7 +62,7 @@ def make_request(config, path, method="GET", payload=None):
 
 def get_issues():
     config = load_config()
-    jql = 'assignee = currentUser() AND (statusCategory != Done OR status = "En medición") AND issuetype in (Task, Tarea, "Sub-task", Subtarea) ORDER BY updated DESC'
+    jql = 'assignee = currentUser() AND (statusCategory != Done OR status = "En medición") AND issuetype in (Task, Tarea, "Sub-task", Subtarea, Correctivos, "Error en producción", Incidencias) ORDER BY updated DESC'
     payload = {
         "jql": jql,
         "maxResults": 50,
