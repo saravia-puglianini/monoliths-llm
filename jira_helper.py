@@ -384,9 +384,129 @@ def open_report(target_date=None):
         for l in unique_links:
             subprocess.Popen(["xdg-open", l], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+def sync_worklogs(target_date):
+    config = load_config()
+    
+    # 1. Get myself to obtain accountId
+    try:
+        myself = make_request(config, "/rest/api/3/myself")
+        account_id = myself.get("accountId")
+    except Exception as e:
+        print(f"Error checking user profile: {e}", file=sys.stderr)
+        return
+        
+    if not account_id:
+        print("ERROR: Could not retrieve accountId", file=sys.stderr)
+        return
+        
+    # 2. Search for issues with worklogs by current user on target_date
+    jql = f'worklogAuthor = currentUser() AND worklogDate = "{target_date}"'
+    payload = {
+        "jql": jql,
+        "maxResults": 100,
+        "fields": ["key"]
+    }
+    
+    try:
+        res = make_request(config, "/rest/api/3/search/jql", method="POST", payload=payload)
+    except Exception as e:
+        print(f"Error searching issues: {e}", file=sys.stderr)
+        return
+        
+    issues = res.get("issues", [])
+    if not issues:
+        return
+        
+    csv_path = os.path.expanduser("~/.justificar/justificar.csv")
+    existing_lines = []
+    if os.path.exists(csv_path):
+        with open(csv_path, "r") as f:
+            existing_lines = [line.strip() for line in f if line.strip()]
+            
+    # Parse existing CSV to know which hours are already used for the target_date
+    used_hours = set()
+    for line in existing_lines:
+        parts = line.split(";")
+        if len(parts) >= 2 and parts[0] == target_date:
+            used_hours.add(parts[1])
+            
+    # Extract existing worklog IDs from CSV to avoid duplicates
+    import re
+    existing_worklog_ids = set()
+    for line in existing_lines:
+        parts = line.split(";")
+        if len(parts) >= 5:
+            url = parts[4]
+            match = re.search(r"focusedWorklogId=(\d+)", url)
+            if match:
+                existing_worklog_ids.add(match.group(1))
+
+    # Standard billing hours
+    horas_laborales_strs = ["9am", "10am", "11am", "12pm", "2pm", "3pm", "4pm", "5pm"]
+    
+    new_entries = []
+    
+    # 3. Fetch all worklogs for these issues
+    for issue in issues:
+        issue_key = issue["key"]
+        path = f"/rest/api/2/issue/{issue_key}/worklog"
+        try:
+            wl_res = make_request(config, path, method="GET")
+        except Exception as e:
+            print(f"Error getting worklogs for {issue_key}: {e}", file=sys.stderr)
+            continue
+            
+        worklogs = wl_res.get("worklogs", [])
+        for wl in worklogs:
+            wl_id = wl.get("id")
+            wl_author = wl.get("author", {})
+            wl_author_id = wl_author.get("accountId")
+            started = wl.get("started", "")
+            
+            # Check if author matches current user, and starts on the target date
+            if wl_author_id == account_id and started.startswith(target_date):
+                if wl_id in existing_worklog_ids:
+                    continue
+                    
+                time_spent_seconds = wl.get("timeSpentSeconds", 0)
+                hours_count = max(1, int(round(time_spent_seconds / 3600.0)))
+                comment = wl.get("comment", "")
+                
+                # Construct worklog URL
+                domain = config["JIRA_DOMAIN"].rstrip("/")
+                wl_url = f"{domain}/browse/{issue_key}?focusedWorklogId={wl_id}&page=com.atlassian.jira.plugin.system.issuetabpanels:worklog-tabpanel#worklog-{wl_id}"
+                
+                for _ in range(hours_count):
+                    assigned_hour = None
+                    for h_str in horas_laborales_strs:
+                        if h_str not in used_hours:
+                            assigned_hour = h_str
+                            used_hours.add(h_str)
+                            break
+                            
+                    if not assigned_hour:
+                        # Fallback for extra/overtime hours
+                        idx = len(used_hours) + 9
+                        if idx < 12:
+                            h_fallback = f"{idx}am"
+                        elif idx == 12:
+                            h_fallback = "12pm"
+                        else:
+                            h_fallback = f"{idx-12}pm"
+                        assigned_hour = h_fallback
+                        used_hours.add(h_fallback)
+                        
+                    new_entries.append((target_date, assigned_hour, issue_key, comment, wl_url))
+                    
+    if new_entries:
+        with open(csv_path, "a") as f:
+            for entry in new_entries:
+                f.write(";".join(entry) + "\n")
+        print(f"Synced {len(new_entries)} worklog hour(s) from Jira to local CSV.")
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: jira_helper.py [get-issues | log-work | transition | get-parent | open-report]")
+        print("Uso: jira_helper.py [get-issues | log-work | transition | get-parent | open-report | sync]")
         sys.exit(1)
         
     cmd = sys.argv[1]
@@ -415,6 +535,11 @@ if __name__ == "__main__":
     elif cmd == "open-report":
         target_date = sys.argv[2] if len(sys.argv) > 2 else None
         open_report(target_date)
+    elif cmd == "sync":
+        if len(sys.argv) < 3:
+            print("Uso: jira_helper.py sync <date>")
+            sys.exit(1)
+        sync_worklogs(sys.argv[2])
     else:
         print(f"Comando desconocido: {cmd}")
         sys.exit(1)

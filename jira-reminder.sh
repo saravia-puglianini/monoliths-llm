@@ -122,6 +122,11 @@ while true; do
         sleep 5; continue
     fi
 
+    # Sincronizar worklogs de Jira a CSV local para soportar múltiples dispositivos
+    if [ -f "$JIRA_CONFIG" ]; then
+        python3 "$DIR/jira_helper.py" sync "$CURRENT_DATE" >/dev/null 2>&1
+    fi
+
     HORAS_ADEUDADAS=()
     for h in "${HORAS_LABORALES[@]}"; do
         if [ "$h" -le "$CURRENT_HOUR" ]; then
