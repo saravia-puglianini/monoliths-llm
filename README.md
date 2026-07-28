@@ -13,6 +13,7 @@ El sistema está compuesto por los siguientes scripts:
 1. **`jira-reminder.sh`**: Script en Bash que monitorea las horas laborales pendientes de registro en el día actual (9:00 AM a 6:00 PM). Compara las horas contra un archivo local de registros y solicita justificar las horas faltantes mediante una interfaz gráfica. Además:
    - Permite transicionar de forma automática el estado de las tareas de Jira a *"En progreso"* e *"Hecho/Done"*.
    - Genera respaldos automáticos de los logs locales.
+   - Sincroniza automáticamente los registros de Jira al inicio de cada iteración para soportar múltiples computadoras.
 2. **`ops360-reminder.sh`**: Script en Bash enfocado en los 4 toques obligatorios de la jornada laboral en Entelgy:
    - **Entrada** (08:55 AM)
    - **Inicio Almuerzo** (12:55 PM)
@@ -20,7 +21,7 @@ El sistema está compuesto por los siguientes scripts:
    - **Salida** (17:55 PM)
 3. **`run-reminders.sh`**: Un "driver" o despachador diseñado específicamente para entornos de **Crontab**. Debido a que cron solo permite programar tareas con una resolución mínima de 1 minuto, este script ejecuta un bucle de 1 minuto con intervalos de `sleep 5` para lanzar los recordatorios de Jira y Ops360 cada 5 segundos.
 4. **`ver-horas.sh`**: Lanzado por el recordatorio de Jira para visualizar de forma amigable (mediante tablas interactivas) las últimas 50 entradas guardadas en el log local y generar reportes.
-5. **`jira_helper.py`**: Script en Python que interactúa con la API de Atlassian Jira para listar tickets asignados, realizar transiciones de estado de tareas e historias padres, y gestionar la subida de horas.
+5. **`jira_helper.py`**: Script en Python que interactúa con la API de Atlassian Jira para listar tickets asignados, realizar transiciones de estado de tareas e historias padres, gestionar la subida de horas, y realizar la sincronización de logs entre múltiples dispositivos.
 
 ---
 
@@ -43,11 +44,11 @@ Para instalar y ejecutar este sistema en otra máquina, debes contar con las sig
 Los datos persistentes y configuraciones se almacenan a nivel de usuario en las siguientes ubicaciones:
 
 * **`~/.justificar/jira_config`**: Archivo de credenciales de Jira. Si no existe, el script de recordatorio solicitará crearlo interactivamente la primera vez. Estructura interna:
-  ```ini
-  JIRA_EMAIL="tu-correo@dominio.com"
-  JIRA_API_TOKEN="token_generado_en_atlassian"
-  JIRA_DOMAIN="https://tu-organizacion.atlassian.net"
-  ```
+   ```ini
+   JIRA_EMAIL="tu-correo@dominio.com"
+   JIRA_API_TOKEN="token_generado_en_atlassian"
+   JIRA_DOMAIN="https://tu-organizacion.atlassian.net"
+   ```
 * **`~/.justificar/justificar.csv`**: Base de datos local plana donde se registran las horas guardadas.
   - Formato: `YYYY-MM-DD;Hora (ej: 9am o 2pm);Proyecto/Ticket;Descripción;[Link-opcional]`
 * **`~/.justificar/backups/`**: Directorio donde se guardan copias de seguridad de `justificar.csv` cada vez que se arranca el script (se auto-limpia manteniendo únicamente los últimos 10 respaldos).
@@ -57,13 +58,49 @@ Los datos persistentes y configuraciones se almacenan a nivel de usuario en las 
 
 ---
 
-## 🚀 Configuración en otra máquina
+## 🔄 Funcionamiento de Sincronización Multi-dispositivo
 
-Existen dos formas principales de automatizar y mantener vivos estos scripts en un nuevo equipo GNU/Linux:
+Para permitir que el sistema funcione en dos o más computadoras a la vez:
+1. Cada vez que `jira-reminder.sh` realiza un ciclo de verificación, ejecuta el comando `python3 jira_helper.py sync <FECHA>`.
+2. Este comando se conecta a la API de Jira y busca todas las horas registradas por el usuario logueado para ese día específico.
+3. Si encuentra registros en Jira que no están en el archivo local `justificar.csv`, los descarga y los inserta localmente asociándolos automáticamente a las horas de trabajo correspondientes de la mañana/tarde.
+4. De esta manera, el script en el segundo dispositivo sabe exactamente qué horas ya registraste en el primero y te preguntará únicamente por el saldo restante sin duplicar información.
 
-### Opción A: Mediante Crontab (Recomendado para equipos sin systemd o portabilidad simple)
+---
 
-Dado que los scripts requieren comunicarse con el servidor de pantallas gráfico (X11 o Wayland) para desplegar las ventanas de `yad`, es mandatorio proveer las variables de entorno `DISPLAY` y `XAUTHORITY` dentro del cron.
+## 🚀 Guía de Instalación Paso a Paso (Para Sistemas IA y Desarrolladores)
+
+Sigue estos pasos detallados para instalar el sistema en una máquina limpia:
+
+### Paso 1: Clonar y Ubicar los Archivos
+Coloca los archivos de este repositorio en el directorio deseado (se asume `/home/user/monoliths-llm/` para los ejemplos de configuración, ajusta si es necesario).
+
+### Paso 2: Otorgar Permisos de Ejecución
+Asegúrate de dar permisos de ejecución a todos los scripts del sistema:
+```bash
+chmod +x /home/user/monoliths-llm/*.sh
+chmod +x /home/user/monoliths-llm/*.py
+```
+
+### Paso 3: Configuración de Credenciales de Jira
+Puedes dejar que el script te pregunte interactivamente al iniciar por primera vez, o puedes crear la configuración manualmente:
+```bash
+mkdir -p ~/.justificar
+cat <<EOF > ~/.justificar/jira_config
+JIRA_EMAIL="tu_email_de_jira@dominio.com"
+JIRA_API_TOKEN="tu_api_token_de_atlassian_jira"
+JIRA_DOMAIN="https://tu-organizacion.atlassian.net"
+EOF
+chmod 600 ~/.justificar/jira_config
+```
+
+### Paso 4: Automatizar la Ejecución
+
+Existen dos formas principales de automatizar y mantener vivos estos scripts en segundo plano:
+
+#### Opción A: Mediante Crontab (Portabilidad simple)
+
+Dado que los scripts requieren comunicarse con el servidor de pantallas gráfico (X11 o Wayland) para desplegar las ventanas de `yad`, es obligatorio proveer las variables de entorno `DISPLAY` y `XAUTHORITY` dentro del cron.
 
 1. Abre la edición de tu crontab de usuario:
    ```bash
@@ -76,15 +113,12 @@ Dado que los scripts requieren comunicarse con el servidor de pantallas gráfico
    > ⚠️ **IMPORTANTE:**
    > - Reemplaza `/home/user/` por la ruta absoluta de tu directorio Home.
    > - Asegúrate de que `DISPLAY` (comúnmente `:0`) y `XAUTHORITY` apunten a los valores correctos de tu sesión activa. Puedes validar tus valores actuales ejecutando `echo $DISPLAY` y `echo $XAUTHORITY` en tu terminal gráfica.
-   - El script `run-reminders.sh` se encargará de levantar en segundo plano ambos recordatorios (`jira` y `ops360`) cada 5 segundos. Las colisiones están prevenidas internamente a través de lockfiles PID (`/tmp/jira_reminder.pid` y `/tmp/ops360_reminder.pid`).
 
 ---
 
-### Opción B: Mediante Systemd User Units (Configuración actual de esta máquina)
+#### Opción B: Mediante Systemd User Units (Recomendado para persistencia y reinicios automáticos)
 
 Si la máquina destino utiliza `systemd`, se puede configurar como servicios de usuario (`--user`). Esta opción mantiene los scripts corriendo constantemente como "daemons" en segundo plano, controlando de manera nativa los reinicios ante fallas.
-
-Para replicar esta configuración:
 
 1. Crea el directorio de servicios de usuario si no existe:
    ```bash
