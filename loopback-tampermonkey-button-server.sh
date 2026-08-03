@@ -2,6 +2,7 @@
 """
 Servidor HTTP para control de Loopback ALSA + Tampermonkey
 Detecta automáticamente cuando el micrófono/auricular JBL está conectado.
+Soporta pipelines personalizados (Modo Normal o Modo Filtro) mediante /tmp/jbl_pipeline.
 """
 
 import http.server
@@ -10,14 +11,16 @@ import json
 import subprocess
 import signal
 import sys
-import time
 import os
+import time
 
 PORT = 8888
-GST_PROCESS = None
-INPUT_DEV = "plug:dsnoop_mic"
-OUTPUT_DEV = "default"
-
+PIPELINE_FILE = "/tmp/jbl_pipeline"
+DEFAULT_PIPELINE = [
+    "alsasrc", "device=plug:dsnoop_mic", "buffer-time=1", "latency-time=1", "blocksize=4", "!",
+    "audio/x-raw, format=S16LE, rate=48000, channels=1", "!",
+    "alsasink", "device=plug:dmix_speaker", "sync=false", "buffer-time=1", "latency-time=1", "blocksize=4"
+]
 
 # Asegurar entorno de usuario para ALSA/GStreamer si se ejecuta desde OpenRC/root
 os.environ["HOME"] = "/home/user"
@@ -30,37 +33,44 @@ def is_jbl_connected():
     except Exception:
         return False
 
+def is_gstreamer_running():
+    """Verifica si el proceso de loopback en tiempo real está corriendo activamente."""
+    try:
+        res = subprocess.run(["doas", "pidof", "gst-launch-1.0"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        return res.returncode == 0
+    except Exception:
+        return False
+
+def get_pipeline_cmd():
+    if os.path.exists(PIPELINE_FILE):
+        try:
+            with open(PIPELINE_FILE, "r") as f:
+                content = f.read().strip()
+                if content:
+                    return content.split()
+        except Exception as e:
+            print(f"[Loopback Server] Error leyendo {PIPELINE_FILE}: {e}")
+    return DEFAULT_PIPELINE
+
 def start_gstreamer():
-    global GST_PROCESS
     if not is_jbl_connected():
         print("[Loopback Server] JBL no detectado. Esperando conexión...")
-        return None
+        return False
 
-    if GST_PROCESS is None or GST_PROCESS.poll() is not None:
-        cmd = [
-            "doas", "chrt", "-f", "99",
-            "gst-launch-1.0", "-q",
-            "alsasrc", "device=plug:dsnoop_mic", "buffer-time=1", "latency-time=1", "blocksize=4", "!",
-            "audio/x-raw, format=S16LE, rate=48000, channels=1", "!",
-            "alsasink", "device=plug:dmix_speaker", "sync=false", "buffer-time=1", "latency-time=1", "blocksize=4"
-        ]
-
-        GST_PROCESS = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print(f"[Loopback Server] JBL detectado. Monitoreo iniciado (PID: {GST_PROCESS.pid})")
-    return GST_PROCESS.pid if GST_PROCESS else None
+    if not is_gstreamer_running():
+        pipeline_args = get_pipeline_cmd()
+        cmd = ["doas", "chrt", "-f", "99", "gst-launch-1.0", "-q"] + pipeline_args
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(0.3)
+        print("[Loopback Server] Monitoreo iniciado.")
+    return True
 
 def stop_gstreamer():
-    global GST_PROCESS
-    if GST_PROCESS is not None:
-        if GST_PROCESS.poll() is None:
-            GST_PROCESS.terminate()
-            try:
-                GST_PROCESS.wait(timeout=1)
-            except subprocess.TimeoutExpired:
-                GST_PROCESS.kill()
-            print("[Loopback Server] Monitoreo pausado/detenido.")
-        GST_PROCESS = None
-    subprocess.run(["doas", "killall", "-9", "gst-launch-1.0"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        subprocess.run(["doas", "pkill", "-9", "-f", "gst-launch-1.0"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("[Loopback Server] Monitoreo detenido.")
+    except Exception as e:
+        print(f"[Loopback Server] Error deteniendo gst-launch-1.0: {e}")
 
 class LoopbackHandler(http.server.BaseHTTPRequestHandler):
     def _send_cors_headers(self):
@@ -75,8 +85,6 @@ class LoopbackHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        global GST_PROCESS
-
         path = self.path.split("?")[0]
         jbl_on = is_jbl_connected()
 
@@ -87,24 +95,27 @@ class LoopbackHandler(http.server.BaseHTTPRequestHandler):
                 start_gstreamer()
         elif path == "/toggle":
             if jbl_on:
-                if GST_PROCESS is not None and GST_PROCESS.poll() is None:
+                if is_gstreamer_running():
                     stop_gstreamer()
                 else:
                     start_gstreamer()
 
-        is_active = (GST_PROCESS is not None and GST_PROCESS.poll() is None and jbl_on)
+        is_active = is_gstreamer_running() and jbl_on
+
         response_data = {
             "status": "success",
             "jbl_connected": jbl_on,
-            "active": is_active,
-            "pid": GST_PROCESS.pid if is_active else None
+            "active": is_active
         }
 
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self._send_cors_headers()
-        self.end_headers()
-        self.wfile.write(json.dumps(response_data).encode("utf-8"))
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self._send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data).encode("utf-8"))
+        except Exception as e:
+            print(f"[Loopback Server] Error enviando respuesta: {e}")
 
     def log_message(self, format, *args):
         return
