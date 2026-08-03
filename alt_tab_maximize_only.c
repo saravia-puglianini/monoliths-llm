@@ -1,6 +1,8 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <X11/keysym.h>
+#include <X11/extensions/XInput2.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +13,11 @@
 Display *dpy;
 Window root;
 int screen, screen_width, screen_height;
+
+int xi_opcode;
+KeyCode tab_code;
+KeyCode alt_l_code, alt_r_code, meta_l_code, meta_r_code;
+Window ignore_unmap_window = None;
 
 // Window list in MRU order
 Window managed_windows[MAX_WINDOWS];
@@ -88,7 +95,52 @@ void get_window_title(Window w, char *buf, int max_len) {
 
 int is_manageable(Window w) {
     XWindowAttributes attrs;
-    return (XGetWindowAttributes(dpy, w, &attrs) && !attrs.override_redirect);
+    if (!XGetWindowAttributes(dpy, w, &attrs) || attrs.override_redirect) {
+        return 0;
+    }
+
+    // Exclude transient windows (popups, dropdowns, dialogs linked to a parent main window)
+    Window transient_for = None;
+    if (XGetTransientForHint(dpy, w, &transient_for) && transient_for != None && transient_for != root) {
+        return 0;
+    }
+
+    // Exclude popup, dropdown, menu, tooltip, utility, and dialog window types
+    Atom actual_type;
+    int actual_format;
+    unsigned long nitems, bytes_after;
+    unsigned char *prop = NULL;
+    Atom net_wm_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
+
+    if (XGetWindowProperty(dpy, w, net_wm_type, 0, 32, False,
+                           XA_ATOM, &actual_type, &actual_format,
+                           &nitems, &bytes_after, &prop) == Success && prop) {
+        Atom *types = (Atom *)prop;
+        Atom type_dropdown = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU", False);
+        Atom type_popup = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_POPUP_MENU", False);
+        Atom type_menu = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_MENU", False);
+        Atom type_tooltip = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_TOOLTIP", False);
+        Atom type_notification = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_NOTIFICATION", False);
+        Atom type_combo = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_COMBO", False);
+        Atom type_utility = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_UTILITY", False);
+        Atom type_dialog = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
+        Atom type_dock = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DOCK", False);
+        Atom type_splash = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_SPLASH", False);
+
+        for (unsigned long i = 0; i < nitems; i++) {
+            if (types[i] == type_dropdown || types[i] == type_popup ||
+                types[i] == type_menu || types[i] == type_tooltip ||
+                types[i] == type_notification || types[i] == type_combo ||
+                types[i] == type_utility || types[i] == type_dialog ||
+                types[i] == type_dock || types[i] == type_splash) {
+                XFree(prop);
+                return 0;
+            }
+        }
+        XFree(prop);
+    }
+
+    return 1;
 }
 
 void maximize_window(Window w) {
@@ -295,9 +347,28 @@ int main() {
 
     XSelectInput(dpy, root, SubstructureRedirectMask | SubstructureNotifyMask | KeyPressMask | KeyReleaseMask);
 
-    KeyCode tab_code = XKeysymToKeycode(dpy, XK_Tab);
-    XGrabKey(dpy, tab_code, Mod1Mask, root, True, GrabModeAsync, GrabModeAsync);
-    XGrabKey(dpy, tab_code, Mod1Mask | ShiftMask, root, True, GrabModeAsync, GrabModeAsync);
+    tab_code = XKeysymToKeycode(dpy, XK_Tab);
+    alt_l_code = XKeysymToKeycode(dpy, XK_Alt_L);
+    alt_r_code = XKeysymToKeycode(dpy, XK_Alt_R);
+    meta_l_code = XKeysymToKeycode(dpy, XK_Meta_L);
+    meta_r_code = XKeysymToKeycode(dpy, XK_Meta_R);
+
+    XGrabKey(dpy, tab_code, Mod1Mask, root, False, GrabModeAsync, GrabModeAsync);
+    XGrabKey(dpy, tab_code, Mod1Mask | ShiftMask, root, False, GrabModeAsync, GrabModeAsync);
+
+    int xi_event, xi_error;
+    if (XQueryExtension(dpy, "XInputExtension", &xi_opcode, &xi_event, &xi_error)) {
+        unsigned char mask_bytes[XIMaskLen(XI_LASTEVENT)];
+        memset(mask_bytes, 0, sizeof(mask_bytes));
+        XISetMask(mask_bytes, XI_RawKeyPress);
+
+        XIEventMask evmask;
+        evmask.deviceid = XIAllMasterDevices;
+        evmask.mask_len = sizeof(mask_bytes);
+        evmask.mask = mask_bytes;
+
+        XISelectEvents(dpy, root, &evmask, 1);
+    }
 
     unsigned int nwindows;
     Window root_ret, parent_ret, *windows = NULL;
@@ -315,6 +386,36 @@ int main() {
     XEvent ev;
     while (1) {
         XNextEvent(dpy, &ev);
+
+        if (ev.type == GenericEvent && XGetEventData(dpy, &ev.xcookie)) {
+            XGenericEventCookie *cookie = &ev.xcookie;
+            if (cookie->extension == xi_opcode && cookie->evtype == XI_RawKeyPress) {
+                XIRawEvent *raw = (XIRawEvent *)cookie->data;
+                if (raw->detail == tab_code) {
+                    char keys[32];
+                    XQueryKeymap(dpy, keys);
+                    int alt_down = (alt_l_code && (keys[alt_l_code >> 3] & (1 << (alt_l_code & 7)))) ||
+                                   (alt_r_code && (keys[alt_r_code >> 3] & (1 << (alt_r_code & 7)))) ||
+                                   (meta_l_code && (keys[meta_l_code >> 3] & (1 << (meta_l_code & 7)))) ||
+                                   (meta_r_code && (keys[meta_r_code >> 3] & (1 << (meta_r_code & 7))));
+                    if (alt_down && !switcher_active) {
+                        Window focused = None;
+                        int revert_to;
+                        XGetInputFocus(dpy, &focused, &revert_to);
+                        if (focused != None && focused != root && focused != switcher_popup) {
+                            ignore_unmap_window = focused;
+                            XUnmapWindow(dpy, focused);
+                            XMapWindow(dpy, focused);
+                            XFlush(dpy);
+                        }
+                        start_switcher();
+                    }
+                }
+            }
+            XFreeEventData(dpy, cookie);
+            continue;
+        }
+
         switch (ev.type) {
             case MapRequest: {
                 Window w = ev.xmaprequest.window;
@@ -347,6 +448,10 @@ int main() {
                 break;
             }
             case UnmapNotify:
+                if (ev.xunmap.window == ignore_unmap_window) {
+                    ignore_unmap_window = None;
+                    break;
+                }
                 if (!switcher_active || ev.xunmap.window != switcher_popup) {
                     remove_window(ev.xunmap.window);
                 }
