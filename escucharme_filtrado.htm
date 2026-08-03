@@ -247,31 +247,53 @@
         const delayNode = audioContext.createDelay(10);
         delayNode.delayTime.value = 5.0;
 
-        // --- NUEVOS FILTROS WEB AUDIO API ---
+        // --- NUEVOS FILTROS AGRESIVOS CON NOISE GATE ---
 
-        // 1. Filtro Pasa-altos: Corta zumbidos eléctricos, golpes en la mesa y ruido de viento (frecuencias bajas)
+        // 1. Filtro Pasa-altos doble (más pendiente, 12dB/oct + 12dB/oct)
         const lowCutFilter = audioContext.createBiquadFilter();
         lowCutFilter.type = 'highpass';
-        lowCutFilter.frequency.value = 85; // Frecuencia típica para no afectar la voz humana
+        lowCutFilter.frequency.value = 220; // Elimina todo por debajo de 220 Hz
+        lowCutFilter.Q.value = 1.0;
 
-        // 2. Filtro Pasa-bajos: Corta siseos agudos y estática de alta frecuencia
+        // 2. Filtro Pasa-bajos doble (corta siseo y estática fuertemente)
         const highCutFilter = audioContext.createBiquadFilter();
         highCutFilter.type = 'lowpass';
-        highCutFilter.frequency.value = 6000;
+        highCutFilter.frequency.value = 2500; // Corta por encima de 2.5 kHz
+        highCutFilter.Q.value = 1.0;
 
-        // 3. Compresor Dinámico: Suaviza los picos de volumen y ayuda a que la voz destaque sobre el fondo
+        // 3. Puerta de Ruido (Noise Gate) casera mediante ScriptProcessor/Analyser
+        const gateNode = audioContext.createScriptProcessor(2048, 1, 1);
+        const gateThreshold = 0.015; // Umbral de volumen por debajo del cual silencia el fondo
+
+        gateNode.onaudioprocess = (e) => {
+            const input = e.inputBuffer.getChannelData(0);
+            const output = e.outputBuffer.getChannelData(0);
+            
+            // Calculamos la energía RMS del bloque de audio
+            let sum = 0;
+            for (let i = 0; i < input.length; i++) {
+                sum += input[i] * input[i];
+            }
+            const rms = Math.sqrt(sum / input.length);
+
+            // Si la señal está por debajo del umbral de ruido, atenuamos fuertemente (puerta cerrada)
+            const gain = (rms > gateThreshold) ? 1.0 : 0.0;
+            for (let i = 0; i < input.length; i++) {
+                output[i] = input[i] * gain;
+            }
+        };
+
+        // 4. Compresor Dinámico suave post-gate
         const compressor = audioContext.createDynamicsCompressor();
-        compressor.threshold.value = -50;
-        compressor.knee.value = 40;
-        compressor.ratio.value = 12;
-        compressor.attack.value = 0;
-        compressor.release.value = 0.25;
+        compressor.threshold.value = -18;
+        compressor.ratio.value = 3;
 
         // --- CONEXIÓN DE LOS NODOS ---
-        // source -> lowCut -> highCut -> compressor -> delay -> destination
+        // source -> lowCut -> highCut -> gate -> compressor -> delay -> destination
         source.connect(lowCutFilter);
         lowCutFilter.connect(highCutFilter);
-        highCutFilter.connect(compressor);
+        highCutFilter.connect(gateNode);
+        gateNode.connect(compressor);
         compressor.connect(delayNode);
         delayNode.connect(audioContext.destination);
 

@@ -14,6 +14,7 @@ JIRA_LOCK="/tmp/jira_reminder.pid"
 if [ -f "$JIRA_LOCK" ]; then
     PID=$(cat "$JIRA_LOCK")
     if ! ps -p "$PID" >/dev/null 2>&1; then
+        rm -f "$JIRA_LOCK"
         "$JIRA_REMINDER" &
     fi
 else
@@ -25,6 +26,7 @@ OPS_LOCK="/tmp/ops360_reminder.pid"
 if [ -f "$OPS_LOCK" ]; then
     PID=$(cat "$OPS_LOCK")
     if ! ps -p "$PID" >/dev/null 2>&1; then
+        rm -f "$OPS_LOCK"
         "$OPS360_REMINDER" &
     fi
 else

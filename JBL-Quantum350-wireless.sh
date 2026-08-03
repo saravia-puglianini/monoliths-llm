@@ -2,8 +2,10 @@
 # Script: /home/user/monoliths-llm/JBL-Quantum350-wireless.sh
 # Conmuta manualmente al dispositivo USB Wireless JBL Quantum350
 
-# Cargar módulo snd-usb-audio por si acaso no estuviera cargado aún
-doas modprobe snd-usb-audio 2>/dev/null || true
+# Cargar módulos de audio USB con parámetros de ultra-baja latencia y Loopback Virtual
+doas rmmod snd_usb_audio 2>/dev/null || true
+doas modprobe snd-usb-audio lowlatency=1 implicit_fb=0 2>/dev/null || true
+doas modprobe snd-aloop 2>/dev/null || true
 sleep 0.5
 
 # Validar si el dispositivo USB Audio Wireless está conectado físicamente y detectado
@@ -30,32 +32,45 @@ fi
 ASOUND_CONF="/etc/asound.conf"
 
 doas tee "$ASOUND_CONF" >/dev/null <<EOC
-pcm.!default {
-    type plug
-    slave.pcm {
-        type dmix
-        ipc_key 1024
-        ipc_key_add_uid false
-        ipc_perm 0666
-        slave {
-            pcm "hw:Wireless,0"
-            rate 48000
-        }
+# Configuración ALSA limpia y multiplexada para JBL Quantum 350
+pcm.dsnoop_mic {
+    type dsnoop
+    ipc_key 1025
+    ipc_key_add_uid false
+    ipc_perm 0666
+    slave {
+        pcm "hw:Wireless,0"
+        rate 48000
+        channels 1
+        period_size 4
+        period_time 0
+        buffer_size 8
     }
+}
+
+pcm.dmix_speaker {
+    type dmix
+    ipc_key 1024
+    ipc_key_add_uid false
+    ipc_perm 0666
+    slave {
+        pcm "hw:Wireless,0"
+        rate 48000
+        period_size 4
+        period_time 0
+        buffer_size 8
+    }
+}
+
+pcm.!default {
+    type asym
+    playback.pcm "plug:dmix_speaker"
+    capture.pcm "plug:dsnoop_mic"
 }
 
 pcm.!sysdefault {
     type plug
-    slave.pcm {
-        type dmix
-        ipc_key 1024
-        ipc_key_add_uid false
-        ipc_perm 0666
-        slave {
-            pcm "hw:Wireless,0"
-            rate 48000
-        }
-    }
+    slave.pcm "default"
 }
 
 ctl.!default {
@@ -64,8 +79,11 @@ ctl.!default {
 }
 EOC
 
-# Reiniciar el servicio de audio de Google Chrome
-pkill -9 -f "chrome.*audio.mojom.AudioService" 2>/dev/null || true
-pkill -9 -f "chrome.*AudioService" 2>/dev/null || true
+# Reiniciar el streaming de GStreamer del servicio loopback-tampermonkey si está activo
+pkill -f "gst-launch-1.0.*plug:dsnoop_mic" 2>/dev/null || true
+curl -s "http://127.0.0.1:8888/resume" >/dev/null 2>&1 || true
 
-echo "[OK] Audio configurado a USB Wireless JBL Quantum350"
+echo "[OK] Audio configurado a USB Wireless JBL Quantum350 (dsnoop + dmix activos)"
+
+
+

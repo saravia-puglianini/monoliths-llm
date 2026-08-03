@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>99 Luftballons für Kindern</title>
+    <meta name="description"
+        content="Lerne die 4 einfachen Gitarrenakkorde für das Lied '99 Luftballons' mit interaktiven Diagrammen für Kinder!">
+
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #1e1b4b 0%, #311042 50%, #0f172a 100%);
+            --card-bg: rgba(255, 255, 255, 0.07);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --accent-red: #ff4757;
+            --accent-yellow: #ffa502;
+            --accent-blue: #2ed573;
+            --accent-purple: #1e90ff;
+            --d-dur-color: #ff4757;
+            --e-moll-color: #1e90ff;
+            --g-dur-color: #2ed573;
+            --a-dur-color: #ffa502;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            padding: 2rem 1rem;
+            position: relative;
+        }
+
+        /* Animated Balloons in Background */
+        .balloon-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .balloon {
+            position: absolute;
+            bottom: -150px;
+            width: 60px;
+            height: 75px;
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            opacity: 0.15;
+            animation: floatUp 15s infinite linear;
+        }
+
+        .balloon::after {
+            content: "";
+            position: absolute;
+            bottom: -8px;
+            left: 28px;
+            width: 4px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.5);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 0.15;
+            }
+
+            90% {
+                opacity: 0.15;
+            }
+
+            100% {
+                transform: translateY(-120vh) rotate(20deg);
+                opacity: 0;
+            }
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            z-index: 1;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #ff4757, #ff6b81, #ffa502, #2ed573, #1e90ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 20px rgba(255, 71, 87, 0.2);
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+            animation: titlePulse 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes titlePulse {
+            0% {
+                transform: scale(1);
+            }
+
+            100% {
+                transform: scale(1.02);
+            }
+        }
+
+        .subtitle {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .song-info {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 1.5rem 2rem;
+            max-width: 800px;
+            width: 100%;
+            margin-bottom: 3rem;
+            z-index: 1;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .song-info h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.8rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .song-info p {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .chord-sequence {
+            display: inline-flex;
+            gap: 0.8rem;
+            margin-top: 1rem;
+            align-items: center;
+        }
+
+        .chord-badge {
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .badge-d {
+            background-color: var(--d-dur-color);
+            color: white;
+        }
+
+        .badge-em {
+            background-color: var(--e-moll-color);
+            color: white;
+        }
+
+        .badge-g {
+            background-color: var(--g-dur-color);
+            color: white;
+        }
+
+        .badge-a {
+            background-color: var(--a-dur-color);
+            color: white;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            width: 100%;
+            z-index: 1;
+            margin-bottom: 3rem;
+        }
+
+        .chord-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            backdrop-filter: blur(12px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chord-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+        }
+
+        .chord-card.d-dur::before {
+            background: var(--d-dur-color);
+        }
+
+        .chord-card.e-moll::before {
+            background: var(--e-moll-color);
+        }
+
+        .chord-card.g-dur::before {
+            background: var(--g-dur-color);
+        }
+
+        .chord-card.a-dur::before {
+            background: var(--a-dur-color);
+        }
+
+        .chord-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .chord-name {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.2rem;
+        }
+
+        .chord-translation {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            color: #94a3b8;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* SVG Chord Diagram Styling */
+        .chord-diagram {
+            width: 160px;
+            height: 180px;
+            margin-bottom: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 10px;
+        }
+
+        .chord-details {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            text-align: left;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.15);
+            padding: 1rem;
+            border-radius: 16px;
+            margin-top: auto;
+        }
+
+        .chord-details ul {
+            list-style: none;
+        }
+
+        .chord-details li {
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chord-details li::before {
+            content: "🎈";
+            font-size: 0.9rem;
+        }
+
+        footer {
+            margin-top: auto;
+            text-align: center;
+            color: #64748b;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            z-index: 1;
+            padding: 2rem 0 1rem 0;
+        }
+
+        /* Custom Interactive Button for Sound Playback (simulated) */
+        .play-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 1rem;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .play-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .play-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Hands Section Styling */
+        .hands-section {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(12px);
+            border-radius: 28px;
+            padding: 2.5rem 2rem;
+            margin: 2rem 0;
+            text-align: center;
+            z-index: 1;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .hands-section h3 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            color: #fff;
+            background: linear-gradient(to right, #ffa502, #2ed573);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hands-section p {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .hands-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 4rem;
+            flex-wrap: wrap;
+        }
+
+        .hand-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1.5rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .hand-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .hand-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+            color: #fff;
+        }
+
+        .hand-subtitle {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .hand-graphic {
+            width: 220px;
+            height: 240px;
+        }
+
+        .hand-path {
+            fill: #fecaca;
+            stroke: #f87171;
+            stroke-width: 3;
+            stroke-linejoin: round;
+        }
+
+        .hand-number-bubble {
+            fill: #f43f5e;
+            stroke: #fff;
+            stroke-width: 2;
+        }
+
+        .hand-text {
+            fill: #fff;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: bold;
+            font-size: 12px;
+            text-anchor: middle;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Animated background balloons -->
+    <div class="balloon-bg" id="balloonContainer"></div>
+
+    <header>
+        <h1>99 Luftballons für Kindern</h1>
+        <p class="subtitle">Lerne die 4 magischen Akkorde auf der Gitarre, um das berühmte Lied zu spielen!</p>
+    </header>
+
+    <div class="song-info">
+        <h2>🎸 Die magische Akkordfolge (Akkordfolge)</h2>
+        <p>
+            Für das gesamte Lied <strong>"99 Luftballons"</strong> wiederholen wir immer die gleiche Reihenfolge.
+            Jeder Akkord wird für 4 Schläge (oder 2 Schläge im schnellen Teil) gespielt. Probiere es aus!
+        </p>
+        <div class="chord-sequence">
+            <span class="chord-badge badge-d">D-Dur</span>
+            <span>➔</span>
+            <span class="chord-badge badge-em">e-Moll</span>
+            <span>➔</span>
+            <span class="chord-badge badge-g">G-Dur</span>
+            <span>➔</span>
+            <span class="chord-badge badge-a">A-Dur</span>
+        </div>
+    </div>
+
+    <main class="container">
+
+        <!-- D-Dur (RE MAYOR) -->
+        <div class="chord-card d-dur">
+            <div class="chord-name" style="color: var(--d-dur-color);">D-Dur</div>
+            <div class="chord-translation">RE MAYOR</div>
+
+            <!-- SVG Guitar Chord Diagram -->
+            <svg class="chord-diagram" viewBox="0 0 100 120">
+                <!-- Nut / Cejilla -->
+                <line x1="20" y1="20" x2="80" y2="20" stroke="#fff" stroke-width="4" />
+                <!-- Strings (6 strings) -->
+                <line x1="20" y1="20" x2="20" y2="110" stroke="#fff" stroke-opacity="0.4" stroke-width="1.5" />
+                <line x1="32" y1="20" x2="32" y2="110" stroke="#fff" stroke-opacity="0.4" stroke-width="1.5" />
+                <line x1="44" y1="20" x2="44" y2="110" stroke="#fff" stroke-opacity="0.4" stroke-width="1.5" />
+                <line x1="56" y1="20" x2="56" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="68" y1="20" x2="68" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="80" y1="20" x2="80" y2="110" stroke="#fff" stroke-width="1.5" />
+                <!-- Frets (4 frets) -->
+                <line x1="20" y1="42.5" x2="80" y2="42.5" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="65" x2="80" y2="65" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="87.5" x2="80" y2="87.5" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="110" x2="80" y2="110" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <!-- String Names or X/O markers at top -->
+                <text x="18" y="14" fill="#ff4757" font-size="8" font-family="sans-serif">X</text>
+                <text x="30" y="14" fill="#ff4757" font-size="8" font-family="sans-serif">X</text>
+                <text x="42" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <!-- Finger Positions -->
+                <!-- Finger 1 on G string, 2nd fret -->
+                <circle cx="56" cy="53.75" r="5" fill="var(--d-dur-color)" />
+                <text x="54" y="56.75" fill="#fff" font-size="8" font-weight="bold">1</text>
+                <!-- Finger 3 on B string, 3rd fret -->
+                <circle cx="68" cy="76.25" r="5" fill="var(--d-dur-color)" />
+                <text x="66" y="79.25" fill="#fff" font-size="8" font-weight="bold">3</text>
+                <!-- Finger 2 on E string, 2nd fret -->
+                <circle cx="80" cy="53.75" r="5" fill="var(--d-dur-color)" />
+                <text x="78" y="56.75" fill="#fff" font-size="8" font-weight="bold">2</text>
+            </svg>
+
+            <div class="chord-details">
+                <ul>
+                    <li><strong>Saiten:</strong> Nur die untersten 4 Saiten anschlagen (D, G, H, E).</li>
+                    <li><strong>Finger 1:</strong> 2. Bund der G-Saite.</li>
+                    <li><strong>Finger 2:</strong> 2. Bund der E-Saite.</li>
+                    <li><strong>Finger 3:</strong> 3. Bund der H-Saite.</li>
+                </ul>
+            </div>
+
+            <button class="play-btn" onclick="playChord('D')">🔊 Anhören</button>
+        </div>
+
+        <!-- e-Moll (mi menor) -->
+        <div class="chord-card e-moll">
+            <div class="chord-name" style="color: var(--e-moll-color);">e-Moll</div>
+            <div class="chord-translation">mi menor</div>
+
+            <!-- SVG Guitar Chord Diagram -->
+            <svg class="chord-diagram" viewBox="0 0 100 120">
+                <!-- Nut / Cejilla -->
+                <line x1="20" y1="20" x2="80" y2="20" stroke="#fff" stroke-width="4" />
+                <!-- Strings (6 strings) -->
+                <line x1="20" y1="20" x2="20" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="32" y1="20" x2="32" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="44" y1="20" x2="44" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="56" y1="20" x2="56" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="68" y1="20" x2="68" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="80" y1="20" x2="80" y2="110" stroke="#fff" stroke-width="1.5" />
+                <!-- Frets (4 frets) -->
+                <line x1="20" y1="42.5" x2="80" y2="42.5" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="65" x2="80" y2="65" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="87.5" x2="80" y2="87.5" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="110" x2="80" y2="110" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <!-- String Names or X/O markers at top -->
+                <text x="18" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <text x="42" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <text x="54" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <text x="66" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <text x="78" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <!-- Finger Positions -->
+                <!-- Finger 2 on A string, 2nd fret -->
+                <circle cx="32" cy="53.75" r="5" fill="var(--e-moll-color)" />
+                <text x="30" y="56.75" fill="#fff" font-size="8" font-weight="bold">2</text>
+                <!-- Finger 3 on D string, 2nd fret -->
+                <circle cx="44" cy="53.75" r="5" fill="var(--e-moll-color)" />
+                <text x="42" y="56.75" fill="#fff" font-size="8" font-weight="bold">3</text>
+            </svg>
+
+            <div class="chord-details">
+                <ul>
+                    <li><strong>Saiten:</strong> Alle 6 Saiten dürfen gespielt werden!</li>
+                    <li><strong>Finger 2:</strong> 2. Bund der A-Saite (2. dickste).</li>
+                    <li><strong>Finger 3:</strong> 2. Bund der D-Saite.</li>
+                    <li>Der traurigste, aber einfachste Akkord!</li>
+                </ul>
+            </div>
+
+            <button class="play-btn" onclick="playChord('Em')">🔊 Anhören</button>
+        </div>
+
+        <!-- G-Dur (SOL MAYOR) -->
+        <div class="chord-card g-dur">
+            <div class="chord-name" style="color: var(--g-dur-color);">G-Dur</div>
+            <div class="chord-translation">SOL MAYOR</div>
+
+            <!-- SVG Guitar Chord Diagram -->
+            <svg class="chord-diagram" viewBox="0 0 100 120">
+                <!-- Nut / Cejilla -->
+                <line x1="20" y1="20" x2="80" y2="20" stroke="#fff" stroke-width="4" />
+                <!-- Strings (6 strings) -->
+                <line x1="20" y1="20" x2="20" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="32" y1="20" x2="32" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="44" y1="20" x2="44" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="56" y1="20" x2="56" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="68" y1="20" x2="68" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="80" y1="20" x2="80" y2="110" stroke="#fff" stroke-width="1.5" />
+                <!-- Frets (4 frets) -->
+                <line x1="20" y1="42.5" x2="80" y2="42.5" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="65" x2="80" y2="65" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="87.5" x2="80" y2="87.5" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="110" x2="80" y2="110" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <!-- String Names or X/O markers at top -->
+                <text x="42" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <text x="54" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <text x="66" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <!-- Finger Positions -->
+                <!-- Finger 2 on Low E string, 3rd fret -->
+                <circle cx="20" cy="76.25" r="5" fill="var(--g-dur-color)" />
+                <text x="18" y="79.25" fill="#fff" font-size="8" font-weight="bold">2</text>
+                <!-- Finger 1 on A string, 2nd fret -->
+                <circle cx="32" cy="53.75" r="5" fill="var(--g-dur-color)" />
+                <text x="30" y="56.75" fill="#fff" font-size="8" font-weight="bold">1</text>
+                <!-- Finger 3 on High E string, 3rd fret -->
+                <circle cx="80" cy="76.25" r="5" fill="var(--g-dur-color)" />
+                <text x="78" y="79.25" fill="#fff" font-size="8" font-weight="bold">3</text>
+            </svg>
+
+            <div class="chord-details">
+                <ul>
+                    <li><strong>Saiten:</strong> Alle 6 Saiten werden angeschlagen!</li>
+                    <li><strong>Finger 1:</strong> 2. Bund der A-Saite.</li>
+                    <li><strong>Finger 2:</strong> 3. Bund der tiefen E-Saite.</li>
+                    <li><strong>Finger 3:</strong> 3. Bund der hohen E-Saite.</li>
+                </ul>
+            </div>
+
+            <button class="play-btn" onclick="playChord('G')">🔊 Anhören</button>
+        </div>
+
+        <!-- A-Dur (LA MAYOR) -->
+        <div class="chord-card a-dur">
+            <div class="chord-name" style="color: var(--a-dur-color);">A-Dur</div>
+            <div class="chord-translation">LA MAYOR</div>
+
+            <!-- SVG Guitar Chord Diagram -->
+            <svg class="chord-diagram" viewBox="0 0 100 120">
+                <!-- Nut / Cejilla -->
+                <line x1="20" y1="20" x2="80" y2="20" stroke="#fff" stroke-width="4" />
+                <!-- Strings (6 strings) -->
+                <line x1="20" y1="20" x2="20" y2="110" stroke="#fff" stroke-opacity="0.4" stroke-width="1.5" />
+                <line x1="32" y1="20" x2="32" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="44" y1="20" x2="44" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="56" y1="20" x2="56" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="68" y1="20" x2="68" y2="110" stroke="#fff" stroke-width="1.5" />
+                <line x1="80" y1="20" x2="80" y2="110" stroke="#fff" stroke-width="1.5" />
+                <!-- Frets (4 frets) -->
+                <line x1="20" y1="42.5" x2="80" y2="42.5" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="65" x2="80" y2="65" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="87.5" x2="80" y2="87.5" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="20" y1="110" x2="80" y2="110" stroke="#fff" stroke-opacity="0.4" stroke-width="1" />
+                <!-- String Names or X/O markers at top -->
+                <text x="18" y="14" fill="#ff4757" font-size="8" font-family="sans-serif">X</text>
+                <text x="30" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <text x="78" y="14" fill="#2ed573" font-size="8" font-family="sans-serif">O</text>
+                <!-- Finger Positions -->
+                <!-- Finger 1 on D string, 2nd fret -->
+                <circle cx="44" cy="53.75" r="5" fill="var(--a-dur-color)" />
+                <text x="42" y="56.75" fill="#fff" font-size="8" font-weight="bold">1</text>
+                <!-- Finger 2 on G string, 2nd fret -->
+                <circle cx="56" cy="53.75" r="5" fill="var(--a-dur-color)" />
+                <text x="54" y="56.75" fill="#fff" font-size="8" font-weight="bold">2</text>
+                <!-- Finger 3 on B string, 2nd fret -->
+                <circle cx="68" cy="53.75" r="5" fill="var(--a-dur-color)" />
+                <text x="66" y="56.75" fill="#fff" font-size="8" font-weight="bold">3</text>
+            </svg>
+
+            <div class="chord-details">
+                <ul>
+                    <li><strong>Saiten:</strong> Die tiefe E-Saite nicht mitspielen.</li>
+                    <li><strong>Finger 1:</strong> 2. Bund der D-Saite.</li>
+                    <li><strong>Finger 2:</strong> 2. Bund der G-Saite.</li>
+                    <li><strong>Finger 3:</strong> 2. Bund der H-Saite.</li>
+                </ul>
+            </div>
+
+            <button class="play-btn" onclick="playChord('A')">🔊 Anhören</button>
+        </div>
+
+    </main>
+
+    <!-- Hands section indicating fingers -->
+    <section class="hands-section">
+        <h3>🖐️ Fingernummerierung für Kinder</h3>
+        <p>
+            Wenn du auf den Akkord-Diagrammen Zahlen siehst (1, 2, 3, 4), zeigen sie dir, welchen Finger du benutzen sollst. 
+            Hier siehst du deine beiden Hände von oben (Handrücken nach oben):
+        </p>
+        <div class="hands-container">
+            <!-- Left Hand (Linke Hand - Greifhand) -->
+            <div class="hand-card">
+                <div class="hand-title">Linke Hand</div>
+                <div class="hand-subtitle">Greifhand (am Griffbrett)</div>
+                <svg class="hand-graphic" viewBox="0 0 200 240">
+                    <!-- Wrist & Palm Background -->
+                    <path class="hand-path" d="M 70,240 L 70,170 C 70,140 50,140 50,130 C 50,120 150,120 150,130 C 150,140 130,140 130,170 L 130,240 Z" />
+                    
+                    <!-- Finger 4 (Kleiner Finger) -->
+                    <line x1="60" y1="130" x2="60" y2="90" stroke="#fecaca" stroke-width="16" stroke-linecap="round"/>
+                    <line x1="60" y1="130" x2="60" y2="90" stroke="#f87171" stroke-width="4" stroke-linecap="round" fill="none"/>
+                    
+                    <!-- Finger 3 (Ringfinger) -->
+                    <line x1="85" y1="125" x2="85" y2="65" stroke="#fecaca" stroke-width="18" stroke-linecap="round"/>
+                    <line x1="85" y1="125" x2="85" y2="65" stroke="#f87171" stroke-width="4" stroke-linecap="round" fill="none"/>
+                    
+                    <!-- Finger 2 (Mittelfinger) -->
+                    <line x1="110" y1="120" x2="110" y2="50" stroke="#fecaca" stroke-width="18" stroke-linecap="round"/>
+                    <line x1="110" y1="120" x2="110" y2="50" stroke="#f87171" stroke-width="4" stroke-linecap="round" fill="none"/>
+                    
+                    <!-- Finger 1 (Zeigefinger) -->
+                    <line x1="135" y1="125" x2="135" y2="65" stroke="#fecaca" stroke-width="18" stroke-linecap="round"/>
+                    <line x1="135" y1="125" x2="135" y2="65" stroke="#f87171" stroke-width="4" stroke-linecap="round" fill="none"/>
+                    
+                    <!-- Thumb (Daumen) -->
+                    <path d="M 130,150 Q 185,155 175,130" fill="none" stroke="#fecaca" stroke-width="18" stroke-linecap="round"/>
+                    <path d="M 130,150 Q 185,155 175,130" fill="none" stroke="#f87171" stroke-width="4" stroke-linecap="round"/>
+                    
+                    <!-- Palm Cover to hide overlap seams -->
+                    <path d="M 52,130 Q 100,120 148,130 L 128,185 L 72,185 Z" fill="#fecaca" stroke="none"/>
+                    
+                    <!-- Knuckles decorative lines -->
+                    <line x1="60" y1="135" x2="60" y2="145" stroke="#f87171" stroke-width="2"/>
+                    <line x1="85" y1="130" x2="85" y2="140" stroke="#f87171" stroke-width="2"/>
+                    <line x1="110" y1="128" x2="110" y2="138" stroke="#f87171" stroke-width="2"/>
+                    <line x1="135" y1="130" x2="135" y2="140" stroke="#f87171" stroke-width="2"/>
+
+                    <!-- Fingertip Number Bubbles (Fretting Fingers 1-4) -->
+                    <!-- Finger 4 -->
+                    <circle class="hand-number-bubble" cx="60" cy="90" r="11"/>
+                    <text class="hand-text" x="60" y="94">4</text>
+                    
+                    <!-- Finger 3 -->
+                    <circle class="hand-number-bubble" cx="85" cy="65" r="11"/>
+                    <text class="hand-text" x="85" y="69">3</text>
+                    
+                    <!-- Finger 2 -->
+                    <circle class="hand-number-bubble" cx="110" cy="50" r="11"/>
+                    <text class="hand-text" x="110" y="54">2</text>
+                    
+                    <!-- Finger 1 -->
+                    <circle class="hand-number-bubble" cx="135" cy="65" r="11"/>
+                    <text class="hand-text" x="135" y="69">1</text>
+                    
+                    <!-- Daumen (Thumb) -->
+                    <circle cx="175" cy="130" r="10" fill="#475569" stroke="#fff" stroke-width="2"/>
+                    <text class="hand-text" x="175" y="134" font-size="10">D</text>
+                </svg>
+            </div>
+
+            <!-- Right Hand (Rechte Hand - Schlaghand) -->
+            <div class="hand-card">
+                <div class="hand-title">Rechte Hand</div>
+                <div class="hand-subtitle">Schlaghand (zum Zupfen/Schlagen)</div>
+                <svg class="hand-graphic" viewBox="0 0 200 240">
+                    <!-- Wrist & Palm Background -->
+                    <path class="hand-path" d="M 70,240 L 70,170 C 70,140 50,140 50,130 C 50,120 150,120 150,130 C 150,140 130,140 130,170 L 130,240 Z" />
+                    
+                    <!-- Thumb (Daumen - left side) -->
+                    <path d="M 70,150 Q 15,155 25,130" fill="none" stroke="#fecaca" stroke-width="18" stroke-linecap="round"/>
+                    <path d="M 70,150 Q 15,155 25,130" fill="none" stroke="#f87171" stroke-width="4" stroke-linecap="round"/>
+
+                    <!-- Finger i (Zeigefinger) -->
+                    <line x1="65" y1="125" x2="65" y2="65" stroke="#fecaca" stroke-width="18" stroke-linecap="round"/>
+                    <line x1="65" y1="125" x2="65" y2="65" stroke="#f87171" stroke-width="4" stroke-linecap="round" fill="none"/>
+                    
+                    <!-- Finger m (Mittelfinger) -->
+                    <line x1="90" y1="120" x2="90" y2="50" stroke="#fecaca" stroke-width="18" stroke-linecap="round"/>
+                    <line x1="90" y1="120" x2="90" y2="50" stroke="#f87171" stroke-width="4" stroke-linecap="round" fill="none"/>
+                    
+                    <!-- Finger a (Ringfinger) -->
+                    <line x1="115" y1="125" x2="115" y2="65" stroke="#fecaca" stroke-width="18" stroke-linecap="round"/>
+                    <line x1="115" y1="125" x2="115" y2="65" stroke="#f87171" stroke-width="4" stroke-linecap="round" fill="none"/>
+
+                    <!-- Finger ch (Kleiner Finger) -->
+                    <line x1="140" y1="130" x2="140" y2="90" stroke="#fecaca" stroke-width="16" stroke-linecap="round"/>
+                    <line x1="140" y1="130" x2="140" y2="90" stroke="#f87171" stroke-width="4" stroke-linecap="round" fill="none"/>
+                    
+                    <!-- Palm Cover to hide overlap seams -->
+                    <path d="M 52,130 Q 100,120 148,130 L 128,185 L 72,185 Z" fill="#fecaca" stroke="none"/>
+                    
+                    <!-- Knuckles decorative lines -->
+                    <line x1="65" y1="130" x2="65" y2="140" stroke="#f87171" stroke-width="2"/>
+                    <line x1="90" y1="128" x2="90" y2="138" stroke="#f87171" stroke-width="2"/>
+                    <line x1="115" y1="130" x2="115" y2="140" stroke="#f87171" stroke-width="2"/>
+                    <line x1="140" y1="135" x2="140" y2="145" stroke="#f87171" stroke-width="2"/>
+
+                    <!-- Labels for Strumming Hand (p, i, m, a, ch) -->
+                    <!-- Thumb (p) -->
+                    <circle cx="25" cy="130" r="10" fill="#475569" stroke="#fff" stroke-width="2"/>
+                    <text class="hand-text" x="25" y="134" font-size="10">p</text>
+
+                    <!-- Index (i) -->
+                    <circle cx="65" cy="65" r="10" fill="#475569" stroke="#fff" stroke-width="2"/>
+                    <text class="hand-text" x="65" y="69" font-size="10">i</text>
+                    
+                    <!-- Middle (m) -->
+                    <circle cx="90" cy="50" r="10" fill="#475569" stroke="#fff" stroke-width="2"/>
+                    <text class="hand-text" x="90" y="54" font-size="10">m</text>
+                    
+                    <!-- Ring (a) -->
+                    <circle cx="115" cy="65" r="10" fill="#475569" stroke="#fff" stroke-width="2"/>
+                    <text class="hand-text" x="115" y="69" font-size="10">a</text>
+                    
+                    <!-- Pinky (ch) -->
+                    <circle cx="140" cy="90" r="10" fill="#475569" stroke="#fff" stroke-width="2"/>
+                    <text class="hand-text" x="140" y="94" font-size="10">ch</text>
+                </svg>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>Erstellt mit ❤️ für kleine Rockstars | 99 Luftballons Akkord-Lernseite</p>
+    </footer>
+
+    <!-- Simple audio generation using Web Audio API to play real chord sounds! -->
+    <script>
+        // Web Audio API chord synthesiser
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const chordFrequencies = {
+            // D-Dur: D3 (146.83), A3 (220.00), D4 (293.66), F#4 (369.99)
+            'D': [146.83, 220.00, 293.66, 369.99],
+            // e-Moll: E2 (82.41), B2 (123.47), E3 (164.81), G3 (196.00), B3 (246.94), E4 (329.63)
+            'Em': [82.41, 123.47, 164.81, 196.00, 246.94, 329.63],
+            // G-Dur: G2 (98.00), B2 (123.47), D3 (146.83), G3 (196.00), B3 (246.94), G4 (392.00)
+            'G': [98.00, 123.47, 146.83, 196.00, 246.94, 392.00],
+            // A-Dur: A2 (110.00), E3 (164.81), A3 (220.00), C#4 (277.18), E4 (329.63)
+            'A': [110.00, 164.81, 220.00, 277.18, 329.63]
+        };
+
+        function playChord(chordName) {
+            // Resume AudioContext if suspended (browser security autoplay policy)
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const freqs = chordFrequencies[chordName];
+            if (!freqs) return;
+
+            const now = audioCtx.currentTime;
+
+            // Pluck the strings with a slight delay to simulate guitar strumming
+            freqs.forEach((freq, index) => {
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                // Mix triangle wave for a warmer, slightly acoustic guitar-like tone
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + index * 0.05);
+
+                // ADSR-like envelope for a plucked string
+                gainNode.gain.setValueAtTime(0, now + index * 0.05);
+                gainNode.gain.linearRampToValueAtTime(0.2, now + index * 0.05 + 0.02);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + index * 0.05 + 1.5);
+
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                osc.start(now + index * 0.05);
+                osc.stop(now + index * 0.05 + 1.6);
+            });
+        }
+
+        // Generate floating balloons dynamically
+        const balloonColors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#9b59b6'];
+        const container = document.getElementById('balloonContainer');
+        const totalBalloons = 25;
+
+        for (let i = 0; i < totalBalloons; i++) {
+            const balloon = document.createElement('div');
+            balloon.className = 'balloon';
+
+            // Randomize position, size, animation delay and duration
+            const sizeWidth = Math.floor(Math.random() * 40) + 30; // 30px to 70px
+            const sizeHeight = sizeWidth * 1.25;
+            const left = Math.random() * 100; // 0% to 100%
+            const duration = Math.random() * 15 + 10; // 10s to 25s
+            const delay = Math.random() * -20; // negative delay so they start scattered immediately
+            const color = balloonColors[Math.floor(Math.random() * balloonColors.length)];
+
+            balloon.style.width = `${sizeWidth}px`;
+            balloon.style.height = `${sizeHeight}px`;
+            balloon.style.left = `${left}%`;
+            balloon.style.animationDuration = `${duration}s`;
+            balloon.style.animationDelay = `${delay}s`;
+            balloon.style.background = color;
+            balloon.style.boxShadow = `inset -8px -8px 0 rgba(0,0,0,0.15), 0 10px 20px rgba(0,0,0,0.2)`;
+
+            container.appendChild(balloon);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Jira and Ops360 Reminders
+Exec=/home/user/monoliths-llm/run-reminders.sh
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Comment=Autostart reminder scripts on login

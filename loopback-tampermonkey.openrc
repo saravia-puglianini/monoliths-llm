@@ -1,0 +1,18 @@
+#!/sbin/openrc-run
+# Servicio OpenRC para el Servidor de Loopback Audio + Tampermonkey
+
+name="loopback-tampermonkey"
+description="Servidor de monitoreo de microfono JBL con boton Tampermonkey para Chrome"
+command="/home/user/monoliths-llm/loopback-tampermonkey-button-server.sh"
+command_background="true"
+pidfile="/run/loopback-tampermonkey.pid"
+command_user="user:libre"
+
+rc_ulimit="-r 99 -l unlimited"
+
+export HOME="/home/user"
+
+depend() {
+    need localmount
+    after bootmisc
+}
