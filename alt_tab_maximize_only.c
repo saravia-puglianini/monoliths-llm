@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <locale.h>
 
 #define MAX_WINDOWS 1000
 
@@ -32,7 +33,9 @@ int num_switcher = 0;
 
 // Colors & graphics
 unsigned long color_bg, color_fg, color_sel_bg, color_sel_fg, color_border, color_cyan, color_magenta;
-XFontStruct *font_info;
+XFontSet font_set;
+int font_ascent = 0;
+int font_descent = 0;
 GC gc;
 
 unsigned long get_color(const char *name) {
@@ -154,7 +157,7 @@ void draw_glitch_frame(int popup_width, int popup_height, int is_transition) {
     XSetForeground(dpy, gc, is_transition ? ((rand() % 3 == 0) ? color_magenta : color_bg) : color_bg);
     XFillRectangle(dpy, switcher_popup, gc, 0, 0, popup_width, popup_height);
 
-    int item_height = font_info->ascent + font_info->descent + 10;
+    int item_height = font_ascent + font_descent + 10;
     int y_offset = 15;
 
     if (is_transition || (rand() % 4 == 0)) {
@@ -169,7 +172,7 @@ void draw_glitch_frame(int popup_width, int popup_height, int is_transition) {
     for (int i = 0; i < num_switcher; i++) {
         char title[256];
         get_window_title(switcher_list[i], title, sizeof(title));
-        int text_y = y_offset + i * item_height + font_info->ascent + 5;
+        int text_y = y_offset + i * item_height + font_ascent + 5;
         int text_x = 20;
 
         int glitch_this = is_transition || (rand() % 8 == 0);
@@ -192,13 +195,13 @@ void draw_glitch_frame(int popup_width, int popup_height, int is_transition) {
 
         if (glitch_this) {
             XSetForeground(dpy, gc, color_cyan);
-            XDrawString(dpy, switcher_popup, gc, text_x + offset_x - 3, text_y, title, strlen(title));
+            Xutf8DrawString(dpy, switcher_popup, font_set, gc, text_x + offset_x - 3, text_y, title, strlen(title));
             XSetForeground(dpy, gc, color_magenta);
-            XDrawString(dpy, switcher_popup, gc, text_x + offset_x + 3, text_y, title, strlen(title));
+            Xutf8DrawString(dpy, switcher_popup, font_set, gc, text_x + offset_x + 3, text_y, title, strlen(title));
         }
 
         XSetForeground(dpy, gc, (i == switcher_index) ? color_sel_fg : color_fg);
-        XDrawString(dpy, switcher_popup, gc, text_x + offset_x, text_y, title, strlen(title));
+        Xutf8DrawString(dpy, switcher_popup, font_set, gc, text_x + offset_x, text_y, title, strlen(title));
     }
     XFlush(dpy);
 }
@@ -206,7 +209,7 @@ void draw_glitch_frame(int popup_width, int popup_height, int is_transition) {
 void draw_switcher(int is_new_activation) {
     if (switcher_popup == None || num_switcher == 0) return;
 
-    int item_height = font_info->ascent + font_info->descent + 10;
+    int item_height = font_ascent + font_descent + 10;
     int popup_width = 500;
     int popup_height = num_switcher * item_height + 30;
 
@@ -234,7 +237,7 @@ void start_switcher() {
     switcher_active = 1;
     switcher_index = (num_switcher > 1) ? 1 : 0;
 
-    int item_height = font_info->ascent + font_info->descent + 10;
+    int item_height = font_ascent + font_descent + 10;
     int popup_width = 500;
     int popup_height = num_switcher * item_height + 30;
 
@@ -336,14 +339,21 @@ int main() {
     XSetWindowBackground(dpy, root, WhitePixel(dpy, screen));
     XClearWindow(dpy, root);
 
-    font_info = XLoadQueryFont(dpy, "-*-liberation sans-medium-r-normal--14-*-*-*-*-*-*-*");
-    if (!font_info) font_info = XLoadQueryFont(dpy, "fixed");
-    if (!font_info) return 1;
+    setlocale(LC_ALL, "");
+
+    char **missing_list;
+    int missing_count;
+    char *def_string;
+    font_set = XCreateFontSet(dpy, "-*-liberation sans-medium-r-normal--14-*-*-*-*-*-*-*,fixed,*", &missing_list, &missing_count, &def_string);
+    if (!font_set) return 1;
+
+    XFontSetExtents *ext = XExtentsOfFontSet(font_set);
+    font_ascent = -ext->max_logical_extent.y;
+    font_descent = ext->max_logical_extent.height - font_ascent;
 
     init_colors();
 
     gc = XCreateGC(dpy, root, 0, NULL);
-    XSetFont(dpy, gc, font_info->fid);
 
     XSelectInput(dpy, root, SubstructureRedirectMask | SubstructureNotifyMask | KeyPressMask | KeyReleaseMask);
 

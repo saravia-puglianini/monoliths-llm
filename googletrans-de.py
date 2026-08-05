@@ -1,23 +1,23 @@
 # BUILD $HOME/googletrans/dist/googletrans-de
 import sys
-from googletrans import Translator
+import os
+import contextlib
 
-translator = Translator()
+with open(os.devnull, "w") as fnull:
+    with contextlib.redirect_stderr(fnull):
+        from deep_translator import GoogleTranslator
 
-if len(sys.argv) < 2:
-    print("Uso: python3 googletrans-de.py 'texto a traducir'")
-    sys.exit(1)
-
-text_to_translate = " ".join(sys.argv[1:])
+texto_a_traducir = " ".join(sys.argv[1:])
 
 try:
-    result = translator.translate(text_to_translate, dest='de')
-    print(result.text)
+    with open(os.devnull, "w") as fnull:
+        with contextlib.redirect_stderr(fnull):
+            traduccion = GoogleTranslator(source='auto', target='de').translate(texto_a_traducir)
+    print(traduccion)
 except Exception as e:
-    # Mensaje en alemán cuando ocurre un error
     print("Fehler bei der Übersetzung")
-    # Si quieres depuración, descomenta la siguiente línea:
-    # print("Debug:", e)
+    print("Debug:", e)
+
 
 # # HOW TO BUILD
 # # Run

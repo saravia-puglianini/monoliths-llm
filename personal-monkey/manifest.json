@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Personal Monkey",
+  "version": "1.0",
+  "description": "Ejecuta personal-script.js cada 5 segundos de forma local.",
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["personal-script.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
