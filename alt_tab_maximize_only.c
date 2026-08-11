@@ -153,44 +153,57 @@ void maximize_window(Window w) {
     }
 }
 
-void draw_glitch_frame(int popup_width, int popup_height, int is_transition) {
-    XSetForeground(dpy, gc, is_transition ? ((rand() % 3 == 0) ? color_magenta : color_bg) : color_bg);
-    XFillRectangle(dpy, switcher_popup, gc, 0, 0, popup_width, popup_height);
+// Window tile layout structure for mosaic
+typedef struct {
+    Window win;
+    int x, y, width, height;
+} Tile;
 
-    int item_height = font_ascent + font_descent + 10;
-    int y_offset = 15;
+Tile switcher_tiles[MAX_WINDOWS];
+int hovered_tile = -1;
+
+void draw_grid_frame(int is_transition) {
+    XSetForeground(dpy, gc, is_transition ? ((rand() % 3 == 0) ? color_magenta : color_bg) : color_bg);
+    XFillRectangle(dpy, switcher_popup, gc, 0, 0, screen_width, screen_height);
 
     if (is_transition || (rand() % 4 == 0)) {
-        int lines = is_transition ? (5 + (rand() % 10)) : 2;
+        int lines = is_transition ? (8 + (rand() % 12)) : 3;
         for (int i = 0; i < lines; i++) {
             XSetForeground(dpy, gc, (rand() % 2) ? color_cyan : color_magenta);
-            XFillRectangle(dpy, switcher_popup, gc, rand() % 50, rand() % popup_height,
-                           50 + (rand() % (popup_width - 50)), 1 + (rand() % (is_transition ? 15 : 4)));
+            XFillRectangle(dpy, switcher_popup, gc, rand() % screen_width, rand() % screen_height,
+                           80 + (rand() % 300), 2 + (rand() % 10));
         }
     }
 
     for (int i = 0; i < num_switcher; i++) {
+        Tile *t = &switcher_tiles[i];
         char title[256];
-        get_window_title(switcher_list[i], title, sizeof(title));
-        int text_y = y_offset + i * item_height + font_ascent + 5;
-        int text_x = 20;
+        get_window_title(t->win, title, sizeof(title));
 
-        int glitch_this = is_transition || (rand() % 8 == 0);
-        int offset_x = glitch_this ? (rand() % 11 - 5) : 0;
+        int is_hovered = (i == hovered_tile);
+        
+        // Draw card background
+        XSetForeground(dpy, gc, is_hovered ? color_sel_bg : color_bg);
+        XFillRectangle(dpy, switcher_popup, gc, t->x, t->y, t->width, t->height);
+
+        // Draw card border
+        XSetForeground(dpy, gc, is_hovered ? color_magenta : color_border);
+        XSetLineAttributes(dpy, gc, is_hovered ? 3 : 1, LineSolid, CapButt, JoinMiter);
+        XDrawRectangle(dpy, switcher_popup, gc, t->x, t->y, t->width, t->height);
+        XSetLineAttributes(dpy, gc, 0, LineSolid, CapButt, JoinMiter);
+
+        // Text positioning & glitch effects
+        int text_x = t->x + 15;
+        int text_y = t->y + (t->height / 2) + (font_ascent / 2);
+
+        int glitch_this = is_transition || (rand() % 10 == 0);
+        int offset_x = glitch_this ? (rand() % 9 - 4) : 0;
         
         if (glitch_this && strlen(title) > 2) {
-            int glitch_chars = 1 + (rand() % 3);
+            int glitch_chars = 1 + (rand() % 2);
             for (int g = 0; g < glitch_chars; g++) {
                 title[rand() % strlen(title)] = "X#_$%&!01"[rand() % 9];
             }
-        }
-
-        if (i == switcher_index) {
-            XSetForeground(dpy, gc, color_sel_bg);
-            XFillRectangle(dpy, switcher_popup, gc, 10, y_offset + i * item_height, popup_width - 20, item_height);
-            XSetForeground(dpy, gc, color_sel_fg);
-        } else {
-            XSetForeground(dpy, gc, color_fg);
         }
 
         if (glitch_this) {
@@ -200,7 +213,7 @@ void draw_glitch_frame(int popup_width, int popup_height, int is_transition) {
             Xutf8DrawString(dpy, switcher_popup, font_set, gc, text_x + offset_x + 3, text_y, title, strlen(title));
         }
 
-        XSetForeground(dpy, gc, (i == switcher_index) ? color_sel_fg : color_fg);
+        XSetForeground(dpy, gc, is_hovered ? color_sel_fg : color_fg);
         Xutf8DrawString(dpy, switcher_popup, font_set, gc, text_x + offset_x, text_y, title, strlen(title));
     }
     XFlush(dpy);
@@ -209,17 +222,51 @@ void draw_glitch_frame(int popup_width, int popup_height, int is_transition) {
 void draw_switcher(int is_new_activation) {
     if (switcher_popup == None || num_switcher == 0) return;
 
-    int item_height = font_ascent + font_descent + 10;
-    int popup_width = 500;
-    int popup_height = num_switcher * item_height + 30;
-
-    int frames = is_new_activation ? 6 : 3;
-    int delay = is_new_activation ? 18000 : 12000;
+    int frames = is_new_activation ? 5 : 2;
+    int delay = is_new_activation ? 12000 : 8000;
     for (int f = 0; f < frames; f++) {
-        draw_glitch_frame(popup_width, popup_height, 1);
+        draw_grid_frame(1);
         usleep(delay);
     }
-    draw_glitch_frame(popup_width, popup_height, 0);
+    draw_grid_frame(0);
+}
+
+void calculate_grid_tiles() {
+    if (num_switcher <= 0) return;
+
+    int cols = 1;
+    while (cols * cols < num_switcher) cols++;
+    int rows = (num_switcher + cols - 1) / cols;
+
+    int margin = 40;
+    int gap = 20;
+    int avail_w = screen_width - (margin * 2) - (gap * (cols - 1));
+    int avail_h = screen_height - (margin * 2) - (gap * (rows - 1));
+
+    int tile_w = avail_w / cols;
+    int tile_h = avail_h / rows;
+
+    for (int i = 0; i < num_switcher; i++) {
+        int r = i / cols;
+        int c = i % cols;
+
+        switcher_tiles[i].win = switcher_list[i];
+        switcher_tiles[i].x = margin + c * (tile_w + gap);
+        switcher_tiles[i].y = margin + r * (tile_h + gap);
+        switcher_tiles[i].width = tile_w;
+        switcher_tiles[i].height = tile_h;
+    }
+}
+
+int get_tile_at_pos(int x, int y) {
+    for (int i = 0; i < num_switcher; i++) {
+        Tile *t = &switcher_tiles[i];
+        if (x >= t->x && x <= t->x + t->width &&
+            y >= t->y && y <= t->y + t->height) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 void start_switcher() {
@@ -235,20 +282,19 @@ void start_switcher() {
     if (num_switcher == 0) return;
 
     switcher_active = 1;
-    switcher_index = (num_switcher > 1) ? 1 : 0;
+    switcher_index = 0;
+    hovered_tile = -1;
 
-    int item_height = font_ascent + font_descent + 10;
-    int popup_width = 500;
-    int popup_height = num_switcher * item_height + 30;
+    calculate_grid_tiles();
 
     XSetWindowAttributes attrs;
     attrs.override_redirect = True;
     attrs.background_pixel = color_bg;
     attrs.border_pixel = color_border;
-    attrs.event_mask = StructureNotifyMask;
+    attrs.event_mask = StructureNotifyMask | ButtonPressMask | PointerMotionMask;
 
-    switcher_popup = XCreateWindow(dpy, root, (screen_width - popup_width) / 2, (screen_height - popup_height) / 2,
-                                   popup_width, popup_height, 2, CopyFromParent, InputOutput, CopyFromParent,
+    switcher_popup = XCreateWindow(dpy, root, 0, 0, screen_width, screen_height, 0,
+                                   CopyFromParent, InputOutput, CopyFromParent,
                                    CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWEventMask, &attrs);
 
     XMapRaised(dpy, switcher_popup);
@@ -260,6 +306,17 @@ void start_switcher() {
     }
 
     XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+    XGrabPointer(dpy, switcher_popup, True, ButtonPressMask | PointerMotionMask,
+                GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
+
+    // Initial mouse position check for hover
+    Window r_win, c_win;
+    int rx, ry, wx, wy;
+    unsigned int mask;
+    if (XQueryPointer(dpy, switcher_popup, &r_win, &c_win, &rx, &ry, &wx, &wy, &mask)) {
+        hovered_tile = get_tile_at_pos(wx, wy);
+    }
+
     draw_switcher(1);
 }
 
@@ -303,16 +360,17 @@ void glitch_window(Window w) {
     XFlush(dpy);
 }
 
-void stop_switcher(int accept) {
+void stop_switcher(int accept_index) {
     if (!switcher_active) return;
 
+    XUngrabPointer(dpy, CurrentTime);
     XUngrabKeyboard(dpy, CurrentTime);
     XDestroyWindow(dpy, switcher_popup);
     switcher_popup = None;
     switcher_active = 0;
 
-    if (accept && num_switcher > 0 && switcher_index >= 0 && switcher_index < num_switcher) {
-        Window target = switcher_list[switcher_index];
+    if (accept_index >= 0 && accept_index < num_switcher) {
+        Window target = switcher_tiles[accept_index].win;
         XRaiseWindow(dpy, target);
         XSetInputFocus(dpy, target, RevertToPointerRoot, CurrentTime);
         add_window(target);
@@ -473,28 +531,40 @@ int main() {
                 }
                 if (num_managed == 0) XClearWindow(dpy, root);
                 break;
+            case MotionNotify: {
+                if (switcher_active && ev.xmotion.window == switcher_popup) {
+                    int prev_hovered = hovered_tile;
+                    hovered_tile = get_tile_at_pos(ev.xmotion.x, ev.xmotion.y);
+                    if (hovered_tile != prev_hovered) {
+                        draw_grid_frame(0);
+                    }
+                }
+                break;
+            }
+            case ButtonPress: {
+                if (switcher_active && ev.xbutton.button == Button1) {
+                    int clicked = get_tile_at_pos(ev.xbutton.x, ev.xbutton.y);
+                    if (clicked != -1) {
+                        stop_switcher(clicked);
+                    }
+                }
+                break;
+            }
             case KeyPress: {
                 if (ev.xkey.keycode == tab_code) {
                     if (!switcher_active) {
                         start_switcher();
-                    } else {
-                        switcher_index = (ev.xkey.state & ShiftMask) ? 
-                            (switcher_index - 1 + num_switcher) % num_switcher : 
-                            (switcher_index + 1) % num_switcher;
-                        draw_switcher(0);
                     }
+                    // IMPORTANT: If switcher IS active, extra Alt+Tab keypresses do NOTHING.
+                    // Forced mouse selection!
                 } else if (switcher_active && XLookupKeysym(&ev.xkey, 0) == XK_Escape) {
-                    stop_switcher(0);
+                    stop_switcher(-1);
                 }
                 break;
             }
             case KeyRelease: {
-                if (switcher_active) {
-                    KeySym sym = XLookupKeysym(&ev.xkey, 0);
-                    if (sym == XK_Alt_L || sym == XK_Alt_R || sym == XK_Meta_L || sym == XK_Meta_R) {
-                        stop_switcher(1);
-                    }
-                }
+                // KeyRelease of Alt does NOT close the switcher anymore!
+                // Mouse click or ESC is required to choose a window.
                 break;
             }
         }
