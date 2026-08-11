@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+# Servicio OpenRC para auto-erase-sap-carga
+# Monitorea y rota private.carga.txt a private.carga.YYYY-MM-DD.ready.txt
+
+name="auto-erase-sap-carga"
+description="Servidor OpenRC para rotacion y backup de carga automatica de SAP"
+command="/home/user/monoliths-llm/auto-erase-sap-carga.py"
+command_background="true"
+pidfile="/run/auto-erase-sap-carga.pid"
+command_user="user:libre"
+
+export HOME="/home/user"
+
+depend() {
+    need localmount
+    after bootmisc
+}

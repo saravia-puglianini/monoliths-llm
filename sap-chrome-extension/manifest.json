@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Auto SAP Worklog Integrator",
+  "version": "1.0",
+  "description": "Automatiza la carga de registros de horas en SAP S/4HANA Cloud en segundo plano sin perder foco.",
+  "permissions": [
+    "tabs",
+    "notifications",
+    "storage",
+    "alarms",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:9995/*",
+    "http://127.0.0.1:9995/*",
+    "https://my419950.s4hana.cloud.sap/*",
+    "https://*.s4hana.cloud.sap/*",
+    "https://*.office.com/*",
+    "https://*.microsoftonline.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://my419950.s4hana.cloud.sap/*"],
+      "js": ["content_sap.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Auto SAP Status"
+  }
+}

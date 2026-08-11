@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 320px;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 12px;
+      margin: 0;
+      background: #0f172a;
+      color: #f8fafc;
+    }
+    h2 {
+      font-size: 15px;
+      margin-top: 0;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card {
+      background: #1e293b;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .badge-ok { background: #059669; color: #ecfdf5; }
+    .badge-pending { background: #d97706; color: #fffbeb; }
+    .btn {
+      width: 100%;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .log-list {
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <h2><span>⚡</span> Auto SAP Worklog</h2>
+  <div class="card">
+    <div>Servidor OpenRC: <span id="serverStatus" class="status-badge badge-pending">Verificando...</span></div>
+    <div style="margin-top: 6px;">Estado Carga: <span id="cargaStatus">Sin cargas pendientes</span></div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight: 600; margin-bottom: 4px;">Detalles Carga Pendiente:</div>
+    <div id="cargaDetails" class="log-list">Ninguna</div>
+  </div>
+
+  <button id="btnCheck" class="btn">Verificar Carga Ahora</button>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -178,13 +178,7 @@ while true; do
 
     # FLUJO DE INGRESO
     while true; do
-        HORAS_A_JUSTIFICAR=$($YAD_BIN --title "Jira - Cantidad" \
-            --text "Debe <b>$COUNT_ADEUDADAS hora(s)</b>.\n¿Cuántas va a registrar ahora?" \
-            --entry --entry-label="Horas:" --numeric --center --width=300 --always-on-top)
-        
-        [ $? -ne 0 ] || [ -z "$HORAS_A_JUSTIFICAR" ] && break 2
-        HORAS_A_JUSTIFICAR=$(echo "$HORAS_A_JUSTIFICAR" | sed 's/[^0-9]*//g')
-        [ -z "$HORAS_A_JUSTIFICAR" ] && continue
+        HORAS_A_JUSTIFICAR=1
 
         # Intentar obtener tareas de Jira para selección
         HAS_JIRA=0
@@ -228,7 +222,7 @@ while true; do
 $TASKS_LIST"
                 
                 SELECT_DATA=$($YAD_BIN --list --title "Jira - Seleccionar Tarea" \
-                    --text "Seleccione la tarea para registrar las $HORAS_A_JUSTIFICAR hora(s):" \
+                    --text "Seleccione la tarea para registrar <b>1 hora</b>:" \
                     --column="Clave (Task Key)" \
                     --column="Project Name" \
                     --column="Buscar" \
@@ -333,11 +327,20 @@ $TASKS_LIST"
             if [ "$PROCESADAS" -lt "$HORAS_A_JUSTIFICAR" ]; then
                 H_STR=$(format_hour_csv "$h")
                 echo "$CURRENT_DATE;$H_STR;$FINAL_PROJ;$FINAL_DESC;$WORKLOG_URL" >> "$JUSTIFICAR_CSV"
+                
+                # Escribir carga para el Addon Chrome & Servicio OpenRC (auto-erase-sap-carga)
+                AUTO_SAP_DIR="$HOME/monoliths-llm/auto-sap"
+                mkdir -p "$AUTO_SAP_DIR"
+                echo "$CURRENT_DATE;$H_STR;$FINAL_PROJ;$FINAL_DESC;$WORKLOG_URL" >> "$AUTO_SAP_DIR/private.carga.txt"
+                
                 PROCESADAS=$((PROCESADAS + 1))
             fi
         done
 
-        $YAD_BIN --title "Jira - Éxito" --text "Registro completado y respaldado." \
+        # Invocación automática Web RPA a SAP S/4HANA Cloud
+        python3 "$DIR/sap_helper.py" auto-log "$CURRENT_DATE" >> "$JUSTIFICAR_DIR/sap_helper.log" 2>&1 &
+
+        $YAD_BIN --title "Jira - Éxito" --text "Registro completado y respaldado en Jira y SAP." \
             --button="OK:0" --center --width=300 --timeout=3 --always-on-top
 
         # Verificar si se completó el registro de las 8 horas de hoy
