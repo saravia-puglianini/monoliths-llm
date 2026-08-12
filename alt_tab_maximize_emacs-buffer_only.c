@@ -681,22 +681,22 @@ int main() {
 
 # DO A Makefile
 
-       CC = gcc
-       CFLAGS = -Wall -Wextra -Ofast -flto -s -fno-asynchronous-unwind-tables -fno-ident
-       LIBS = -lX11 -lXi
-       PREFIX ?= /usr/local
+      CC = gcc
+      CFLAGS = -Wall -Wextra -Ofast -flto -s -fno-asynchronous-unwind-tables -fno-ident
+      LIBS = -lX11 -lXi
+      PREFIX ?= /usr/local
 
-       all: alt_tab_maximize_emacs-buffer_only
+      all: alt_tab_maximize_emacs-buffer_only
 
-       alt_tab_maximize_emacs-buffer_only: alt_tab_maximize_emacs-buffer_only.c
-	       $(CC) $(CFLAGS) -o alt_tab_maximize_emacs-buffer_only alt_tab_maximize_emacs-buffer_only.c $(LIBS)
-	       chmod +x alt_tab_maximize_emacs-buffer_only alt_tab_maximize_emacs-buffer_only-session
+      alt_tab_maximize_emacs-buffer_only: alt_tab_maximize_emacs-buffer_only.c
+	      $(CC) $(CFLAGS) -o alt_tab_maximize_emacs-buffer_only alt_tab_maximize_emacs-buffer_only.c $(LIBS)
+	      chmod +x alt_tab_maximize_emacs-buffer_only alt_tab_maximize_emacs-buffer_only-session
 
-       install: all
-	       mkdir -p $(DESTDIR)$(PREFIX)/bin
-	       cp -f alt_tab_maximize_emacs-buffer_only $(DESTDIR)$(PREFIX)/bin
-	       cp -f alt_tab_maximize_emacs-buffer_only-session $(DESTDIR)$(PREFIX)/bin
-		      chmod 755 $(DESTDIR)$(PREFIX)/bin/alt_tab_maximize_emacs-buffer_only
+      install: all
+	      mkdir -p $(DESTDIR)$(PREFIX)/bin
+	      cp -f alt_tab_maximize_emacs-buffer_only $(DESTDIR)$(PREFIX)/bin
+	      cp -f alt_tab_maximize_emacs-buffer_only-session $(DESTDIR)$(PREFIX)/bin
+	      chmod 755 $(DESTDIR)$(PREFIX)/bin/alt_tab_maximize_emacs-buffer_only
 	      chmod 755 $(DESTDIR)$(PREFIX)/bin/alt_tab_maximize_emacs-buffer_only-session
 
       uninstall:
