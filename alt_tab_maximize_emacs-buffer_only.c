@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
@@ -7,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 #include <unistd.h>
 #include <locale.h>
 
@@ -19,12 +17,19 @@ int screen, screen_width, screen_height;
 
 int xi_opcode;
 KeyCode tab_code;
-KeyCode alt_l_code, alt_r_code, meta_l_code, meta_r_code, super_l_code, super_r_code;
+KeyCode alt_l_code, alt_r_code, meta_l_code, meta_r_code;
 Window ignore_unmap_window = None;
 
 // Window list in MRU order
 Window managed_windows[MAX_WINDOWS];
 int num_managed = 0;
+
+// Switcher state
+int switcher_active = 0;
+Window switcher_popup = None;
+int switcher_index = 0;
+Window switcher_list[MAX_WINDOWS];
+int num_switcher = 0;
 
 // Colors & graphics
 unsigned long color_bg, color_fg, color_sel_bg, color_sel_fg, color_border, color_cyan, color_magenta;
@@ -49,6 +54,25 @@ void init_colors() {
     color_magenta = get_color("#f72585");
 }
 
+void remove_window(Window w) {
+    for (int i = 0; i < num_managed; i++) {
+        if (managed_windows[i] == w) {
+            memmove(&managed_windows[i], &managed_windows[i + 1], (num_managed - i - 1) * sizeof(Window));
+            num_managed--;
+            return;
+        }
+    }
+}
+
+void add_window(Window w) {
+    remove_window(w);
+    if (num_managed < MAX_WINDOWS) {
+        memmove(&managed_windows[1], &managed_windows[0], num_managed * sizeof(Window));
+        managed_windows[0] = w;
+        num_managed++;
+    }
+}
+
 void get_window_title(Window w, char *buf, int max_len) {
     char *name = NULL;
     if (XFetchName(dpy, w, &name) && name && *name) {
@@ -70,64 +94,6 @@ void get_window_title(Window w, char *buf, int max_len) {
         return;
     }
     snprintf(buf, max_len, "Untitled Window");
-}
-
-int is_emacs(Window w) {
-    XClassHint chint;
-    int res = 0;
-    if (XGetClassHint(dpy, w, &chint)) {
-        if (chint.res_name && strcasecmp(chint.res_name, "emacs") == 0) {
-            res = 1;
-        } else if (chint.res_class && strcasecmp(chint.res_class, "emacs") == 0) {
-            res = 1;
-        }
-        if (chint.res_name) XFree(chint.res_name);
-        if (chint.res_class) XFree(chint.res_class);
-    }
-    if (!res) {
-        char title[256];
-        get_window_title(w, title, sizeof(title));
-        if (strcasestr(title, "emacs") != NULL) {
-            res = 1;
-        }
-    }
-    return res;
-}
-
-void update_window_list_file() {
-    FILE *f = fopen("/tmp/emacs_non_emacs_windows", "w");
-    if (!f) return;
-    for (int i = 0; i < num_managed; i++) {
-        Window w = managed_windows[i];
-        if (!is_emacs(w)) {
-            char title[256];
-            get_window_title(w, title, sizeof(title));
-            fprintf(f, "%lu\t%s\n", (unsigned long)w, title);
-        }
-    }
-    fclose(f);
-}
-
-void remove_window(Window w) {
-    for (int i = 0; i < num_managed; i++) {
-        if (managed_windows[i] == w) {
-            memmove(&managed_windows[i], &managed_windows[i + 1], (num_managed - i - 1) * sizeof(Window));
-            num_managed--;
-            update_window_list_file();
-            return;
-        }
-    }
-}
-
-void add_window(Window w) {
-    remove_window(w);
-    if (num_managed < MAX_WINDOWS) {
-        memmove(&managed_windows[1], &managed_windows[0], num_managed * sizeof(Window));
-        managed_windows[0] = w;
-        num_managed++;
-        XSelectInput(dpy, w, PropertyChangeMask);
-        update_window_list_file();
-    }
 }
 
 int is_manageable(Window w) {
@@ -187,6 +153,173 @@ void maximize_window(Window w) {
     }
 }
 
+// Window tile layout structure for mosaic
+typedef struct {
+    Window win;
+    int x, y, width, height;
+} Tile;
+
+Tile switcher_tiles[MAX_WINDOWS];
+int hovered_tile = -1;
+
+void draw_grid_frame(int is_transition) {
+    XSetForeground(dpy, gc, is_transition ? ((rand() % 3 == 0) ? color_magenta : color_bg) : color_bg);
+    XFillRectangle(dpy, switcher_popup, gc, 0, 0, screen_width, screen_height);
+
+    if (is_transition || (rand() % 4 == 0)) {
+        int lines = is_transition ? (8 + (rand() % 12)) : 3;
+        for (int i = 0; i < lines; i++) {
+            XSetForeground(dpy, gc, (rand() % 2) ? color_cyan : color_magenta);
+            XFillRectangle(dpy, switcher_popup, gc, rand() % screen_width, rand() % screen_height,
+                           80 + (rand() % 300), 2 + (rand() % 10));
+        }
+    }
+
+    for (int i = 0; i < num_switcher; i++) {
+        Tile *t = &switcher_tiles[i];
+        char title[256];
+        get_window_title(t->win, title, sizeof(title));
+
+        int is_hovered = (i == hovered_tile);
+        
+        // Draw card background
+        XSetForeground(dpy, gc, is_hovered ? color_sel_bg : color_bg);
+        XFillRectangle(dpy, switcher_popup, gc, t->x, t->y, t->width, t->height);
+
+        // Draw card border
+        XSetForeground(dpy, gc, is_hovered ? color_magenta : color_border);
+        XSetLineAttributes(dpy, gc, is_hovered ? 3 : 1, LineSolid, CapButt, JoinMiter);
+        XDrawRectangle(dpy, switcher_popup, gc, t->x, t->y, t->width, t->height);
+        XSetLineAttributes(dpy, gc, 0, LineSolid, CapButt, JoinMiter);
+
+        // Text positioning & glitch effects
+        int text_x = t->x + 15;
+        int text_y = t->y + (t->height / 2) + (font_ascent / 2);
+
+        int glitch_this = is_transition || (rand() % 10 == 0);
+        int offset_x = glitch_this ? (rand() % 9 - 4) : 0;
+        
+        if (glitch_this && strlen(title) > 2) {
+            int glitch_chars = 1 + (rand() % 2);
+            for (int g = 0; g < glitch_chars; g++) {
+                title[rand() % strlen(title)] = "X#_$%&!01"[rand() % 9];
+            }
+        }
+
+        if (glitch_this) {
+            XSetForeground(dpy, gc, color_cyan);
+            Xutf8DrawString(dpy, switcher_popup, font_set, gc, text_x + offset_x - 3, text_y, title, strlen(title));
+            XSetForeground(dpy, gc, color_magenta);
+            Xutf8DrawString(dpy, switcher_popup, font_set, gc, text_x + offset_x + 3, text_y, title, strlen(title));
+        }
+
+        XSetForeground(dpy, gc, is_hovered ? color_sel_fg : color_fg);
+        Xutf8DrawString(dpy, switcher_popup, font_set, gc, text_x + offset_x, text_y, title, strlen(title));
+    }
+    XFlush(dpy);
+}
+
+void draw_switcher(int is_new_activation) {
+    if (switcher_popup == None || num_switcher == 0) return;
+
+    int frames = is_new_activation ? 5 : 2;
+    int delay = is_new_activation ? 12000 : 8000;
+    for (int f = 0; f < frames; f++) {
+        draw_grid_frame(1);
+        usleep(delay);
+    }
+    draw_grid_frame(0);
+}
+
+void calculate_grid_tiles() {
+    if (num_switcher <= 0) return;
+
+    int cols = 1;
+    while (cols * cols < num_switcher) cols++;
+    int rows = (num_switcher + cols - 1) / cols;
+
+    int margin = 40;
+    int gap = 20;
+    int avail_w = screen_width - (margin * 2) - (gap * (cols - 1));
+    int avail_h = screen_height - (margin * 2) - (gap * (rows - 1));
+
+    int tile_w = avail_w / cols;
+    int tile_h = avail_h / rows;
+
+    for (int i = 0; i < num_switcher; i++) {
+        int r = i / cols;
+        int c = i % cols;
+
+        switcher_tiles[i].win = switcher_list[i];
+        switcher_tiles[i].x = margin + c * (tile_w + gap);
+        switcher_tiles[i].y = margin + r * (tile_h + gap);
+        switcher_tiles[i].width = tile_w;
+        switcher_tiles[i].height = tile_h;
+    }
+}
+
+int get_tile_at_pos(int x, int y) {
+    for (int i = 0; i < num_switcher; i++) {
+        Tile *t = &switcher_tiles[i];
+        if (x >= t->x && x <= t->x + t->width &&
+            y >= t->y && y <= t->y + t->height) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void start_switcher() {
+    if (switcher_active) return;
+
+    num_switcher = 0;
+    for (int i = 0; i < num_managed; i++) {
+        XWindowAttributes attrs;
+        if (XGetWindowAttributes(dpy, managed_windows[i], &attrs) && attrs.map_state == IsViewable) {
+            switcher_list[num_switcher++] = managed_windows[i];
+        }
+    }
+    if (num_switcher == 0) return;
+
+    switcher_active = 1;
+    switcher_index = 0;
+    hovered_tile = -1;
+
+    calculate_grid_tiles();
+
+    XSetWindowAttributes attrs;
+    attrs.override_redirect = True;
+    attrs.background_pixel = color_bg;
+    attrs.border_pixel = color_border;
+    attrs.event_mask = StructureNotifyMask | ButtonPressMask | PointerMotionMask;
+
+    switcher_popup = XCreateWindow(dpy, root, 0, 0, screen_width, screen_height, 0,
+                                   CopyFromParent, InputOutput, CopyFromParent,
+                                   CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWEventMask, &attrs);
+
+    XMapRaised(dpy, switcher_popup);
+    
+    XEvent ev;
+    while (1) {
+        XWindowEvent(dpy, switcher_popup, StructureNotifyMask, &ev);
+        if (ev.type == MapNotify) break;
+    }
+
+    XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+    XGrabPointer(dpy, switcher_popup, True, ButtonPressMask | PointerMotionMask,
+                GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
+
+    // Initial mouse position check for hover
+    Window r_win, c_win;
+    int rx, ry, wx, wy;
+    unsigned int mask;
+    if (XQueryPointer(dpy, switcher_popup, &r_win, &c_win, &rx, &ry, &wx, &wy, &mask)) {
+        hovered_tile = get_tile_at_pos(wx, wy);
+    }
+
+    draw_switcher(1);
+}
+
 void glitch_window(Window w) {
     XWindowAttributes attrs;
     if (!XGetWindowAttributes(dpy, w, &attrs) || attrs.map_state != IsViewable) return;
@@ -227,41 +360,21 @@ void glitch_window(Window w) {
     XFlush(dpy);
 }
 
-void set_active_window_prop(Window w) {
-    Atom net_active = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
-    XChangeProperty(dpy, root, net_active, XA_WINDOW, 32, PropModeReplace,
-                    (unsigned char *)&w, 1);
-}
+void stop_switcher(int accept_index) {
+    if (!switcher_active) return;
 
-void focus_emacs() {
-    for (int i = 0; i < num_managed; i++) {
-        if (is_emacs(managed_windows[i])) {
-            Window target = managed_windows[i];
-            XRaiseWindow(dpy, target);
-            XSetInputFocus(dpy, target, RevertToPointerRoot, CurrentTime);
-            set_active_window_prop(target);
-            add_window(target);
-            glitch_window(target);
-            return;
-        }
-    }
-    // Search in root windows if not yet in managed_windows
-    unsigned int nwindows;
-    Window root_ret, parent_ret, *windows = NULL;
-    if (XQueryTree(dpy, root, &root_ret, &parent_ret, &windows, &nwindows) && windows) {
-        for (unsigned int i = 0; i < nwindows; i++) {
-            if (is_emacs(windows[i])) {
-                Window target = windows[i];
-                XRaiseWindow(dpy, target);
-                XSetInputFocus(dpy, target, RevertToPointerRoot, CurrentTime);
-                set_active_window_prop(target);
-                add_window(target);
-                glitch_window(target);
-                XFree(windows);
-                return;
-            }
-        }
-        XFree(windows);
+    XUngrabPointer(dpy, CurrentTime);
+    XUngrabKeyboard(dpy, CurrentTime);
+    XDestroyWindow(dpy, switcher_popup);
+    switcher_popup = None;
+    switcher_active = 0;
+
+    if (accept_index >= 0 && accept_index < num_switcher) {
+        Window target = switcher_tiles[accept_index].win;
+        XRaiseWindow(dpy, target);
+        XSetInputFocus(dpy, target, RevertToPointerRoot, CurrentTime);
+        add_window(target);
+        glitch_window(target);
     }
 }
 
@@ -280,13 +393,6 @@ int main() {
     root = RootWindow(dpy, screen);
     screen_width = DisplayWidth(dpy, screen);
     screen_height = DisplayHeight(dpy, screen);
-
-    Atom net_supported = XInternAtom(dpy, "_NET_SUPPORTED", False);
-    Atom net_active = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
-    Atom net_wm_name = XInternAtom(dpy, "_NET_WM_NAME", False);
-    Atom supported[] = { net_active, net_wm_name };
-    XChangeProperty(dpy, root, net_supported, XA_ATOM, 32, PropModeReplace,
-                    (unsigned char *)supported, 2);
 
     XSetWindowBackground(dpy, root, WhitePixel(dpy, screen));
     XClearWindow(dpy, root);
@@ -314,17 +420,9 @@ int main() {
     alt_r_code = XKeysymToKeycode(dpy, XK_Alt_R);
     meta_l_code = XKeysymToKeycode(dpy, XK_Meta_L);
     meta_r_code = XKeysymToKeycode(dpy, XK_Meta_R);
-    super_l_code = XKeysymToKeycode(dpy, XK_Super_L);
-    super_r_code = XKeysymToKeycode(dpy, XK_Super_R);
 
-    unsigned int base_mods[] = { Mod1Mask, Mod1Mask | ShiftMask, Mod4Mask, Mod4Mask | ShiftMask };
-    unsigned int lock_mods[] = { 0, LockMask, Mod2Mask, LockMask | Mod2Mask, Mod5Mask, LockMask | Mod5Mask, Mod2Mask | Mod5Mask, LockMask | Mod2Mask | Mod5Mask };
-
-    for (size_t b = 0; b < sizeof(base_mods) / sizeof(base_mods[0]); b++) {
-        for (size_t l = 0; l < sizeof(lock_mods) / sizeof(lock_mods[0]); l++) {
-            XGrabKey(dpy, tab_code, base_mods[b] | lock_mods[l], root, False, GrabModeAsync, GrabModeAsync);
-        }
-    }
+    XGrabKey(dpy, tab_code, Mod1Mask, root, False, GrabModeAsync, GrabModeAsync);
+    XGrabKey(dpy, tab_code, Mod1Mask | ShiftMask, root, False, GrabModeAsync, GrabModeAsync);
 
     int xi_event, xi_error;
     if (XQueryExtension(dpy, "XInputExtension", &xi_opcode, &xi_event, &xi_error)) {
@@ -367,11 +465,18 @@ int main() {
                     int alt_down = (alt_l_code && (keys[alt_l_code >> 3] & (1 << (alt_l_code & 7)))) ||
                                    (alt_r_code && (keys[alt_r_code >> 3] & (1 << (alt_r_code & 7)))) ||
                                    (meta_l_code && (keys[meta_l_code >> 3] & (1 << (meta_l_code & 7)))) ||
-                                   (meta_r_code && (keys[meta_r_code >> 3] & (1 << (meta_r_code & 7)))) ||
-                                   (super_l_code && (keys[super_l_code >> 3] & (1 << (super_l_code & 7)))) ||
-                                   (super_r_code && (keys[super_r_code >> 3] & (1 << (super_r_code & 7))));
-                    if (alt_down) {
-                        focus_emacs();
+                                   (meta_r_code && (keys[meta_r_code >> 3] & (1 << (meta_r_code & 7))));
+                    if (alt_down && !switcher_active) {
+                        Window focused = None;
+                        int revert_to;
+                        XGetInputFocus(dpy, &focused, &revert_to);
+                        if (focused != None && focused != root && focused != switcher_popup) {
+                            ignore_unmap_window = focused;
+                            XUnmapWindow(dpy, focused);
+                            XMapWindow(dpy, focused);
+                            XFlush(dpy);
+                        }
+                        start_switcher();
                     }
                 }
             }
@@ -389,7 +494,6 @@ int main() {
                 }
                 XMapWindow(dpy, w);
                 XSetInputFocus(dpy, w, RevertToPointerRoot, CurrentTime);
-                set_active_window_prop(w);
                 if (manageable) glitch_window(w);
                 break;
             }
@@ -416,38 +520,51 @@ int main() {
                     ignore_unmap_window = None;
                     break;
                 }
-                remove_window(ev.xunmap.window);
+                if (!switcher_active || ev.xunmap.window != switcher_popup) {
+                    remove_window(ev.xunmap.window);
+                }
                 if (num_managed == 0) XClearWindow(dpy, root);
                 break;
             case DestroyNotify:
-                remove_window(ev.xdestroywindow.window);
+                if (!switcher_active || ev.xdestroywindow.window != switcher_popup) {
+                    remove_window(ev.xdestroywindow.window);
+                }
                 if (num_managed == 0) XClearWindow(dpy, root);
                 break;
-            case PropertyNotify: {
-                if (ev.xproperty.atom == XInternAtom(dpy, "_NET_WM_NAME", False) ||
-                    ev.xproperty.atom == XA_WM_NAME) {
-                    update_window_list_file();
+            case MotionNotify: {
+                if (switcher_active && ev.xmotion.window == switcher_popup) {
+                    int prev_hovered = hovered_tile;
+                    hovered_tile = get_tile_at_pos(ev.xmotion.x, ev.xmotion.y);
+                    if (hovered_tile != prev_hovered) {
+                        draw_grid_frame(0);
+                    }
                 }
                 break;
             }
-            case ClientMessage: {
-                Atom net_active = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
-                if (ev.xclient.message_type == net_active) {
-                    Window w = ev.xclient.window;
-                    if (w != None && is_manageable(w)) {
-                        XRaiseWindow(dpy, w);
-                        XSetInputFocus(dpy, w, RevertToPointerRoot, CurrentTime);
-                        set_active_window_prop(w);
-                        add_window(w);
-                        glitch_window(w);
+            case ButtonPress: {
+                if (switcher_active && ev.xbutton.button == Button1) {
+                    int clicked = get_tile_at_pos(ev.xbutton.x, ev.xbutton.y);
+                    if (clicked != -1) {
+                        stop_switcher(clicked);
                     }
                 }
                 break;
             }
             case KeyPress: {
                 if (ev.xkey.keycode == tab_code) {
-                    focus_emacs();
+                    if (!switcher_active) {
+                        start_switcher();
+                    }
+                    // IMPORTANT: If switcher IS active, extra Alt+Tab keypresses do NOTHING.
+                    // Forced mouse selection!
+                } else if (switcher_active && XLookupKeysym(&ev.xkey, 0) == XK_Escape) {
+                    stop_switcher(-1);
                 }
+                break;
+            }
+            case KeyRelease: {
+                // KeyRelease of Alt does NOT close the switcher anymore!
+                // Mouse click or ESC is required to choose a window.
                 break;
             }
         }
