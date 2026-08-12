@@ -86,6 +86,22 @@ pcm.dsnoop_mic {
     }
 }
 
+pcm.entrada_buena_jbl {
+    type plug
+    slave {
+        pcm "dsnoop_mic"
+    }
+}
+
+pcm.entrada_buena_16k_jbl {
+    type plug
+    slave {
+        pcm "entrada_buena_jbl"
+        rate 16000
+    }
+}
+
+
 pcm.dmix_speaker {
     type dmix
     ipc_key 1024

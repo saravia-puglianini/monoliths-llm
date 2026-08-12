@@ -42,8 +42,8 @@ fi
 if [[ -d /sys/class/powercap/intel-rapl:0 ]]; then
     echo
     echo "[+] Ajustando power limits PL1/PL2..."
-    echo 45000000 | doas tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw   # PL1 45W sostenido
-    echo 60000000 | doas tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw   # PL2 60W turbo corto
+    echo 45000000 | tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw   # PL1 45W sostenido
+    echo 60000000 | tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw   # PL2 60W turbo corto
 fi
 
 # --------------------------------------
@@ -118,7 +118,11 @@ done
 echo
 echo "[+] Ajustando swappiness..."
 
-sysctl -w vm.swappiness=10 >/dev/null
+if command -v sysctl >/dev/null 2>&1; then
+    sysctl -w vm.swappiness=10 >/dev/null
+elif [[ -f /proc/sys/vm/swappiness ]]; then
+    echo 10 > /proc/sys/vm/swappiness
+fi
 
 # --------------------------------------
 # TRANSPARENT HUGEPAGES
