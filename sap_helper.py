@@ -228,6 +228,27 @@ def generate_sap_ui5_rpa_js(target_date, project_hours_map):
         retries++;
     }}
 
+    // 0. Dar foco a la tabla y enviar 10 veces Ctrl + - (Zoom Out)
+    let gridTable = document.querySelector('[id*="timesheetMain"], .sapTetrisTable, table');
+    if (gridTable) {{
+        try {{
+            gridTable.focus();
+            gridTable.scrollIntoView({{ block: 'center' }});
+        }} catch(e) {{}}
+    }}
+    for (let z = 1; z <= 10; z++) {{
+        let currentZoom = Math.max(0.5, 1.0 - (z * 0.05));
+        if (document.body) {{ document.body.style.zoom = `${{currentZoom}}`; }}
+        let tgt = document.activeElement || gridTable || document.body || window;
+        try {{ if (tgt.focus) tgt.focus(); }} catch (e) {{}}
+        tgt.dispatchEvent(new KeyboardEvent('keydown', {{ key: '-', code: 'Minus', keyCode: 189, ctrlKey: true, bubbles: true }}));
+        tgt.dispatchEvent(new KeyboardEvent('keyup', {{ key: '-', code: 'Minus', keyCode: 189, ctrlKey: true, bubbles: true }}));
+        tgt.dispatchEvent(new KeyboardEvent('keydown', {{ key: '-', code: 'NumpadSubtract', keyCode: 109, ctrlKey: true, bubbles: true }}));
+        tgt.dispatchEvent(new KeyboardEvent('keyup', {{ key: '-', code: 'NumpadSubtract', keyCode: 109, ctrlKey: true, bubbles: true }}));
+        await wait(120);
+    }}
+    await wait(400);
+
     // Intentar interactuar vía DOM & SAP UI5 Core
     for (const item of entries) {{
         try {{

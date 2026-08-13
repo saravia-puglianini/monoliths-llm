@@ -59,7 +59,8 @@ class AutoEraseHandler(http.server.BaseHTTPRequestHandler):
                                     "fecha": d_part,
                                     "hora": parts[1].strip() if len(parts) > 1 else "",
                                     "proyecto": parts[2].strip() if len(parts) > 2 else "",
-                                    "descripcion": parts[3].strip() if len(parts) > 3 else ""
+                                    "descripcion": parts[3].strip() if len(parts) > 3 else "",
+                                    "url": parts[4].strip() if len(parts) > 4 else ""
                                 })
 
                         data = {
