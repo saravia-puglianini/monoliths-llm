@@ -214,11 +214,11 @@ while true; do
             if [ -n "$TASKS_LIST" ]; then
                 # Construir parámetros para YAD list
                 YAD_ARGS=()
-                while IFS='|' read -r k p_name pk_parent p_sum_parent s; do
+                while IFS='|' read -r k p_name pk_parent p_sum_parent s h_spent; do
                     if [ -n "$k" ]; then
-                        YAD_ARGS+=("$k" "$p_name" "$pk_parent" "$p_sum_parent" "$s")
+                        YAD_ARGS+=("$k" "$p_name" "$pk_parent" "$p_sum_parent" "$s" "${h_spent:-0 hrs}")
                     fi
-                done <<< "MANUAL|MANUAL|N/A|N/A|Tipear
+                done <<< "MANUAL|MANUAL|N/A|N/A|Tipear|N/A
 $TASKS_LIST"
                 
                 SELECT_DATA=$($YAD_BIN --list --title "Jira - Seleccionar Tarea" \
@@ -228,6 +228,7 @@ $TASKS_LIST"
                     --column="Buscar" \
                     --column="Historia Parent title" \
                     --column="Tarea title" \
+                    --column="Horas invertidas" \
                     --hide-column=1 \
                     --fullscreen --center --always-on-top "${YAD_ARGS[@]}")
                 

@@ -66,18 +66,28 @@ def get_issues():
     payload = {
         "jql": jql,
         "maxResults": 50,
-        "fields": ["key", "summary", "project", "parent", "status", "issuelinks"]
+        "fields": ["key", "summary", "project", "parent", "status", "issuelinks", "timespent", "aggregatetimespent"]
     }
     
     res = make_request(config, "/rest/api/3/search/jql", method="POST", payload=payload)
     issues = res.get("issues", [])
     
-    # Print in YAD format: KEY|PROJECT_KEY|PARENT_SUMMARY_TRUNCATED|PROJECT_NAME|PARENT_KEY_WITH_STATUS|PARENT_SUMMARY|TASK_SUMMARY_WITH_STATUS
+    # Print in YAD format: KEY|PROJECT_KEY|PARENT_SUMMARY_TRUNCATED|PROJECT_NAME|PARENT_KEY_WITH_STATUS|PARENT_SUMMARY|TASK_SUMMARY_WITH_STATUS|HOURS_SPENT
     for issue in issues:
         key = issue["key"]
         fields = issue.get("fields", {})
         summary = fields.get("summary", "")
         task_status = fields.get("status", {}).get("name", "N/A")
+        
+        # Calculate time spent in hours
+        ts_sec = fields.get("timespent") or fields.get("aggregatetimespent") or 0
+        ts_hours = ts_sec / 3600.0
+        if ts_hours == 0:
+            hours_spent = "0 hrs"
+        elif ts_hours.is_integer():
+            hours_spent = f"{int(ts_hours)} hr" if int(ts_hours) == 1 else f"{int(ts_hours)} hrs"
+        else:
+            hours_spent = f"{ts_hours:.1f} hrs"
         
         project = fields.get("project", {})
         project_key = project.get("key", "N/A")
@@ -131,8 +141,9 @@ def get_issues():
         project_key = project_key.replace("|", " ").replace("\n", " ").replace("\r", " ").strip()
         parent_key_display = parent_key_display.replace("|", " ").replace("\n", " ").replace("\r", " ").strip()
         parent_summary = parent_summary.replace("|", " ").replace("\n", " ").replace("\r", " ").strip()
+        hours_spent = hours_spent.replace("|", " ").strip()
         
-        print(f"{key}|{project_name}|{parent_key_display}|{parent_summary}|{task_summary_display}")
+        print(f"{key}|{project_name}|{parent_key_display}|{parent_summary}|{task_summary_display}|{hours_spent}")
 
 def log_work(issue_key, hours, comment):
     config = load_config()

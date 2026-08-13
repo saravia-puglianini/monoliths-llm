@@ -40,7 +40,7 @@ async function processCargaInSAP(cargaData) {
   let sapTab = tabs.find(t => t.url && t.url.includes("s4hana.cloud.sap"));
 
   if (!sapTab) {
-    console.log("🌐 [Auto SAP Background] Abriendo pestaña de SAP en segundo plano...");
+    console.log("🌐 [Auto SAP Background] Abriendo pestaña de SAP en una pestaña nueva...");
     sapTab = await chrome.tabs.create({
       url: SAP_TARGET_URL,
       active: false
@@ -49,12 +49,32 @@ async function processCargaInSAP(cargaData) {
 
   const tabId = sapTab.id;
 
-  if (sapTab.url && (sapTab.url.includes("office.com") || sapTab.url.includes("microsoftonline") || sapTab.url.includes("login"))) {
+  // Esperar a que la pestaña termine de cargar
+  const waitForTabLoad = (tId) => new Promise((resolve) => {
+    const listener = (updatedTabId, changeInfo) => {
+      if (updatedTabId === tId && changeInfo.status === "complete") {
+        chrome.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+    setTimeout(resolve, 6000); // Timeout máximo
+  });
+
+  await waitForTabLoad(tabId);
+
+  // Obtener URL actualizada
+  const currentTab = await chrome.tabs.get(tabId);
+  const currentUrl = currentTab.url || "";
+
+  // Verificar si la sesión requiere inicio de sesión en Office/Microsoft/Login
+  if (currentUrl.includes("office.com") || currentUrl.includes("microsoftonline") || currentUrl.includes("login") || currentUrl.includes("saml")) {
+    console.warn("⚠️ [Auto SAP Background] Sesión no activa (página de login detectada):", currentUrl);
     chrome.notifications.create("loginNotice", {
       type: "basic",
       iconUrl: "icon.png",
-      title: "Registro SAP - Iniciar Sesión",
-      message: "Inicia sesión en tu office.com para realizar el registro SAP",
+      title: "Registro SAP - Requiere Iniciar Sesión",
+      message: "Por favor inicia sesión en Office/SAP para realizar el registro automático de horas.",
       priority: 2
     });
     isProcessing = false;
@@ -66,18 +86,21 @@ async function processCargaInSAP(cargaData) {
       target: { tabId: tabId },
       files: ["content_sap.js"]
     });
-  } catch (e) {}
+  } catch (e) {
+    console.log("ℹ️ Content script ya presente o inyectado.");
+  }
 
   setTimeout(() => {
     chrome.tabs.sendMessage(tabId, {
       action: "EXECUTE_CARGA_PAYLOAD",
       payload: cargaData
-    }, () => {
+    }, (res) => {
       if (chrome.runtime.lastError) {
+        console.error("❌ Error enviando payload a content_sap.js:", chrome.runtime.lastError.message);
         isProcessing = false;
       }
     });
-  }, 1500);
+  }, 2000);
 }
 
 async function notifyServerComplete() {
@@ -121,3 +144,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 });
+

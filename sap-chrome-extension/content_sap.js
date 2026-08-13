@@ -1,10 +1,37 @@
 // Content Script para registrar HORA POR HORA desde cero en SAP Fiori:
-// 1. Seleccionar tarjeta PANDERO en Mis Tareas
-// 2. Agregar 1 hora en la grilla del día
-// 3. Hacer clic en el cuadro azul generado (PANDERO 01:00 h)
-// 4. Ingresar la descripción de Jira en la casilla Act. Laboral:
-// 5. Presionar botón Guardar
+// 1. Validar sesión activa (estilo office.js)
+// 2. Seleccionar tarjeta PANDERO en Mis Tareas
+// 3. Agregar 1 hora en la grilla del día
+// 4. Hacer clic en el cuadro azul generado (PANDERO 01:00 h)
+// 5. Ingresar la descripción de Jira en la casilla Act. Laboral:
+// 6. Presionar botón Guardar
 console.log("🚀 [Auto SAP Content Script] Inicializado con secuencia exacta de 5 pasos desde cero.");
+
+function validateSessionState() {
+  const currentUrl = window.location.href;
+  const bodyText = document.body ? document.body.innerText || "" : "";
+
+  // 1. Detectar si la página pide iniciar sesión / redirección a Office / Microsoft
+  const isLoginPage = currentUrl.includes("office.com") ||
+                      currentUrl.includes("microsoftonline.com") ||
+                      currentUrl.includes("login") ||
+                      currentUrl.includes("saml");
+
+  const hasSignInBtn = !!document.querySelector('a[href*="login"], button[aria-label*="Iniciar sesión"], button[aria-label*="Sign in"]') ||
+                       Array.from(document.querySelectorAll('button, a')).some(el => {
+                         const text = (el.innerText || "").trim().toLowerCase();
+                         return text === 'iniciar sesión' || text === 'sign in';
+                       });
+
+  // 2. Detectar elementos activos de SAP Fiori / Shell Header
+  const hasSapHeader = !!document.querySelector('#shell-header, .sapUshellShellHeader, #application-TimeEntry-manageTimeEntry-component');
+
+  if (isLoginPage || (hasSignInBtn && !hasSapHeader)) {
+    return { active: false, reason: "Redirigido a inicio de sesión / sin acceso activo" };
+  }
+
+  return { active: true, reason: "Sesión activa en SAP Fiori" };
+}
 
 function showVisualInfo(message, type = "info") {
   console.log(`[Auto SAP HUD] (${type.toUpperCase()}) ${message}`);
@@ -65,6 +92,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function processCargaPayload(cargaData) {
   try {
+    const sessionStatus = validateSessionState();
+    if (!sessionStatus.active) {
+      showVisualInfo(`⚠️ ${sessionStatus.reason}. Inicia sesión para continuar.`, "warning");
+      return;
+    }
+
     showVisualInfo(`Iniciando registro desde cero (${cargaData.items.length} tareas del ${cargaData.fecha})`, "warning");
     
     const result = await executeSAPRegistrationPasoAPaso(cargaData);

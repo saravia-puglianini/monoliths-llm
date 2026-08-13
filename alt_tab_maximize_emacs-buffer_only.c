@@ -84,13 +84,6 @@ int is_emacs(Window w) {
         if (chint.res_name) XFree(chint.res_name);
         if (chint.res_class) XFree(chint.res_class);
     }
-    if (!res) {
-        char title[256];
-        get_window_title(w, title, sizeof(title));
-        if (strcasestr(title, "emacs") != NULL) {
-            res = 1;
-        }
-    }
     return res;
 }
 
@@ -202,12 +195,7 @@ void glitch_window(Window w) {
                                    CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWEventMask, &sattrs);
 
     XMapRaised(dpy, overlay);
-
-    XEvent ev;
-    while (1) {
-        XWindowEvent(dpy, overlay, StructureNotifyMask, &ev);
-        if (ev.type == MapNotify) break;
-    }
+    XSync(dpy, False);
 
     for (int f = 0; f < 5; f++) {
         XSetForeground(dpy, gc, (rand() % 3 == 0) ? color_magenta : ((rand() % 2 == 0) ? color_cyan : color_bg));
@@ -458,9 +446,96 @@ int main() {
 
 /*
 ==============================================================================
-  ELISP CODE FOR YOUR ~/.emacs.d/init.el
+  ELISP CODE FOR YOUR ~/.emacs.d/init.el (O cargar alt_tab_external_buffers.el)
 ==============================================================================
   Copiar el siguiente codigo en tu ~/.emacs.d/init.el:
+
+(defcustom my-external-buffer-format "*Ext: %s*"
+  "Formato para los nombres de buffers de ventanas externas. %s se reemplaza por el título de la ventana."
+  :type 'string
+  :group 'external-windows)
+
+(defvar-local my-external-window-id nil
+  "ID de la ventana X11 asociada a este buffer.")
+
+(defvar my-last-real-buffer nil
+  "Último buffer normal (no externo) visitado por el usuario.")
+
+(defvar my-external-windows-hash (make-hash-table :test 'equal)
+  "Mapeo de ID de ventana X11 a objeto buffer.")
+
+(defun my-update-last-real-buffer ()
+  "Registra el último buffer activo que no sea una ventana externa ni el minibuffer."
+  (unless (or (bound-and-true-p my-external-window-id)
+              (minibufferp)
+              (string-prefix-p " " (buffer-name)))
+    (setq my-last-real-buffer (current-buffer))))
+
+(defun my-activate-external-window-id (win-id)
+  "Ejecuta xdotool para activar la ventana con ID WIN-ID."
+  (call-process "xdotool" nil 0 nil "windowactivate" (format "%s" win-id)))
+
+(defun my-check-and-trigger-external-windows (&optional frame)
+  "Verifica si alguna ventana de Emacs muestra un buffer externo y dispara la ventana real."
+  (dolist (win (window-list frame))
+    (let ((buf (window-buffer win)))
+      (when (and (buffer-live-p buf)
+                 (buffer-local-value 'my-external-window-id buf))
+        (let ((win-id (buffer-local-value 'my-external-window-id buf))
+              (title (buffer-name buf))
+              (fallback (if (and my-last-real-buffer (buffer-live-p my-last-real-buffer))
+                            my-last-real-buffer
+                          (other-buffer buf t))))
+          ;; Restaurar el buffer anterior en la ventana de Emacs
+          (set-window-buffer win fallback)
+          ;; Activar la ventana real externa en X11
+          (my-activate-external-window-id win-id)
+          (message "Ventana externa activada: %s" title))))))
+
+(defun my-sync-external-window-buffers ()
+  "Sincroniza los buffers individuales de Emacs con la lista /tmp/emacs_non_emacs_windows."
+  (interactive)
+  (let ((file "/tmp/emacs_non_emacs_windows")
+        (current-ids (make-hash-table :test 'equal)))
+    (when (file-exists-p file)
+      (with-temp-buffer
+        (insert-file-contents file)
+        (goto-char (point-min))
+        (while (not (eobp))
+          (let* ((line (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
+                 (parts (split-string line "\t")))
+            (when (>= (length parts) 2)
+              (let* ((win-id (nth 0 parts))
+                     (win-title (nth 1 parts))
+                     (buf-name (format my-external-buffer-format win-title))
+                     (existing-buf (gethash win-id my-external-windows-hash))
+                     (buf (get-buffer buf-name)))
+                (puthash win-id t current-ids)
+                ;; Si la ventana cambió de título, eliminar el buffer con el título viejo
+                (when (and existing-buf
+                           (buffer-live-p existing-buf)
+                           (not (string= (buffer-name existing-buf) buf-name)))
+                  (kill-buffer existing-buf))
+                (if (and buf (buffer-live-p buf))
+                    (with-current-buffer buf
+                      (setq-local my-external-window-id win-id))
+                  (setq buf (get-buffer-create buf-name))
+                  (with-current-buffer buf
+                    (setq-local my-external-window-id win-id)
+                    (let ((inhibit-read-only t))
+                      (erase-buffer)
+                      (insert (format "=== VENTANA EXTERNA X11 ===\nID: %s\nTítulo: %s\n\nEste buffer representa una ventana del sistema.\nAl ser visualizado, Emacs enfoca la ventana real y regresa al buffer anterior."
+                                      win-id win-title))
+                      (read-only-mode 1))))
+                (puthash win-id buf my-external-windows-hash))))
+          (forward-line 1))))
+    ;; Eliminar buffers de ventanas cerradas
+    (maphash (lambda (win-id buf)
+               (unless (gethash win-id current-ids)
+                 (when (buffer-live-p buf)
+                   (kill-buffer buf))
+                 (remhash win-id my-external-windows-hash)))
+             my-external-windows-hash)))
 
 (defun my-activate-window-at-point ()
   "Activa la ventana seleccionada en la línea actual."
@@ -473,7 +548,7 @@ int main() {
           (setq id (match-string 1)))))
     (if id
         (progn
-          (call-process "xdotool" nil 0 nil "windowactivate" id)
+          (my-activate-external-window-id id)
           (message "Ventana %s activada" id))
       (message "No hay ID de ventana en esta línea"))))
 
@@ -486,8 +561,9 @@ int main() {
   (define-key external-windows-mode-map (kbd "g") #'my-update-external-windows))
 
 (defun my-update-external-windows ()
-  "Actualiza el buffer *External Windows* con las ventanas no-Emacs abiertas."
+  "Actualiza el buffer *External Windows* y los buffers individuales."
   (interactive)
+  (my-sync-external-window-buffers)
   (let ((buf (get-buffer-create "*External Windows*"))
         (file "/tmp/emacs_non_emacs_windows"))
     (when (file-exists-p file)
@@ -498,7 +574,8 @@ int main() {
               (old-pos (point)))
           (erase-buffer)
           (insert "=== VENTANAS ABIERTAS (FUERA DE EMACS) ===\n")
-          (insert "Presiona ENTER en cualquier línea para cambiar a esa ventana.\n\n")
+          (insert "Presiona ENTER en cualquier línea para cambiar a esa ventana.\n")
+          (insert "También puedes usar C-x b <NombreVentana> para ir directamente.\n\n")
           (with-temp-buffer
             (insert-file-contents file)
             (goto-char (point-min))
@@ -515,7 +592,7 @@ int main() {
                                      'action (lambda (btn)
                                                (let ((id (button-get btn 'window-id)))
                                                  (when id
-                                                   (call-process "xdotool" nil 0 nil "windowactivate" id))))
+                                                   (my-activate-external-window-id id))))
                                      'window-id win-id
                                      'follow-link t)
                       (add-text-properties start (point) `(window-id ,win-id))
@@ -523,31 +600,45 @@ int main() {
               (forward-line 1)))
           (goto-char (max (point-min) (min old-pos (point-max)))))))))
 
-(defvar my-external-windows-thread nil
-  "Hilo en segundo plano para actualizar las ventanas abiertas.")
+(defvar my-external-windows-timer nil)
+(defvar my-external-windows-thread nil)
 
 (defun my-start-external-windows-tracker ()
-  "Inicia el bucle infinito en un hilo de Emacs para rastrear las ventanas."
+  "Inicia la sincronización periódica de ventanas externas y hooks en Emacs."
   (interactive)
-  (unless (and my-external-windows-thread (thread-alive-p my-external-windows-thread))
-    (setq my-external-windows-thread
-          (make-thread
-           (lambda ()
-             (while t
-               (ignore-errors (my-update-external-windows))
-               (sleep-for 1)))
-           "external-windows-tracker"))
-    (message "Rastreador de ventanas externas iniciado.")))
+  (add-hook 'post-command-hook #'my-update-last-real-buffer)
+  (add-hook 'post-command-hook #'my-check-and-trigger-external-windows)
+  (add-hook 'window-state-change-hook #'my-check-and-trigger-external-windows)
+
+  (unless (or my-external-windows-timer
+              (and my-external-windows-thread (thread-alive-p my-external-windows-thread)))
+    (if (fboundp 'make-thread)
+        (setq my-external-windows-thread
+              (make-thread
+               (lambda ()
+                 (while t
+                   (ignore-errors (my-update-external-windows))
+                   (sleep-for 1)))
+               "external-windows-tracker"))
+      (setq my-external-windows-timer
+            (run-with-timer 0 1 #'my-update-external-windows)))
+    (message "Rastreador de ventanas externas y buffers automáticos iniciado.")))
 
 (defun my-stop-external-windows-tracker ()
   "Detiene el rastreador de ventanas externas."
   (interactive)
+  (remove-hook 'post-command-hook #'my-update-last-real-buffer)
+  (remove-hook 'post-command-hook #'my-check-and-trigger-external-windows)
+  (remove-hook 'window-state-change-hook #'my-check-and-trigger-external-windows)
+  (when my-external-windows-timer
+    (cancel-timer my-external-windows-timer)
+    (setq my-external-windows-timer nil))
   (when (and my-external-windows-thread (thread-alive-p my-external-windows-thread))
     (thread-signal my-external-windows-thread 'quit nil)
-    (setq my-external-windows-thread nil)
-    (message "Rastreador de ventanas externas detenido.")))
+    (setq my-external-windows-thread nil))
+  (message "Rastreador de ventanas externas detenido."))
 
-;; Iniciar automaticamente el rastreador al abrir Emacs:
+;; Iniciar automáticamente el rastreador al abrir Emacs:
 (my-start-external-windows-tracker)
 
 ==============================================================================

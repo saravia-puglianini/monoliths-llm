@@ -39,11 +39,14 @@ fi
 # --------------------------------------
 # POWER LIMITS (PL1/PL2)
 # --------------------------------------
+modprobe intel_rapl_common 2>/dev/null || true
+modprobe intel_rapl_msr 2>/dev/null || true
+
 if [[ -d /sys/class/powercap/intel-rapl:0 ]]; then
     echo
     echo "[+] Ajustando power limits PL1/PL2..."
-    echo 45000000 | tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw   # PL1 45W sostenido
-    echo 60000000 | tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw   # PL2 60W turbo corto
+    [[ -f /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw ]] && echo 45000000 | tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw >/dev/null   # PL1 45W sostenido
+    [[ -f /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw ]] && echo 60000000 | tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw >/dev/null   # PL2 60W turbo corto
 fi
 
 # --------------------------------------
@@ -146,25 +149,36 @@ echo "Governor:"
 cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 
 echo
-echo "Turbo:"
+echo "No_turbo:"
 cat /sys/devices/system/cpu/intel_pstate/no_turbo 2>/dev/null || true
 
 echo
 echo "Power limits (PL1/PL2):"
-cat /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
-cat /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw
+if [[ -f /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw ]]; then
+    PL1=$(cat /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw)
+    PL2=$(cat /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw)
+    awk "BEGIN {printf \"%.0f W\n%.0f W\n\", $PL1/1000000, $PL2/1000000}"
+else
+    echo "No disponible en este hardware/driver"
+fi
 
 echo
 echo "Frecuencia máxima:"
-cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq ]]; then
+    awk "BEGIN {printf \"%.2f GHz\n\", $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq)/1000000}"
+fi
 
 echo
 echo "Frecuencia mínima:"
-cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq ]]; then
+    awk "BEGIN {printf \"%.2f GHz\n\", $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq)/1000000}"
+fi
 
 echo
 echo "Frecuencia actual:"
-cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq
+if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then
+    awk "BEGIN {printf \"%.2f GHz\n\", $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq)/1000000}"
+fi
 
 echo
 echo "Listo."
