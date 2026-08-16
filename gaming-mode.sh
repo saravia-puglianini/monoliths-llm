@@ -151,8 +151,16 @@ cat /sys/devices/system/cpu/intel_pstate/no_turbo 2>/dev/null || true
 
 echo
 echo "Power limits (PL1/PL2):"
-cat /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
-cat /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw
+if [[ -f /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw ]]; then
+    cat /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
+else
+    echo "PL1: no disponible"
+fi
+if [[ -f /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw ]]; then
+    cat /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw
+else
+    echo "PL2: no disponible"
+fi
 
 echo
 echo "Frecuencia máxima:"
