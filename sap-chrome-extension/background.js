@@ -3,6 +3,9 @@ const SERVER_URL = "http://127.0.0.1:9995";
 const SAP_TARGET_URL = "https://my419950.s4hana.cloud.sap/ui#TimeEntry-manageTimeEntry";
 
 let isProcessing = false;
+let waitingForLogin = false;
+let loginTabId = null;
+let hasNotifiedLogin = false;
 
 chrome.alarms.create("checkCargaAlarm", { periodInMinutes: 0.15 });
 
@@ -15,6 +18,22 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 chrome.runtime.onInstalled.addListener(() => {
   console.log("🚀 [Auto SAP Extension] Background Worker iniciado.");
   checkPendingCarga();
+});
+
+// Listener para detectar cuándo el usuario completa el inicio de sesión
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === "complete" && tab.url && tab.url.includes("s4hana.cloud.sap")) {
+    if (waitingForLogin || loginTabId === tabId) {
+      console.log("🎉 [Auto SAP Background] Inicio de sesión completado detectado en SAP. Reanudando carga...");
+      waitingForLogin = false;
+      hasNotifiedLogin = false;
+      loginTabId = null;
+      isProcessing = false;
+      setTimeout(() => {
+        checkPendingCarga();
+      }, 1000);
+    }
+  }
 });
 
 async function checkPendingCarga() {
@@ -37,19 +56,49 @@ async function checkPendingCarga() {
 
 async function processCargaInSAP(cargaData) {
   const tabs = await chrome.tabs.query({});
-  let sapTab = tabs.find(t => t.url && t.url.includes("s4hana.cloud.sap"));
+  
+  // Buscar cualquier pestaña existente que sea de SAP o de Login de Microsoft/Office/SAML
+  let sapTab = tabs.find(t => t.url && (
+    t.url.includes("s4hana.cloud.sap") ||
+    t.url.includes("microsoftonline.com") ||
+    t.url.includes("office.com") ||
+    t.url.includes("login.microsoftonline") ||
+    t.url.includes("saml")
+  ));
 
   if (!sapTab) {
     console.log("🌐 [Auto SAP Background] Abriendo pestaña de SAP en una pestaña nueva...");
     sapTab = await chrome.tabs.create({
       url: SAP_TARGET_URL,
-      active: false
+      active: true
     });
   }
 
   const tabId = sapTab.id;
 
-  // Esperar a que la pestaña termine de cargar
+  // Si ya sabemos que la pestaña está en la página de inicio de sesión
+  if (sapTab.url && (sapTab.url.includes("office.com") || sapTab.url.includes("microsoftonline") || sapTab.url.includes("login") || sapTab.url.includes("saml"))) {
+    console.warn("⚠️ [Auto SAP Background] Sesión no activa (página de login activa):", sapTab.url);
+    waitingForLogin = true;
+    loginTabId = tabId;
+
+    if (!hasNotifiedLogin) {
+      hasNotifiedLogin = true;
+      chrome.tabs.update(tabId, { active: true });
+      chrome.notifications.create("loginNotice", {
+        type: "basic",
+        iconUrl: "icon.png",
+        title: "Registro SAP - Requiere Iniciar Sesión",
+        message: "Por favor inicia sesión en Microsoft Authenticator/SAP. El registro continuará automáticamente al iniciar sesión.",
+        priority: 2
+      });
+    }
+
+    isProcessing = false;
+    return;
+  }
+
+  // Esperar a que la pestaña termine de cargar si está navegando
   const waitForTabLoad = (tId) => new Promise((resolve) => {
     const listener = (updatedTabId, changeInfo) => {
       if (updatedTabId === tId && changeInfo.status === "complete") {
@@ -63,20 +112,27 @@ async function processCargaInSAP(cargaData) {
 
   await waitForTabLoad(tabId);
 
-  // Obtener URL actualizada
+  // Obtener URL actualizada después de cargar
   const currentTab = await chrome.tabs.get(tabId);
   const currentUrl = currentTab.url || "";
 
-  // Verificar si la sesión requiere inicio de sesión en Office/Microsoft/Login
+  // Verificar si tras la carga fue redirigido a inicio de sesión
   if (currentUrl.includes("office.com") || currentUrl.includes("microsoftonline") || currentUrl.includes("login") || currentUrl.includes("saml")) {
-    console.warn("⚠️ [Auto SAP Background] Sesión no activa (página de login detectada):", currentUrl);
-    chrome.notifications.create("loginNotice", {
-      type: "basic",
-      iconUrl: "icon.png",
-      title: "Registro SAP - Requiere Iniciar Sesión",
-      message: "Por favor inicia sesión en Office/SAP para realizar el registro automático de horas.",
-      priority: 2
-    });
+    console.warn("⚠️ [Auto SAP Background] Redirigido a inicio de sesión:", currentUrl);
+    waitingForLogin = true;
+    loginTabId = tabId;
+
+    if (!hasNotifiedLogin) {
+      hasNotifiedLogin = true;
+      chrome.tabs.update(tabId, { active: true });
+      chrome.notifications.create("loginNotice", {
+        type: "basic",
+        iconUrl: "icon.png",
+        title: "Registro SAP - Requiere Iniciar Sesión",
+        message: "Por favor aprueba el inicio de sesión en Authenticator/SAP. El registro continuará automáticamente.",
+        priority: 2
+      });
+    }
     isProcessing = false;
     return;
   }
@@ -134,12 +190,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === "TRIGGER_CHECK_NOW") {
     sendResponse({ status: "checking" });
     isProcessing = false;
+    waitingForLogin = false;
+    hasNotifiedLogin = false;
     checkPendingCarga();
     return true;
   } else if (request.action === "SAP_WORKLOG_COMPLETED") {
     sendResponse({ status: "acknowledged" });
     notifyServerComplete().then(() => {
       isProcessing = false;
+      waitingForLogin = false;
+      hasNotifiedLogin = false;
     });
     return true;
   }

@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grabador de Pantalla & Audio Monolítico</title>
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+      --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 1.5rem auto;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      background: var(--primary);
+      color: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      background-color: #e0e7ff;
+      color: #4338ca;
+      font-weight: 600;
+    }
+
+    /* Modal / Overlay de Bloqueo de Navegador */
+    .browser-block-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.95);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      padding: 2rem;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .browser-block-card {
+      background: #ffffff;
+      color: #0f172a;
+      padding: 2.5rem;
+      border-radius: 20px;
+      max-width: 540px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      border: 1px solid #e2e8f0;
+    }
+
+    .browser-block-icon {
+      width: 64px;
+      height: 64px;
+      background: #fee2e2;
+      color: #ef4444;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem auto;
+    }
+
+    .browser-block-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #ef4444;
+      margin-bottom: 1rem;
+    }
+
+    .browser-block-msg {
+      font-size: 1rem;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .browser-block-badge {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-family: monospace;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 1.5rem;
+      flex: 1;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .video-container {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .video-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #fafafa;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: #94a3b8;
+    }
+
+    .status-dot.active {
+      background-color: var(--danger);
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-dot.ready {
+      background-color: var(--success);
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.15); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .timer {
+      font-family: monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      background: #f1f5f9;
+      padding: 0.25rem 0.75rem;
+      border-radius: 6px;
+    }
+
+    .video-viewport {
+      position: relative;
+      background-color: #0f172a;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #94a3b8;
+      padding: 2rem;
+    }
+
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 1rem;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.5;
+    }
+
+    /* Overlay de Cuenta Regresiva */
+    .countdown-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.85);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      backdrop-filter: blur(6px);
+      animation: fadeIn 0.2s ease-in-out;
+    }
+
+    .countdown-number {
+      font-size: 7rem;
+      font-weight: 800;
+      color: #38bdf8;
+      text-shadow: 0 0 30px rgba(56, 189, 248, 0.5);
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .countdown-subtitle {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-top: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .controls-panel {
+      padding: 1.25rem;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-danger {
+      background-color: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background-color: var(--danger-hover);
+    }
+
+    .btn-secondary {
+      background-color: #f1f5f9;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background-color: #e2e8f0;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+      padding: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-sm {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.78rem;
+      border-radius: 6px;
+    }
+
+    .setting-group {
+      margin-bottom: 1rem;
+    }
+
+    .setting-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.4rem;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background-color: #ffffff;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, input[type="text"]:focus, input[type="number"]:focus {
+      border-color: var(--primary);
+    }
+
+    .audio-meter-container {
+      margin-top: 0.5rem;
+    }
+
+    .audio-meter-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .audio-meter-bar {
+      height: 8px;
+      background-color: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .audio-meter-fill {
+      height: 100%;
+      width: 0%;
+      background-color: var(--success);
+      border-radius: 4px;
+      transition: width 0.05s ease-out;
+    }
+
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.25rem 0;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #cbd5e1;
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    .tabs-list {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .tab-status-box {
+      padding: 0.4rem 0.6rem;
+      background-color: #eff6ff;
+      border: 1px dashed #93c5fd;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      color: #1e40af;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .info-box {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      background-color: #f8fafc;
+      border-left: 3px solid var(--primary);
+      padding: 0.65rem 0.75rem;
+      border-radius: 0 6px 6px 0;
+      margin-top: 0.75rem;
+      line-height: 1.4;
+    }
+
+    footer {
+      max-width: 1200px;
+      margin: 1.5rem auto 0 auto;
+      width: 100%;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+      padding-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Overlay de Bloqueo Pragmático si no es Google Chrome -->
+  <div class="browser-block-overlay" id="browserBlockOverlay" style="display: none;">
+    <div class="browser-block-card">
+      <div class="browser-block-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <div class="browser-block-title">Navegador No Soportado</div>
+      <div class="browser-block-msg">
+        Este script htm solo se puede usar en Google-chrome-stable pragmáticamente... para evitar que se use en otro navegador ya que no funcionaría... es un pequeño bloqueo que asegura que el usuario final tendrá todas las funcionalidades...
+      </div>
+      <div class="browser-block-badge">
+        Por favor abre este archivo en google-chrome-stable
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="logo-area">
+      <div class="logo-icon">REC</div>
+      <div>
+        <h1>Grabador de Pantalla & Audio WebRTC</h1>
+        <span class="badge">Navegador Puro • Desacoplado de ALSA</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Visualización y Reproducción -->
+    <div class="video-container">
+      <div class="video-header">
+        <div class="status-indicator">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Listo para grabar</span>
+        </div>
+        <div class="timer" id="timerDisplay">00:00:00</div>
+      </div>
+
+      <div class="video-viewport">
+        <!-- Overlay de Cuenta Regresiva con Voz de Google Speech Synth -->
+        <div class="countdown-overlay" id="countdownOverlay" style="display: none;">
+          <div class="countdown-number" id="countdownNumber">5</div>
+          <div class="countdown-subtitle" id="countdownSubtitle">Preparando grabación...</div>
+        </div>
+
+        <!-- Estado inicial cuando no se graba -->
+        <div class="empty-state" id="emptyState">
+          <svg viewBox="0 0 24 24">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+          <p>Presiona <strong>"Iniciar Grabación"</strong> para capturar pantalla y audio.</p>
+        </div>
+
+        <!-- Video en Vivo / Vista previa -->
+        <video id="liveVideo" autoplay playsinline muted style="display: none;"></video>
+        <!-- Video Grabado para Reproducción -->
+        <video id="playbackVideo" controls style="display: none;"></video>
+      </div>
+
+      <div class="controls-panel">
+        <button class="btn btn-primary" id="startBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="10"/>
+          </svg>
+          Iniciar Grabación
+        </button>
+
+        <button class="btn btn-secondary" id="pauseBtn" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+          Pausar
+        </button>
+
+        <button class="btn btn-danger" id="stopBtn" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+          </svg>
+          Detener
+        </button>
+
+        <button class="btn btn-secondary" id="downloadBtn" disabled style="background-color: #10b981; color: white; border: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Descargar (.mp4)
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra lateral de configuración de Audio y Formatos -->
+    <div class="sidebar">
+      <!-- Título de Archivo Personalizado -->
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            Nombre del Archivo
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <label for="videoTitleInput">Título del Video (Opcional):</label>
+          <input type="text" id="videoTitleInput" placeholder="Ej: demo-proyecto-reunion">
+        </div>
+      </div>
+
+      <!-- Opciones Generales & Cuenta Regresiva -->
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Cuenta Regresiva (Speech)
+          </div>
+        </div>
+
+        <div class="toggle-group">
+          <label for="countdownToggle" style="font-weight: 600;">🗣️ Vociferar antes de grabar</label>
+          <label class="switch">
+            <input type="checkbox" id="countdownToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div style="margin-top: 0.6rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+          <label for="countdownSecondsInput" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0;">Duración en segundos:</label>
+          <input type="number" id="countdownSecondsInput" value="5" min="1" max="60" style="width: 75px; text-align: center; font-weight: bold;">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+            Entradas de Audio
+          </div>
+          <button class="btn btn-secondary btn-sm" id="refreshDevicesBtn" title="Detectar dispositivos">🔄 Refrescar</button>
+        </div>
+
+        <!-- SELECTOR DE MICRÓFONO Y FILTRO VOZ -->
+        <div class="setting-group">
+          <div class="toggle-group">
+            <label for="micToggle">Micrófono</label>
+            <label class="switch">
+              <input type="checkbox" id="micToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <select id="micDeviceSelect" style="margin-top: 0.3rem;"></select>
+
+          <!-- Toggle para Filtro de Voz Limpia -->
+          <div class="toggle-group" style="margin-top: 0.4rem;">
+            <label for="filterMicToggle" style="font-weight: 500; font-size: 0.8rem; color: #10b981;">
+              ⚡ Filtro Voz Limpia (Noise Gate / Pasa-Altos)
+            </label>
+            <label class="switch">
+              <input type="checkbox" id="filterMicToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="audio-meter-container">
+            <div class="audio-meter-label">
+              <span>Nivel Micrófono</span>
+              <span id="micMeterVal">0%</span>
+            </div>
+            <div class="audio-meter-bar">
+              <div class="audio-meter-fill" id="micMeterFill"></div>
+            </div>
+          </div>
+        </div>
+
+        <hr style="margin: 1rem 0; border: none; border-top: 1px solid var(--border-color);">
+
+        <!-- SELECTOR DE AUDIO DE PARLANTES / SISTEMA Y MÚLTIPLES PESTAÑAS -->
+        <div class="setting-group">
+          <div class="toggle-group">
+            <label for="systemAudioToggle">Parlantes / Sistema</label>
+            <label class="switch">
+              <input type="checkbox" id="systemAudioToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <select id="sysAudioDeviceSelect" style="margin-top: 0.3rem;">
+            <option value="display_media" selected>🔊 Audio de Pantalla Compartida (DisplayMedia)</option>
+            <option value="explicit_tab">🔗 Pestañas Específicas Conectadas</option>
+          </select>
+
+          <!-- Botón dedicado para agregar pestañas explícitas de audio -->
+          <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+            <button class="btn btn-secondary btn-sm" id="connectTabAudioBtn" style="border-color: #2563eb; color: #2563eb;">
+              🔗 Conectar Pestaña para Audio
+            </button>
+            <button class="btn btn-secondary btn-sm" id="addAnotherTabAudioBtn" style="border-color: #10b981; color: #10b981; display: none;">
+              ➕ Agregar Otra Pestaña Adicional
+            </button>
+          </div>
+
+          <!-- Lista Dinámica de Pestañas Conectadas -->
+          <div class="tabs-list" id="tabsList"></div>
+
+          <div class="audio-meter-container">
+            <div class="audio-meter-label">
+              <span>Nivel Parlantes / Mezcla Pestañas</span>
+              <span id="sysMeterVal">0%</span>
+            </div>
+            <div class="audio-meter-bar">
+              <div class="audio-meter-fill" id="sysMeterFill"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          💡 <strong>Mezcla Multipestaña & Filtro:</strong> Puedes conectar varias pestañas a la vez (YouTube, Meet, etc.). El micrófono incluye el filtro de <code>escucharme_filtrado.htm</code> (Pasa-Altos 220Hz, Pasa-Bajos 2.5kHz, Noise Gate RMS y Compresor).
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            </svg>
+            Formato & Calidad
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <label for="mimeTypeSelect">Formato de Video (Codec):</label>
+          <select id="mimeTypeSelect">
+            <!-- Rellenado dinámicamente según lo que soporte Chrome -->
+          </select>
+        </div>
+
+        <div class="setting-group">
+          <label for="qualitySelect">Calidad de Video:</label>
+          <select id="qualitySelect">
+            <option value="8000000" selected>Alta (8 Mbps)</option>
+            <option value="4000000">Media (4 Mbps)</option>
+            <option value="2000000">Estándar (2 Mbps)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    Rec-Share-Screen • Grabación desacoplada de la capa ALSA/Host vía WebRTC Media APIs de Google Chrome
+  </footer>
+
+  <script>
+    // Validar pragmáticamente que el navegador sea Google Chrome
+    function verifyGoogleChrome() {
+      const userAgent = navigator.userAgent || '';
+      const vendor = navigator.vendor || '';
+
+      const isChromiumChrome = /Chrome/.test(userAgent) && /Google Inc/.test(vendor);
+      const isEdge = /Edg/.test(userAgent);
+      const isOpera = /OPR/.test(userAgent) || /Opera/.test(userAgent);
+      const isBrave = (navigator.brave && typeof navigator.brave.isBrave === 'function');
+
+      // Validar si es estrictamente Google Chrome / Chromium sin ser Edge u Opera
+      const isStrictChrome = isChromiumChrome && !isEdge && !isOpera;
+
+      if (!isStrictChrome) {
+        const overlay = document.getElementById('browserBlockOverlay');
+        if (overlay) overlay.style.display = 'flex';
+      }
+    }
+
+    // Variables globales
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let screenStream = null;
+    let micStream = null;
+    let sysDirectStream = null;
+
+    // Lista de pestañas conectadas
+    let connectedTabStreams = [];
+
+    let audioCtx = null;
+    let mixedAudioDestination = null;
+    let finalCombinedStream = null;
+
+    let micAnalyser = null;
+    let sysAnalyser = null;
+    let animFrameId = null;
+
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let isPaused = false;
+    let recordedBlob = null;
+
+    // Elementos del DOM
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const refreshDevicesBtn = document.getElementById('refreshDevicesBtn');
+
+    const videoTitleInput = document.getElementById('videoTitleInput');
+
+    const countdownToggle = document.getElementById('countdownToggle');
+    const countdownSecondsInput = document.getElementById('countdownSecondsInput');
+    const countdownOverlay = document.getElementById('countdownOverlay');
+    const countdownNumber = document.getElementById('countdownNumber');
+    const countdownSubtitle = document.getElementById('countdownSubtitle');
+
+    const connectTabAudioBtn = document.getElementById('connectTabAudioBtn');
+    const addAnotherTabAudioBtn = document.getElementById('addAnotherTabAudioBtn');
+    const tabsList = document.getElementById('tabsList');
+
+    const liveVideo = document.getElementById('liveVideo');
+    const playbackVideo = document.getElementById('playbackVideo');
+    const emptyState = document.getElementById('emptyState');
+
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const timerDisplay = document.getElementById('timerDisplay');
+
+    const micToggle = document.getElementById('micToggle');
+    const filterMicToggle = document.getElementById('filterMicToggle');
+    const systemAudioToggle = document.getElementById('systemAudioToggle');
+
+    const micDeviceSelect = document.getElementById('micDeviceSelect');
+    const sysAudioDeviceSelect = document.getElementById('sysAudioDeviceSelect');
+
+    const mimeTypeSelect = document.getElementById('mimeTypeSelect');
+    const qualitySelect = document.getElementById('qualitySelect');
+
+    const micMeterFill = document.getElementById('micMeterFill');
+    const micMeterVal = document.getElementById('micMeterVal');
+    const sysMeterFill = document.getElementById('sysMeterFill');
+    const sysMeterVal = document.getElementById('sysMeterVal');
+
+    // Función para reproducir voz mediante Web Speech API (Google Chrome Speech Synth)
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Cancelar cualquier audio anterior
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'es-ES';
+        utter.rate = 1.1; // Tono enérgico
+        
+        // Buscar voz en español de Google si está disponible
+        const voices = window.speechSynthesis.getVoices();
+        const googleSpanish = voices.find(v => v.lang.includes('es') && v.name.includes('Google'));
+        if (googleSpanish) {
+          utter.voice = googleSpanish;
+        }
+        
+        window.speechSynthesis.speak(utter);
+      }
+    }
+
+    // Ejecutar cuenta regresiva visual y hablada dinámica
+    async function runCountdown() {
+      const startSec = Math.max(1, parseInt(countdownSecondsInput.value) || 5);
+      countdownOverlay.style.display = 'flex';
+      countdownSubtitle.textContent = 'Iniciando en...';
+
+      for (let sec = startSec; sec >= 1; sec--) {
+        const numStr = sec.toString();
+        countdownNumber.textContent = numStr;
+        countdownNumber.style.animation = 'none';
+        // Forzar reflow para reiniciar la animación CSS
+        void countdownNumber.offsetWidth;
+        countdownNumber.style.animation = 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+        speakText(numStr);
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
+      countdownNumber.textContent = '¡Listo!';
+      countdownSubtitle.textContent = '¡Grabando!';
+      speakText('¡Listo!');
+      await new Promise(r => setTimeout(r, 600));
+
+      countdownOverlay.style.display = 'none';
+    }
+
+    // Función para conectar una nueva pestaña de audio
+    async function addTabAudioStream() {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+            suppressLocalAudioPlayback: false
+          },
+          preferCurrentTab: false
+        });
+
+        // Detener la pista de video inmediatamente, solo nos interesa el audio
+        stream.getVideoTracks().forEach(t => t.stop());
+
+        if (stream.getAudioTracks().length > 0) {
+          const tabIndex = connectedTabStreams.length + 1;
+          const audioTrack = stream.getAudioTracks()[0];
+          const tabLabel = audioTrack.label || `Pestaña ${tabIndex}`;
+
+          const tabObj = { id: Date.now(), stream: stream, label: tabLabel };
+          connectedTabStreams.push(tabObj);
+
+          sysAudioDeviceSelect.value = 'explicit_tab';
+          renderTabsList();
+
+          // Si el usuario cierra el compartir desde el banner nativo de Chrome
+          audioTrack.onended = () => {
+            removeTabAudioStream(tabObj.id);
+          };
+        } else {
+          alert('Debes seleccionar una pestaña y asegurar que la casilla "Compartir audio de la pestaña" esté marcada.');
+        }
+      } catch (err) {
+        console.warn('Selección de pestaña cancelada:', err);
+      }
+    }
+
+    function removeTabAudioStream(id) {
+      const idx = connectedTabStreams.findIndex(t => t.id === id);
+      if (idx !== -1) {
+        connectedTabStreams[idx].stream.getTracks().forEach(track => track.stop());
+        connectedTabStreams.splice(idx, 1);
+        renderTabsList();
+      }
+    }
+
+    function renderTabsList() {
+      tabsList.innerHTML = '';
+      if (connectedTabStreams.length > 0) {
+        addAnotherTabAudioBtn.style.display = 'block';
+        connectTabAudioBtn.style.display = 'none';
+
+        connectedTabStreams.forEach((tabObj, index) => {
+          const item = document.createElement('div');
+          item.className = 'tab-status-box';
+          item.innerHTML = `
+            <span>🎵 #${index + 1}: ${tabObj.label.slice(0, 28)}</span>
+            <button style="background:none; border:none; color:#ef4444; cursor:pointer; font-weight:bold;">✕</button>
+          `;
+          item.querySelector('button').addEventListener('click', () => removeTabAudioStream(tabObj.id));
+          tabsList.appendChild(item);
+        });
+      } else {
+        addAnotherTabAudioBtn.style.display = 'none';
+        connectTabAudioBtn.style.display = 'block';
+        sysAudioDeviceSelect.value = 'display_media';
+      }
+    }
+
+    connectTabAudioBtn.addEventListener('click', addTabAudioStream);
+    addAnotherTabAudioBtn.addEventListener('click', addTabAudioStream);
+
+    // Listar Dispositivos de Audio
+    async function populateAudioDevices() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        
+        micDeviceSelect.innerHTML = '';
+        
+        // Limpiar opciones anteriores pero mantener las dos fijas
+        while (sysAudioDeviceSelect.options.length > 2) {
+          sysAudioDeviceSelect.remove(2);
+        }
+
+        let micCount = 0;
+        devices.forEach((device, index) => {
+          if (device.kind === 'audioinput') {
+            const label = device.label || `Entrada de Audio ${index + 1}`;
+            
+            // Opción para Micrófono
+            const micOpt = document.createElement('option');
+            micOpt.value = device.deviceId;
+            micOpt.textContent = label;
+            micDeviceSelect.appendChild(micOpt);
+            micCount++;
+
+            // Opción para Parlantes (Los monitores de PulseAudio/PipeWire aparecen como audioinput en Linux)
+            const sysOpt = document.createElement('option');
+            sysOpt.value = device.deviceId;
+            sysOpt.textContent = `📻 Dispositivo Directo: ${label}`;
+            sysAudioDeviceSelect.appendChild(sysOpt);
+          }
+        });
+
+        if (micCount === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Micrófono por defecto';
+          micDeviceSelect.appendChild(opt);
+        }
+      } catch (err) {
+        console.warn('Error enumerando dispositivos:', err);
+      }
+    }
+
+    // Solicitar permisos para revelar los nombres exactos de los parlantes/micrófonos
+    async function requestPermissionsAndEnumerate() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(t => t.stop());
+        await populateAudioDevices();
+      } catch (err) {
+        console.warn('Permiso de micrófono no otorgado aún:', err);
+        populateAudioDevices();
+      }
+    }
+
+    // Detectar codecs soportados por MediaRecorder en el navegador
+    function populateSupportedMimeTypes() {
+      const candidates = [
+        { label: 'MP4 (H.264 / AAC) - Recomendado', mime: 'video/mp4;codecs=avc1,mp4a.40.2' },
+        { label: 'MP4 (H.264 Generico)', mime: 'video/mp4;codecs=h264,aac' },
+        { label: 'MP4 (Contenedor Estándar)', mime: 'video/mp4' },
+        { label: 'WebM (VP9 / Opus)', mime: 'video/webm;codecs=vp9,opus' },
+        { label: 'WebM (VP8 / Opus)', mime: 'video/webm;codecs=vp8,opus' },
+        { label: 'WebM (Estándar)', mime: 'video/webm' }
+      ];
+
+      mimeTypeSelect.innerHTML = '';
+      let supportedCount = 0;
+
+      candidates.forEach(item => {
+        if (MediaRecorder.isTypeSupported(item.mime)) {
+          const opt = document.createElement('option');
+          opt.value = item.mime;
+          opt.textContent = item.label;
+          mimeTypeSelect.appendChild(opt);
+          supportedCount++;
+        }
+      });
+
+      if (supportedCount === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Default del Navegador';
+        mimeTypeSelect.appendChild(opt);
+      }
+    }
+
+    // Inicialización al cargar
+    window.addEventListener('DOMContentLoaded', () => {
+      verifyGoogleChrome();
+      populateSupportedMimeTypes();
+      requestPermissionsAndEnumerate();
+      // Inicializar voces de SpeechSynth si es necesario
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.getVoices();
+        };
+      }
+    });
+
+    refreshDevicesBtn.addEventListener('click', requestPermissionsAndEnumerate);
+
+    // Formatear segundos a HH:MM:SS
+    function formatTime(sec) {
+      const hrs = Math.floor(sec / 3600);
+      const mins = Math.floor((sec % 3600) / 60);
+      const secs = sec % 60;
+      return [hrs, mins, secs]
+        .map(v => v < 10 ? '0' + v : v)
+        .join(':');
+    }
+
+    function startTimer() {
+      secondsElapsed = 0;
+      timerDisplay.textContent = formatTime(secondsElapsed);
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (!isPaused) {
+          secondsElapsed++;
+          timerDisplay.textContent = formatTime(secondsElapsed);
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+    }
+
+    // Monitoreo visual de VUMeters con AnalyserNode
+    function updateAudioMeters() {
+      if (micAnalyser) {
+        const dataArray = new Uint8Array(micAnalyser.frequencyBinCount);
+        micAnalyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        const avg = sum / dataArray.length;
+        const pct = Math.min(100, Math.round((avg / 128) * 100));
+        micMeterFill.style.width = pct + '%';
+        micMeterVal.textContent = pct + '%';
+      } else {
+        micMeterFill.style.width = '0%';
+        micMeterVal.textContent = '0%';
+      }
+
+      if (sysAnalyser) {
+        const dataArray = new Uint8Array(sysAnalyser.frequencyBinCount);
+        sysAnalyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        const avg = sum / dataArray.length;
+        const pct = Math.min(100, Math.round((avg / 128) * 100));
+        sysMeterFill.style.width = pct + '%';
+        sysMeterVal.textContent = pct + '%';
+      } else {
+        sysMeterFill.style.width = '0%';
+        sysMeterVal.textContent = '0%';
+      }
+
+      animFrameId = requestAnimationFrame(updateAudioMeters);
+    }
+
+    // Iniciar Grabación
+    async function startRecording() {
+      try {
+        recordedChunks = [];
+        recordedBlob = null;
+        downloadBtn.disabled = true;
+
+        // 1. Obtener captura de pantalla (Display Media)
+        const displayOptions = {
+          video: {
+            displaySurface: "monitor",
+            cursor: "always"
+          },
+          audio: systemAudioToggle.checked ? {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+            suppressLocalAudioPlayback: false
+          } : false,
+          systemAudio: "include",
+          surfaceSwitching: "include",
+          selfBrowserSurface: "include"
+        };
+
+        screenStream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
+
+        // Si el usuario cancela la selección de pantalla
+        screenStream.getVideoTracks()[0].onended = () => {
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            stopRecording();
+          }
+        };
+
+        // 2. Obtener captura de micrófono (si está activado)
+        if (micToggle.checked) {
+          try {
+            const micConstraints = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
+            if (micDeviceSelect.value) {
+              micConstraints.audio.deviceId = { exact: micDeviceSelect.value };
+            }
+            micStream = await navigator.mediaDevices.getUserMedia(micConstraints);
+          } catch (err) {
+            console.warn('No se pudo acceder al micrófono:', err);
+            micStream = null;
+          }
+        }
+
+        // 2b. Si el usuario seleccionó un dispositivo de Parlantes / Monitor directo en Linux
+        if (systemAudioToggle.checked && sysAudioDeviceSelect.value !== 'display_media' && sysAudioDeviceSelect.value !== 'explicit_tab') {
+          try {
+            sysDirectStream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                deviceId: { exact: sysAudioDeviceSelect.value },
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+              }
+            });
+          } catch (err) {
+            console.warn('No se pudo abrir dispositivo directo de parlantes:', err);
+            sysDirectStream = null;
+          }
+        }
+
+        // 3. Mezcla de Audios usando Web Audio API
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        mixedAudioDestination = audioCtx.createMediaStreamDestination();
+
+        let hasAudioTrack = false;
+
+        // Analizador común para parlantes / pestañas
+        sysAnalyser = audioCtx.createAnalyser();
+        sysAnalyser.fftSize = 64;
+
+        // A) Conectar pestañas específicas conectadas
+        if (systemAudioToggle.checked && connectedTabStreams.length > 0) {
+          connectedTabStreams.forEach(tabObj => {
+            const audioTracks = tabObj.stream.getAudioTracks();
+            if (audioTracks.length > 0) {
+              const src = audioCtx.createMediaStreamSource(new MediaStream([audioTracks[0]]));
+              src.connect(sysAnalyser);
+              src.connect(mixedAudioDestination);
+              hasAudioTrack = true;
+            }
+          });
+        }
+
+        // B) Conectar dispositivo directo de parlantes o audio de pantalla compartida
+        if (systemAudioToggle.checked && sysAudioDeviceSelect.value !== 'explicit_tab') {
+          let sysAudioTrack = null;
+          if (sysDirectStream && sysDirectStream.getAudioTracks().length > 0) {
+            sysAudioTrack = sysDirectStream.getAudioTracks()[0];
+          } else if (screenStream.getAudioTracks().length > 0) {
+            sysAudioTrack = screenStream.getAudioTracks()[0];
+          }
+
+          if (sysAudioTrack) {
+            const sysSource = audioCtx.createMediaStreamSource(new MediaStream([sysAudioTrack]));
+            sysSource.connect(sysAnalyser);
+            sysSource.connect(mixedAudioDestination);
+            hasAudioTrack = true;
+          }
+        }
+
+        // C) Mezclar audio del micrófono con FILTRO DE VOZ DE "escucharme_filtrado.htm"
+        if (micStream && micStream.getAudioTracks().length > 0) {
+          const micSource = audioCtx.createMediaStreamSource(micStream);
+          micAnalyser = audioCtx.createAnalyser();
+          micAnalyser.fftSize = 64;
+
+          if (filterMicToggle.checked) {
+            // --- CADENA DE FILTROS EXTRAÍDA DE escucharme_filtrado.htm ---
+            // 1. Filtro Pasa-altos (HighPass 220Hz)
+            const lowCutFilter = audioCtx.createBiquadFilter();
+            lowCutFilter.type = 'highpass';
+            lowCutFilter.frequency.value = 220;
+            lowCutFilter.Q.value = 1.0;
+
+            // 2. Filtro Pasa-bajos (LowPass 2.5kHz)
+            const highCutFilter = audioCtx.createBiquadFilter();
+            highCutFilter.type = 'lowpass';
+            highCutFilter.frequency.value = 2500;
+            highCutFilter.Q.value = 1.0;
+
+            // 3. Noise Gate (ScriptProcessor / RMS Gate)
+            const gateNode = audioCtx.createScriptProcessor(2048, 1, 1);
+            const gateThreshold = 0.015;
+
+            gateNode.onaudioprocess = (e) => {
+              const input = e.inputBuffer.getChannelData(0);
+              const output = e.outputBuffer.getChannelData(0);
+              let sum = 0;
+              for (let i = 0; i < input.length; i++) {
+                sum += input[i] * input[i];
+              }
+              const rms = Math.sqrt(sum / input.length);
+              const gain = (rms > gateThreshold) ? 1.0 : 0.0;
+              for (let i = 0; i < input.length; i++) {
+                output[i] = input[i] * gain;
+              }
+            };
+
+            // 4. Compresor Dinámico
+            const compressor = audioCtx.createDynamicsCompressor();
+            compressor.threshold.value = -18;
+            compressor.ratio.value = 3;
+
+            // Conectar: micSource -> lowCut -> highCut -> gate -> compressor -> micAnalyser -> destination
+            micSource.connect(lowCutFilter);
+            lowCutFilter.connect(highCutFilter);
+            highCutFilter.connect(gateNode);
+            gateNode.connect(compressor);
+            compressor.connect(micAnalyser);
+            micAnalyser.connect(mixedAudioDestination);
+          } else {
+            // Sin filtros activos
+            micSource.connect(micAnalyser);
+            micAnalyser.connect(mixedAudioDestination);
+          }
+
+          hasAudioTrack = true;
+        }
+
+        // Configurar vista previa en vivo
+        const finalTracks = [screenStream.getVideoTracks()[0]];
+        if (hasAudioTrack) {
+          finalTracks.push(mixedAudioDestination.stream.getAudioTracks()[0]);
+        }
+        finalCombinedStream = new MediaStream(finalTracks);
+
+        liveVideo.srcObject = finalCombinedStream;
+        liveVideo.style.display = 'block';
+        playbackVideo.style.display = 'none';
+        emptyState.style.display = 'none';
+
+        // 4. CUENTA REGRESIVA SI ESTÁ ACTIVADA (Deseleccionada por defecto)
+        if (countdownToggle.checked) {
+          await runCountdown();
+        }
+
+        // 5. Instanciar MediaRecorder y comenzar la grabación real
+        const options = {
+          videoBitsPerSecond: parseInt(qualitySelect.value)
+        };
+        if (mimeTypeSelect.value) {
+          options.mimeType = mimeTypeSelect.value;
+        }
+
+        mediaRecorder = new MediaRecorder(finalCombinedStream, options);
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = handleStop;
+
+        mediaRecorder.start(1000); // Guardar trozos cada 1s
+
+        // Iniciar animación de VUMeters
+        updateAudioMeters();
+
+        // Actualizar UI
+        startBtn.disabled = true;
+        pauseBtn.disabled = false;
+        stopBtn.disabled = false;
+        micToggle.disabled = true;
+        filterMicToggle.disabled = true;
+        systemAudioToggle.disabled = true;
+        micDeviceSelect.disabled = true;
+        sysAudioDeviceSelect.disabled = true;
+        connectTabAudioBtn.disabled = true;
+        addAnotherTabAudioBtn.disabled = true;
+        mimeTypeSelect.disabled = true;
+
+        statusDot.className = 'status-dot active';
+        statusText.textContent = 'Grabando pantalla...';
+        startTimer();
+
+      } catch (err) {
+        console.error('Error al iniciar la grabación:', err);
+        alert('No se pudo iniciar la grabación: ' + err.message);
+        cleanUpStreams();
+      }
+    }
+
+    // Pausar / Reanudar
+    function togglePause() {
+      if (!mediaRecorder) return;
+
+      if (mediaRecorder.state === 'recording') {
+        mediaRecorder.pause();
+        isPaused = true;
+        pauseBtn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg> Reanudar
+        `;
+        statusDot.className = 'status-dot';
+        statusText.textContent = 'Pausado';
+      } else if (mediaRecorder.state === 'paused') {
+        mediaRecorder.resume();
+        isPaused = false;
+        pauseBtn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg> Pausar
+        `;
+        statusDot.className = 'status-dot active';
+        statusText.textContent = 'Grabando pantalla...';
+      }
+    }
+
+    // Detener grabación
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    }
+
+    // Manejar evento de finalización
+    function handleStop() {
+      stopTimer();
+      cancelAnimationFrame(animFrameId);
+
+      const mimeType = mediaRecorder.mimeType || 'video/mp4';
+      recordedBlob = new Blob(recordedChunks, { type: mimeType });
+
+      // Reproducción del video grabado
+      const videoURL = URL.createObjectURL(recordedBlob);
+      playbackVideo.src = videoURL;
+      playbackVideo.style.display = 'block';
+      liveVideo.style.display = 'none';
+
+      // Restaurar estado UI
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+      pauseBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="6" y="4" width="4" height="16"></rect>
+          <rect x="14" y="4" width="4" height="16"></rect>
+        </svg> Pausar
+      `;
+      stopBtn.disabled = true;
+      downloadBtn.disabled = false;
+
+      micToggle.disabled = false;
+      filterMicToggle.disabled = false;
+      systemAudioToggle.disabled = false;
+      micDeviceSelect.disabled = false;
+      sysAudioDeviceSelect.disabled = false;
+      connectTabAudioBtn.disabled = false;
+      addAnotherTabAudioBtn.disabled = false;
+      mimeTypeSelect.disabled = false;
+
+      statusDot.className = 'status-dot ready';
+      statusText.textContent = 'Grabación completada';
+      isPaused = false;
+
+      cleanUpStreams();
+    }
+
+    // Limpieza de recursos de hardware / WebRTC
+    function cleanUpStreams() {
+      if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+        screenStream = null;
+      }
+      if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
+      }
+      if (sysDirectStream) {
+        sysDirectStream.getTracks().forEach(track => track.stop());
+        sysDirectStream = null;
+      }
+      if (audioCtx) {
+        audioCtx.close().catch(() => {});
+        audioCtx = null;
+      }
+      micAnalyser = null;
+      sysAnalyser = null;
+      micMeterFill.style.width = '0%';
+      micMeterVal.textContent = '0%';
+      sysMeterFill.style.width = '0%';
+      sysMeterVal.textContent = '0%';
+    }
+
+    // Descargar archivo grabado con título personalizado opcional
+    function downloadRecording() {
+      if (!recordedBlob) return;
+
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      
+      let ext = 'mp4';
+      if (recordedBlob.type.includes('webm')) {
+        ext = 'webm';
+      }
+
+      // Obtener y sanitizar título personalizado si existe
+      const rawTitle = videoTitleInput.value.trim();
+      let filename = '';
+
+      if (rawTitle.length > 0) {
+        // Reemplazar caracteres no permitidos en nombres de archivo
+        const sanitizedTitle = rawTitle.replace(/[/\\?%*:|"<>]/g, '-').replace(/\s+/g, '_');
+        filename = `${sanitizedTitle}_${timestamp}.${ext}`;
+      } else {
+        filename = `grabacion-pantalla-${timestamp}.${ext}`;
+      }
+
+      const url = URL.createObjectURL(recordedBlob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+    }
+
+    // Event Listeners
+    startBtn.addEventListener('click', startRecording);
+    pauseBtn.addEventListener('click', togglePause);
+    stopBtn.addEventListener('click', stopRecording);
+    downloadBtn.addEventListener('click', downloadRecording);
+
+  </script>
+</body>
+</html>

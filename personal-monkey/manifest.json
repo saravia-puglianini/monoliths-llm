@@ -3,11 +3,22 @@
   "name": "Personal Monkey",
   "version": "1.0",
   "description": "Ejecuta personal-script.js cada 5 segundos de forma local.",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8888/*",
+    "https://translate.googleapis.com/*"
+  ],
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": true
     }
   ],
   "web_accessible_resources": [

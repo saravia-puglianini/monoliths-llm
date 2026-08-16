@@ -125,11 +125,14 @@ def get_issues():
         if parent_key != "N/A":
             parent_key_display = f"{parent_key} ({parent_status})"
         else:
-            parent_key_display = "N/A"
+            parent_key_display = "-"
             
         task_summary_display = f"{summary} ({task_status})"
         
-        if parent_summary != "N/A" and len(parent_summary) > 10:
+        if parent_summary == "N/A":
+            parent_summary = "-"
+            parent_summary_truncated = "-"
+        elif len(parent_summary) > 10:
             parent_summary_truncated = parent_summary[:10] + "..."
         else:
             parent_summary_truncated = parent_summary
@@ -265,6 +268,51 @@ def get_parent_key(issue_key):
         return "N/A"
     except Exception:
         return "N/A"
+
+def get_parent_details(issue_key):
+    config = load_config()
+    path = f"/rest/api/3/issue/{issue_key}?fields=summary,parent,issuelinks"
+    try:
+        res = make_request(config, path, method="GET")
+        fields = res.get("fields", {})
+        task_summary = fields.get("summary", "").replace("|", " ").replace("\n", " ").strip()
+        
+        parent_key = "N/A"
+        parent_summary = "N/A"
+        
+        # 1. Check parent first to see if it is a Story / Historia
+        parent_obj = fields.get("parent", {})
+        if parent_obj:
+            p_fields = parent_obj.get("fields", {})
+            p_type = p_fields.get("issuetype", {}).get("name", "")
+            p_summary = p_fields.get("summary", "")
+            if p_type in ["Story", "Historia", "Historia de usuario"] or p_summary.startswith("HU") or "HU" in p_summary:
+                parent_key = parent_obj.get("key", "N/A")
+                parent_summary = p_summary.replace("|", " ").replace("\n", " ").strip()
+                
+        # 2. Check issuelinks to find linked Story / Historia (e.g. FU-13222: HU-003...)
+        if parent_key == "N/A":
+            for link in fields.get("issuelinks", []):
+                linked_issue = link.get("inwardIssue") or link.get("outwardIssue")
+                if linked_issue:
+                    li_fields = linked_issue.get("fields", {})
+                    li_type = li_fields.get("issuetype", {}).get("name", "")
+                    li_summary = li_fields.get("summary", "")
+                    if li_type in ["Story", "Historia", "Historia de usuario"] or li_summary.startswith("HU") or "HU" in li_summary:
+                        parent_key = linked_issue.get("key", "N/A")
+                        parent_summary = li_summary.replace("|", " ").replace("\n", " ").strip()
+                        break
+                        
+        # 3. Fallback to parent object (e.g. Epic) if no Story found in issuelinks
+        if parent_key == "N/A" and parent_obj:
+            p_fields = parent_obj.get("fields", {})
+            parent_key = parent_obj.get("key", "N/A")
+            parent_summary = p_fields.get("summary", "N/A").replace("|", " ").replace("\n", " ").strip()
+
+        print(f"{parent_key}|{parent_summary}|{task_summary}")
+    except Exception:
+        print("N/A|N/A|")
+
 
 def open_report(target_date=None):
     import subprocess
@@ -543,6 +591,11 @@ if __name__ == "__main__":
             print("Uso: jira_helper.py get-parent <key>")
             sys.exit(1)
         print(get_parent_key(sys.argv[2]))
+    elif cmd == "get-parent-details":
+        if len(sys.argv) < 3:
+            print("Uso: jira_helper.py get-parent-details <key>")
+            sys.exit(1)
+        get_parent_details(sys.argv[2])
     elif cmd == "open-report":
         target_date = sys.argv[2] if len(sys.argv) > 2 else None
         open_report(target_date)
