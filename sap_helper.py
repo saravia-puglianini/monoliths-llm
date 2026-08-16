@@ -63,33 +63,8 @@ def ensure_chrome_with_cdp():
         write_log(f"[SAP RPA] Puerto CDP {CDP_PORT} ya está activo.")
         return True
 
-    write_log(f"[SAP RPA] Iniciando Google Chrome con puerto CDP {CDP_PORT}...")
-    chrome_bin = "/usr/bin/google-chrome-stable"
-    if not os.path.exists(chrome_bin):
-        chrome_bin = "google-chrome-stable"
-
-    cmd = [
-        chrome_bin,
-        f"--remote-debugging-port={CDP_PORT}",
-        "--remote-allow-origins=*",
-        f"--user-data-dir={os.path.expanduser('~/.config/google-chrome-rpa')}",
-        "--no-first-run",
-        "--no-default-browser-check",
-        SAP_URL
-    ]
-
-    try:
-        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for _ in range(20):
-            time.sleep(0.5)
-            if is_cdp_active():
-                write_log(f"[SAP RPA] Chrome iniciado exitosamente en puerto CDP {CDP_PORT}.")
-                return True
-        write_log(f"[SAP RPA] Tiempo de espera agotado esperando puerto CDP {CDP_PORT}.")
-        return False
-    except Exception as e:
-        write_log(f"[SAP RPA] Error al lanzar Chrome con CDP: {e}")
-        return False
+    write_log(f"[SAP RPA] CDP no está activo. El proceso es gestionado automáticamente por el addon de Chrome y el servicio OpenRC (auto-erase-sap-carga).")
+    return False
 
 def cdp_get_sap_ws_url():
     """
@@ -228,6 +203,27 @@ def generate_sap_ui5_rpa_js(target_date, project_hours_map):
         retries++;
     }}
 
+    // 0. Dar foco a la tabla y enviar 10 veces Ctrl + - (Zoom Out)
+    let gridTable = document.querySelector('[id*="timesheetMain"], .sapTetrisTable, table');
+    if (gridTable) {{
+        try {{
+            gridTable.focus();
+            gridTable.scrollIntoView({{ block: 'center' }});
+        }} catch(e) {{}}
+    }}
+    for (let z = 1; z <= 10; z++) {{
+        let currentZoom = Math.max(0.5, 1.0 - (z * 0.05));
+        if (document.body) {{ document.body.style.zoom = `${{currentZoom}}`; }}
+        let tgt = document.activeElement || gridTable || document.body || window;
+        try {{ if (tgt.focus) tgt.focus(); }} catch (e) {{}}
+        tgt.dispatchEvent(new KeyboardEvent('keydown', {{ key: '-', code: 'Minus', keyCode: 189, ctrlKey: true, bubbles: true }}));
+        tgt.dispatchEvent(new KeyboardEvent('keyup', {{ key: '-', code: 'Minus', keyCode: 189, ctrlKey: true, bubbles: true }}));
+        tgt.dispatchEvent(new KeyboardEvent('keydown', {{ key: '-', code: 'NumpadSubtract', keyCode: 109, ctrlKey: true, bubbles: true }}));
+        tgt.dispatchEvent(new KeyboardEvent('keyup', {{ key: '-', code: 'NumpadSubtract', keyCode: 109, ctrlKey: true, bubbles: true }}));
+        await wait(120);
+    }}
+    await wait(400);
+
     // Intentar interactuar vía DOM & SAP UI5 Core
     for (const item of entries) {{
         try {{
@@ -255,9 +251,22 @@ def generate_sap_ui5_rpa_js(target_date, project_hours_map):
                     el.dispatchEvent(new Event('change', {{ bubbles: true }}));
                     dateFilled = true;
                 }} else if (!hrsFilled && (aria.includes('hora') || aria.includes('duraci') || aria.includes('duration') || id.includes('hour') || id.includes('duration'))) {{
-                    el.value = item.horas;
+                    let durVal = item.horas || "01:00";
+                    el.value = durVal;
+                    el.setAttribute('value', durVal);
                     el.dispatchEvent(new Event('input', {{ bubbles: true }}));
                     el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    el.dispatchEvent(new Event('blur', {{ bubbles: true }}));
+                    if (typeof sap !== 'undefined' && sap?.ui?.getCore && el.id) {{
+                        try {{
+                            const ctrl = sap.ui.getCore().byId(el.id.replace(/-inner$/, ''));
+                            if (ctrl) {{
+                                if (ctrl.setValue) ctrl.setValue(durVal);
+                                if (ctrl.fireChange) ctrl.fireChange({{ value: durVal }});
+                                if (ctrl.fireLiveChange) ctrl.fireLiveChange({{ value: durVal }});
+                            }}
+                        }} catch(e) {{}}
+                    }}
                     hrsFilled = true;
                 }} else if (!projFilled && (aria.includes('proyect') || aria.includes('pep') || aria.includes('wbs') || id.includes('project') || id.includes('wbs'))) {{
                     el.value = item.proyecto;

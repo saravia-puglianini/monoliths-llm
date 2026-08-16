@@ -6,12 +6,19 @@
 # Formato CSV: YYYY-MM-DD;HHam/pm;Proyecto;Descripción
 # =============================================================================
 
+FORCE_RUN=0
+if [ "$1" = "--now" ] || [ "$1" = "-f" ] || [ "$1" = "--force" ] || [ "$1" = "now" ] || [ -t 0 ]; then
+    FORCE_RUN=1
+fi
+
 LOCKFILE="/tmp/jira_reminder.pid"
-if [ -f "$LOCKFILE" ]; then
+if [ "$FORCE_RUN" -ne 1 ] && [ -f "$LOCKFILE" ]; then
     PID=$(cat "$LOCKFILE")
     if ps -p "$PID" >/dev/null 2>&1; then exit 0; fi
 fi
-echo "$$" > "$LOCKFILE"
+if [ "$FORCE_RUN" -ne 1 ]; then
+    echo "$$" > "$LOCKFILE"
+fi
 
 YAD_BIN="/usr/bin/yad"
 DIR="/home/user/monoliths-llm"
@@ -105,21 +112,28 @@ while true; do
     DayOfWeek=$(date +%u)
     TodayMMDD=$(date +%m-%d)
     if [ "$DayOfWeek" -gt 5 ] || grep -q "^$TodayMMDD$" "$HOME/.holidays" 2>/dev/null; then
-        sleep 3600
-        continue
+        if [ "$FORCE_RUN" -ne 1 ]; then
+            sleep 3600
+            continue
+        fi
     fi
     
     CURRENT_DATE=$(date +%Y-%m-%d)
     CURRENT_HOUR_STR=$(date +%H)
     CURRENT_HOUR=$((10#$CURRENT_HOUR_STR))
+    CURRENT_MIN_STR=$(date +%M)
+    CURRENT_MIN=$((10#$CURRENT_MIN_STR))
+    NOW_MINUTES=$((CURRENT_HOUR * 60 + CURRENT_MIN))
 
-    if [ "$CURRENT_HOUR" -lt 9 ] || [ "$CURRENT_HOUR" -ge 18 ]; then
-        sleep 300
-        continue
-    fi
+    if [ "$FORCE_RUN" -ne 1 ]; then
+        if [ "$CURRENT_HOUR" -lt 9 ] || [ "$CURRENT_HOUR" -ge 19 ]; then
+            sleep 300
+            continue
+        fi
 
-    if pgrep -af "yad --title Ops360" > /dev/null || pgrep -af "yad --title Jira" > /dev/null || pgrep -af "yad --title 'Log de Horas'" > /dev/null; then
-        sleep 5; continue
+        if pgrep -af "yad --title Ops360" > /dev/null || pgrep -af "yad --title Jira" > /dev/null || pgrep -af "yad --title 'Log de Horas'" > /dev/null; then
+            sleep 5; continue
+        fi
     fi
 
     # Sincronizar worklogs de Jira a CSV local para soportar múltiples dispositivos
@@ -129,7 +143,9 @@ while true; do
 
     HORAS_ADEUDADAS=()
     for h in "${HORAS_LABORALES[@]}"; do
-        if [ "$h" -le "$CURRENT_HOUR" ]; then
+        # Slot h (ej: 9am) finaliza a las (h+1):00 (ej: 10:00 AM -> 600 min). Solo se adeuda cuando la hora finalizó.
+        THRESHOLD_MINUTES=$(( (h + 1) * 60 ))
+        if [ "$NOW_MINUTES" -ge "$THRESHOLD_MINUTES" ]; then
             H_STR=$(format_hour_csv "$h")
             if ! grep -q "^$CURRENT_DATE;$H_STR;" "$JUSTIFICAR_CSV"; then
                 HORAS_ADEUDADAS+=("$h")
@@ -138,7 +154,13 @@ while true; do
     done
 
     COUNT_ADEUDADAS=${#HORAS_ADEUDADAS[@]}
-    if [ "$COUNT_ADEUDADAS" -eq 0 ]; then sleep 5; continue; fi
+    if [ "$COUNT_ADEUDADAS" -eq 0 ]; then
+        if [ "$FORCE_RUN" -eq 1 ]; then
+            exit 0
+        else
+            sleep 5; continue
+        fi
+    fi
 
     # MODAL 1: ¿Justificó?
     MSG_BODY="Tienes un atraso de <b>$COUNT_ADEUDADAS hora(s)</b>.\n¿Justificó las horas en Jira?"
@@ -149,7 +171,7 @@ while true; do
         --button="Ver Log:2" \
         --button="No:1" \
         --button="Si:0" \
-        --center --width=420 --timeout=120 --always-on-top
+        --center --width=420 --always-on-top
 
     RESP=$?
     if [ $RESP -eq 3 ]; then
@@ -160,16 +182,19 @@ while true; do
         if [ $? -eq 0 ]; then
             echo "$TodayMMDD" >> "$HOME/.holidays"
             sleep 3600
-            continue
+            if [ "$FORCE_RUN" -eq 1 ]; then exit 0; else continue; fi
         else
-            sleep 5; continue
+            if [ "$FORCE_RUN" -eq 1 ]; then exit 0; else sleep 5; continue; fi
         fi
     elif [ $RESP -eq 2 ]; then
         "$DIR/ver-horas.sh" &
-        sleep 5; continue
+        if [ "$FORCE_RUN" -eq 1 ]; then exit 0; else sleep 300; continue; fi
     elif [ $RESP -eq 1 ]; then
         $BROWSER_BIN "https://mipandero.atlassian.net/jira/for-you" &
-        sleep 5; continue
+        if [ "$FORCE_RUN" -eq 1 ]; then exit 0; else sleep 900; continue; fi
+    elif [ $RESP -ne 0 ]; then
+        # Si se cierra la ventana o vence el tiempo
+        if [ "$FORCE_RUN" -eq 1 ]; then exit 0; else sleep 900; continue; fi
     fi
 
     # Asegurar configuración de Jira
@@ -188,13 +213,43 @@ while true; do
 
         WAS_FINISHED=0
         LAST_ENTRY=$(get_last_entry)
+        LAST_DATE=$(echo "$LAST_ENTRY" | cut -d';' -f1)
+        LAST_HOUR=$(echo "$LAST_ENTRY" | cut -d';' -f2)
         LAST_PROJ=$(echo "$LAST_ENTRY" | cut -d';' -f3)
+        LAST_DESC=$(echo "$LAST_ENTRY" | cut -d';' -f4)
 
         if [ "$HAS_JIRA" -eq 1 ]; then
             if [[ "$LAST_PROJ" =~ ^[A-Za-z0-9]+-[0-9]+$ ]]; then
-                $YAD_BIN --title "Jira - Tarea Anterior" \
-                    --text "¿Está seguro que terminó la tarea: <b>$LAST_PROJ</b>?" \
-                    --button="Aún no he terminado:1" --button="Confirmar:0" --center --width=400 --always-on-top
+                LAST_DETAILS=$(python3 "$DIR/jira_helper.py" get-parent-details "$LAST_PROJ" 2>/dev/null)
+                LAST_PARENT_KEY=$(echo "$LAST_DETAILS" | cut -d'|' -f1)
+                LAST_PARENT_TITLE=$(echo "$LAST_DETAILS" | cut -d'|' -f2)
+                LAST_TASK_TITLE=$(echo "$LAST_DETAILS" | cut -d'|' -f3)
+
+                TASK_INFO="<span foreground='#d97706'><b>$LAST_PROJ</b></span>"
+                if [ -n "$LAST_TASK_TITLE" ] && [ "$LAST_TASK_TITLE" != "N/A" ]; then
+                    TASK_INFO+=" ($LAST_TASK_TITLE)"
+                fi
+
+                PARENT_INFO=""
+                if [ -n "$LAST_PARENT_KEY" ] && [ "$LAST_PARENT_KEY" != "N/A" ]; then
+                    PARENT_INFO="\n• <b>Historia Parent:</b> <span foreground='#0284c7'><b>$LAST_PARENT_KEY</b></span>"
+                    if [ -n "$LAST_PARENT_TITLE" ] && [ "$LAST_PARENT_TITLE" != "N/A" ]; then
+                        PARENT_INFO+=" ($LAST_PARENT_TITLE)"
+                    fi
+                fi
+
+                PROMPT_MSG="<b>¿Está seguro que terminó la última tarea registrada?</b>\n\n"
+                PROMPT_MSG+="<b><u>Fila del último registro:</u></b>\n"
+                PROMPT_MSG+="• <b>Fecha / Hora:</b> $LAST_DATE ($LAST_HOUR)\n"
+                PROMPT_MSG+="• <b>Tarea (Key):</b> $TASK_INFO$PARENT_INFO\n"
+                PROMPT_MSG+="• <b>Descripción:</b> $LAST_DESC"
+
+                $YAD_BIN --title "Jira - Confirmar Finalización de Tarea" \
+                    --window-icon "dialog-question" \
+                    --text "$PROMPT_MSG" \
+                    --button="Aún no he terminado:1" \
+                    --button="Sí, la he terminado:0" \
+                    --center --width=540 --always-on-top
                 if [ $? -eq 0 ]; then
                     # Transition previous task to Done/Hecho!
                     python3 "$DIR/jira_helper.py" transition "$LAST_PROJ" hecho >/dev/null 2>&1
@@ -214,21 +269,21 @@ while true; do
             if [ -n "$TASKS_LIST" ]; then
                 # Construir parámetros para YAD list
                 YAD_ARGS=()
-                while IFS='|' read -r k p_name pk_parent p_sum_parent s; do
+                while IFS='|' read -r k p_name pk_parent p_sum_parent s h_spent; do
                     if [ -n "$k" ]; then
-                        YAD_ARGS+=("$k" "$p_name" "$pk_parent" "$p_sum_parent" "$s")
+                        YAD_ARGS+=("$k" "$p_name" "$pk_parent" "$p_sum_parent" "$s" "${h_spent:-0 hrs}")
                     fi
-                done <<< "MANUAL|MANUAL|N/A|N/A|Tipear
+                done <<< "MANUAL|MANUAL|-|-|Tipear|-
 $TASKS_LIST"
                 
                 SELECT_DATA=$($YAD_BIN --list --title "Jira - Seleccionar Tarea" \
                     --text "Seleccione la tarea para registrar <b>1 hora</b>:" \
                     --column="Clave (Task Key)" \
-                    --column="Project Name" \
-                    --column="Buscar" \
-                    --column="Historia Parent title" \
-                    --column="Tarea title" \
-                    --hide-column=1 \
+                    --column="Proyecto" \
+                    --column="Clave Historia Parent" \
+                    --column="Título Historia Parent" \
+                    --column="Título Tarea" \
+                    --column="Horas Invertidas" \
                     --fullscreen --center --always-on-top "${YAD_ARGS[@]}")
                 
                 if [ $? -ne 0 ] || [ -z "$SELECT_DATA" ]; then
@@ -337,8 +392,7 @@ $TASKS_LIST"
             fi
         done
 
-        # Invocación automática Web RPA a SAP S/4HANA Cloud
-        python3 "$DIR/sap_helper.py" auto-log "$CURRENT_DATE" >> "$JUSTIFICAR_DIR/sap_helper.log" 2>&1 &
+        # El addon de Chrome procesa automáticamente private.carga.txt a través del servicio OpenRC (auto-erase-sap-carga)
 
         $YAD_BIN --title "Jira - Éxito" --text "Registro completado y respaldado en Jira y SAP." \
             --button="OK:0" --center --width=300 --timeout=3 --always-on-top
@@ -355,5 +409,9 @@ $TASKS_LIST"
         fi
         break
     done
+    if [ "$FORCE_RUN" -eq 1 ]; then
+        exit 0
+    fi
     sleep 5
 done
+

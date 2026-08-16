@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <div id="shadow-host"></div>
+  <script>
+    const host = document.getElementById('shadow-host');
+    const root = host.attachShadow({mode: 'open'});
+    const input = document.createElement('input');
+    input.type = 'text';
+    root.appendChild(input);
+
+    document.addEventListener('focusin', (e) => {
+      const path = e.composedPath && e.composedPath();
+      const target = (path && path.length > 0) ? path[0] : e.target;
+      console.log('Focus target tagName:', target.tagName);
+    }, true);
+  </script>
+</body>
+</html>

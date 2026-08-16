@@ -66,18 +66,28 @@ def get_issues():
     payload = {
         "jql": jql,
         "maxResults": 50,
-        "fields": ["key", "summary", "project", "parent", "status", "issuelinks"]
+        "fields": ["key", "summary", "project", "parent", "status", "issuelinks", "timespent", "aggregatetimespent"]
     }
     
     res = make_request(config, "/rest/api/3/search/jql", method="POST", payload=payload)
     issues = res.get("issues", [])
     
-    # Print in YAD format: KEY|PROJECT_KEY|PARENT_SUMMARY_TRUNCATED|PROJECT_NAME|PARENT_KEY_WITH_STATUS|PARENT_SUMMARY|TASK_SUMMARY_WITH_STATUS
+    # Print in YAD format: KEY|PROJECT_KEY|PARENT_SUMMARY_TRUNCATED|PROJECT_NAME|PARENT_KEY_WITH_STATUS|PARENT_SUMMARY|TASK_SUMMARY_WITH_STATUS|HOURS_SPENT
     for issue in issues:
         key = issue["key"]
         fields = issue.get("fields", {})
         summary = fields.get("summary", "")
         task_status = fields.get("status", {}).get("name", "N/A")
+        
+        # Calculate time spent in hours
+        ts_sec = fields.get("timespent") or fields.get("aggregatetimespent") or 0
+        ts_hours = ts_sec / 3600.0
+        if ts_hours == 0:
+            hours_spent = "0 hrs"
+        elif ts_hours.is_integer():
+            hours_spent = f"{int(ts_hours)} hr" if int(ts_hours) == 1 else f"{int(ts_hours)} hrs"
+        else:
+            hours_spent = f"{ts_hours:.1f} hrs"
         
         project = fields.get("project", {})
         project_key = project.get("key", "N/A")
@@ -115,11 +125,14 @@ def get_issues():
         if parent_key != "N/A":
             parent_key_display = f"{parent_key} ({parent_status})"
         else:
-            parent_key_display = "N/A"
+            parent_key_display = "-"
             
         task_summary_display = f"{summary} ({task_status})"
         
-        if parent_summary != "N/A" and len(parent_summary) > 10:
+        if parent_summary == "N/A":
+            parent_summary = "-"
+            parent_summary_truncated = "-"
+        elif len(parent_summary) > 10:
             parent_summary_truncated = parent_summary[:10] + "..."
         else:
             parent_summary_truncated = parent_summary
@@ -131,8 +144,9 @@ def get_issues():
         project_key = project_key.replace("|", " ").replace("\n", " ").replace("\r", " ").strip()
         parent_key_display = parent_key_display.replace("|", " ").replace("\n", " ").replace("\r", " ").strip()
         parent_summary = parent_summary.replace("|", " ").replace("\n", " ").replace("\r", " ").strip()
+        hours_spent = hours_spent.replace("|", " ").strip()
         
-        print(f"{key}|{project_name}|{parent_key_display}|{parent_summary}|{task_summary_display}")
+        print(f"{key}|{project_name}|{parent_key_display}|{parent_summary}|{task_summary_display}|{hours_spent}")
 
 def log_work(issue_key, hours, comment):
     config = load_config()
@@ -254,6 +268,51 @@ def get_parent_key(issue_key):
         return "N/A"
     except Exception:
         return "N/A"
+
+def get_parent_details(issue_key):
+    config = load_config()
+    path = f"/rest/api/3/issue/{issue_key}?fields=summary,parent,issuelinks"
+    try:
+        res = make_request(config, path, method="GET")
+        fields = res.get("fields", {})
+        task_summary = fields.get("summary", "").replace("|", " ").replace("\n", " ").strip()
+        
+        parent_key = "N/A"
+        parent_summary = "N/A"
+        
+        # 1. Check parent first to see if it is a Story / Historia
+        parent_obj = fields.get("parent", {})
+        if parent_obj:
+            p_fields = parent_obj.get("fields", {})
+            p_type = p_fields.get("issuetype", {}).get("name", "")
+            p_summary = p_fields.get("summary", "")
+            if p_type in ["Story", "Historia", "Historia de usuario"] or p_summary.startswith("HU") or "HU" in p_summary:
+                parent_key = parent_obj.get("key", "N/A")
+                parent_summary = p_summary.replace("|", " ").replace("\n", " ").strip()
+                
+        # 2. Check issuelinks to find linked Story / Historia (e.g. FU-13222: HU-003...)
+        if parent_key == "N/A":
+            for link in fields.get("issuelinks", []):
+                linked_issue = link.get("inwardIssue") or link.get("outwardIssue")
+                if linked_issue:
+                    li_fields = linked_issue.get("fields", {})
+                    li_type = li_fields.get("issuetype", {}).get("name", "")
+                    li_summary = li_fields.get("summary", "")
+                    if li_type in ["Story", "Historia", "Historia de usuario"] or li_summary.startswith("HU") or "HU" in li_summary:
+                        parent_key = linked_issue.get("key", "N/A")
+                        parent_summary = li_summary.replace("|", " ").replace("\n", " ").strip()
+                        break
+                        
+        # 3. Fallback to parent object (e.g. Epic) if no Story found in issuelinks
+        if parent_key == "N/A" and parent_obj:
+            p_fields = parent_obj.get("fields", {})
+            parent_key = parent_obj.get("key", "N/A")
+            parent_summary = p_fields.get("summary", "N/A").replace("|", " ").replace("\n", " ").strip()
+
+        print(f"{parent_key}|{parent_summary}|{task_summary}")
+    except Exception:
+        print("N/A|N/A|")
+
 
 def open_report(target_date=None):
     import subprocess
@@ -532,6 +591,11 @@ if __name__ == "__main__":
             print("Uso: jira_helper.py get-parent <key>")
             sys.exit(1)
         print(get_parent_key(sys.argv[2]))
+    elif cmd == "get-parent-details":
+        if len(sys.argv) < 3:
+            print("Uso: jira_helper.py get-parent-details <key>")
+            sys.exit(1)
+        get_parent_details(sys.argv[2])
     elif cmd == "open-report":
         target_date = sys.argv[2] if len(sys.argv) > 2 else None
         open_report(target_date)

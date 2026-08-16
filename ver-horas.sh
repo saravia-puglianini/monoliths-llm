@@ -27,9 +27,9 @@ tail -n 50 "$JUSTIFICAR_CSV" | tac | while IFS=';' read -r fecha hora proyecto d
         if [ -z "$link" ]; then
             link="N/A"
         fi
-        echo "$fecha;$dia;$hora;$proyecto;$descripcion;$link"
+        printf "%s\n%s\n%s\n%s\n%s\n%s\n" "$fecha" "$dia" "$hora" "$proyecto" "$descripcion" "$link"
     fi
-done | tr ';' '\n' | $YAD_BIN --list --title "Log de Horas - Últimos registros" \
+done | $YAD_BIN --list --title "Log de Horas - Últimos registros" \
     --column="Fecha" --column="Día" --column="Hora" --column="Proyecto" --column="Descripción" --column="Enlace" \
     --width=950 --height=400 --center --button="Generar Reporte:2" --button="Cerrar:0" \
     --window-icon "document-open"

@@ -59,7 +59,8 @@ class AutoEraseHandler(http.server.BaseHTTPRequestHandler):
                                     "fecha": d_part,
                                     "hora": parts[1].strip() if len(parts) > 1 else "",
                                     "proyecto": parts[2].strip() if len(parts) > 2 else "",
-                                    "descripcion": parts[3].strip() if len(parts) > 3 else ""
+                                    "descripcion": parts[3].strip() if len(parts) > 3 else "",
+                                    "url": parts[4].strip() if len(parts) > 4 else ""
                                 })
 
                         data = {
@@ -93,6 +94,9 @@ class AutoEraseHandler(http.server.BaseHTTPRequestHandler):
         elif path in ["/auto-erase-carga", "/erase"]:
             self._handle_erase()
             return
+        elif path in ["/clear-carga", "/clear"]:
+            self._handle_clear()
+            return
 
         self.send_response(404)
         self._send_cors_headers()
@@ -105,6 +109,9 @@ class AutoEraseHandler(http.server.BaseHTTPRequestHandler):
 
         if path in ["/auto-erase-carga", "/erase"]:
             self._handle_erase()
+            return
+        elif path in ["/clear-carga", "/clear"]:
+            self._handle_clear()
             return
         elif path == "/write-carga":
             content_length = int(self.headers.get('Content-Length', 0))
@@ -119,12 +126,60 @@ class AutoEraseHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"status": "success", "message": "Carga escrita correctamente"}).encode("utf-8"))
             return
+        elif path == "/log-success-item":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length).decode('utf-8')
+            try:
+                item = json.loads(post_data)
+                fecha = item.get('fecha', datetime.date.today().strftime("%Y-%m-%d"))
+                hora = item.get('hora', '')
+                proyecto = item.get('proyecto', '')
+                descripcion = item.get('descripcion', '')
+                url = item.get('url', '')
+
+                os.makedirs(AUTO_SAP_DIR, exist_ok=True)
+                ready_filename = f"private.carga.{fecha}.ready.txt"
+                ready_path = os.path.join(AUTO_SAP_DIR, ready_filename)
+
+                ready_line = f"{fecha};{hora};{proyecto};{descripcion};{url}\n"
+                with open(ready_path, "a", encoding="utf-8") as f:
+                    f.write(ready_line)
+
+                self.send_response(200)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "message": f"Logged to {ready_filename}"}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode("utf-8"))
+            return
 
         self.send_response(404)
         self._send_cors_headers()
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         self.wfile.write(json.dumps({"error": "Ruta no encontrada"}).encode("utf-8"))
+
+    def _handle_clear(self):
+        try:
+            if os.path.exists(CARGA_FILE):
+                os.remove(CARGA_FILE)
+            response = {"status": "success", "message": "Carga file cleared/deleted"}
+            self.send_response(200)
+            self._send_cors_headers()
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode("utf-8"))
+        except Exception as e:
+            self.send_response(500)
+            self._send_cors_headers()
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode("utf-8"))
 
     def _handle_erase(self):
         if not os.path.exists(CARGA_FILE):

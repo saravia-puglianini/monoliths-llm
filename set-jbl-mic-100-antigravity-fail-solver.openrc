@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+# Servicio OpenRC para set-jbl-mic-100-antigravity-fail-solver
+
+name="set-jbl-mic-100-antigravity-fail-solver"
+description="Forzar volumen de microfono JBL al 100% de manera constante"
+command="/home/user/monoliths-llm/set-jbl-mic-100-loop.sh"
+command_background="true"
+pidfile="/run/set-jbl-mic-100-antigravity-fail-solver.pid"
+command_user="user:libre"
+
+export HOME="/home/user"
+
+depend() {
+    need localmount
+    after bootmisc
+}
