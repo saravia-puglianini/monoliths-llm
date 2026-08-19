@@ -1,10 +1,10 @@
 #!/bin/bash
 # ==============================================================================
-# Script: /home/user/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh
-# Perfil: Salida JBL + Captura Mic JBL + Loopback Anti-Ruido DSP del Micrófono Laptop (SOF) en JBL
+# Script: /home/user/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless-CHROME-IN=sof-snd-dsp.sh
+# Perfil: Salida JBL + Entrada JBL + Loopback/Monitoreo en Tiempo Real (~0.5ms)
 # ==============================================================================
 
-LOG_FILE="/tmp/out_jbl_in_jbl_filter_loopback_sof.log"
+LOG_FILE="/tmp/out_jbl_in_jbl_loopback_jbl.log"
 STATE_FILE="/tmp/.apagar_esto_para_encender_el_siguiente"
 
 REQUIRED_MODULES=("snd-usb-audio" "snd-aloop" "snd_soc_skl_hda_dsp" "snd_sof_pci_intel_tgl" "snd_hda_intel")
@@ -69,25 +69,24 @@ save_current_state() {
     log "OK" "Estado guardado en $STATE_FILE"
 }
 
-echo "=== Inicio de Ejecución: OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp ($(date '+%Y-%m-%d %H:%M:%S')) ===" > "$LOG_FILE"
+echo "=== Inicio de Ejecución: OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless ($(date '+%Y-%m-%d %H:%M:%S')) ===" > "$LOG_FILE"
 chmod 666 "$LOG_FILE" 2>/dev/null || true
 
 # Ejecutar limpieza del estado previo
 cleanup_previous_state
 
-log "INFO" "Paso 2: Asegurando configuración en /etc/modprobe.d/alsa-legacy.conf..."
+log "INFO" "Paso 2: Asegurando dsp_driver=3 y cargando módulos SOF, Loopback y JBL..."
 if [ -d /etc/modprobe.d ]; then
     echo "options snd-intel-dspcfg dsp_driver=3" | doas tee /etc/modprobe.d/alsa-legacy.conf >/dev/null
 fi
 
-log "INFO" "Paso 3: Cargando módulos para JBL, Loopback y SOF Laptop..."
 doas modprobe snd-usb-audio lowlatency=1 implicit_fb=0 2>>"$LOG_FILE" || true
 doas modprobe snd-aloop 2>>"$LOG_FILE" || true
 doas modprobe snd_sof_pci_intel_tgl 2>>"$LOG_FILE" || true
 doas modprobe snd_soc_skl_hda_dsp 2>>"$LOG_FILE" || true
 doas modprobe snd_hda_intel 2>>"$LOG_FILE" || true
 
-sleep 0.5
+sleep 0.4
 
 # Detectar nombre de tarjeta interna en ALSA
 CARD_NAME="sofhdadsp"
@@ -107,7 +106,14 @@ else
 fi
 log "INFO" "Micrófono Laptop SOF detectado en: hw:${CARD_NAME},${MIC_DEV}"
 
-log "INFO" "Paso 4: Validando conexión del dispositivo JBL Quantum 350..."
+# Silenciar altavoces internos si el módulo SOF estuvo activo
+amixer -c "${CARD_NAME}" set Master mute >/dev/null 2>&1 || amixer -c 0 set Master mute >/dev/null 2>&1 || true
+amixer -c "${CARD_NAME}" set Capture unmute 100% 2>/dev/null || true
+ amixer -c "${CARD_NAME}" sset 'Dmic0' 100% unmute cap 2>/dev/null || true
+ amixer -c "${CARD_NAME}" sset 'Dmic1 2nd' 100% unmute cap 2>/dev/null || true
+ amixer -c "${CARD_NAME}" sset 'PGA2.0 2 Master' 100% unmute cap 2>/dev/null || true >/dev/null 2>&1 || true
+
+log "INFO" "Paso 3: Validando conexión del dispositivo JBL Quantum 350..."
 CONNECTED=false
 if lsusb 2>/dev/null | grep -i -E "0ecb:206b|JBL|Quantum350|Wireless" >/dev/null; then
     CONNECTED=true
@@ -119,7 +125,7 @@ if [ "$CONNECTED" = false ]; then
     log "ERROR" "No se detectó el dispositivo USB Audio Wireless JBL."
     if command -v yad >/dev/null 2>&1; then
         yad --image=dialog-warning \
-            --title="Audio USB Wireless Filter Loopback" \
+            --title="Audio USB Wireless Loopback" \
             --text="No se detectó el dispositivo USB Audio Wireless JBL" \
             --button=GTK_STOCK_OK:0 \
             --width=350 --center 2>/dev/null &
@@ -129,48 +135,17 @@ else
     log "OK" "Dispositivo JBL Quantum 350 detectado correctamente."
 fi
 
-# Mute altavoces internos para evitar acople
-amixer -c "${CARD_NAME}" set Master mute >/dev/null 2>&1 || amixer -c 0 set Master mute >/dev/null 2>&1 || true
-amixer -c "${CARD_NAME}" set Capture unmute 100% 2>/dev/null || true
- amixer -c "${CARD_NAME}" sset 'Dmic0' 100% unmute cap 2>/dev/null || true
- amixer -c "${CARD_NAME}" sset 'Dmic1 2nd' 100% unmute cap 2>/dev/null || true
- amixer -c "${CARD_NAME}" sset 'PGA2.0 2 Master' 100% unmute cap 2>/dev/null || true >/dev/null 2>&1 || true
-
-log "INFO" "Paso 5: Eliminando /etc/asound.conf..."
+log "INFO" "Paso 4: Eliminando /etc/asound.conf..."
 doas rm -f /etc/asound.conf 2>>"$LOG_FILE" || true
 
 ASOUND_USER="/home/user/.asoundrc"
-log "INFO" "Paso 6: Escribiendo configuración limpia en ${ASOUND_USER}..."
+log "INFO" "Paso 5: Escribiendo configuración limpia en ${ASOUND_USER}..."
 rm -f "$ASOUND_USER" 2>/dev/null || true
 
 cat << EOC > "$ASOUND_USER"
 # ==============================================================================
-# Configuración ALSA de Usuario: OUT=jbl + IN=jbl + FILTER-LOOPBACK(Laptop SOF -> JBL)
+# Configuración ALSA de Usuario: OUT=jbl + IN=jbl + LOOPBACK=jbl
 # ==============================================================================
-
-pcm.microfono_laptop {
-    type plug
-    slave.pcm "dsnoop_sof"
-}
-
-pcm.sof_snd_dsp {
-    type plug
-    slave.pcm "dsnoop_sof"
-}
-
-pcm.chrome_in_sof_snd_dsp {
-    type dsnoop
-    ipc_key 1026
-    ipc_key_add_uid false
-    ipc_perm 0666
-    slave {
-        pcm "hw:${CARD_NAME},${MIC_DEV}"
-        rate 48000
-        channels 2
-        period_size 1024
-        buffer_size 4096
-    }
-}
 
 pcm.dmix_speaker {
     type dmix
@@ -186,7 +161,7 @@ pcm.dmix_speaker {
     }
 }
 
-pcm.dsnoop_jbl {
+pcm.dsnoop_mic {
     type dsnoop
     ipc_key 1025
     ipc_key_add_uid false
@@ -201,9 +176,33 @@ pcm.dsnoop_jbl {
     }
 }
 
-pcm.dsnoop_mic {
+pcm.dsnoop_sof {
+    type dsnoop
+    ipc_key 1026
+    ipc_key_add_uid false
+    ipc_perm 0666
+    slave {
+        pcm "hw:${CARD_NAME},${MIC_DEV}"
+        rate 48000
+        channels 2
+        period_size 1024
+        buffer_size 4096
+    }
+}
+
+pcm.microfono_laptop {
     type plug
-    slave.pcm "dsnoop_jbl"
+    slave.pcm "dsnoop_sof"
+}
+
+pcm.sof_snd_dsp {
+    type plug
+    slave.pcm "dsnoop_sof"
+}
+
+pcm.chrome_in_sof_snd_dsp {
+    type plug
+    slave.pcm "dsnoop_sof"
 }
 
 pcm.salida_jbl {
@@ -213,13 +212,13 @@ pcm.salida_jbl {
 
 pcm.entrada_buena_jbl {
     type plug
-    slave.pcm "dsnoop_jbl"
+    slave.pcm "dsnoop_mic"
 }
 
 pcm.entrada_buena_16k_jbl {
     type plug
     slave {
-        pcm "dsnoop_jbl"
+        pcm "dsnoop_mic"
         rate 16000
     }
 }
@@ -227,7 +226,7 @@ pcm.entrada_buena_16k_jbl {
 pcm.!default {
     type asym
     playback.pcm "plug:dmix_speaker"
-    capture.pcm "plug:dsnoop_jbl"
+    capture.pcm "plug:dsnoop_mic"
 }
 
 pcm.!sysdefault {
@@ -244,27 +243,23 @@ EOC
 chmod 644 "$ASOUND_USER" 2>/dev/null || true
 log "OK" "${ASOUND_USER} actualizado correctamente."
 
-log "INFO" "Paso 7: Ajustando niveles de volumen del micrófono JBL y Mic Laptop al 100%..."
+log "INFO" "Paso 6: Ajustando niveles de volumen del micrófono JBL al 100%..."
 amixer -c Wireless sset Mic 100% unmute 2>>"$LOG_FILE" || true
 amixer -c Wireless sset Headphone 100% unmute 2>>"$LOG_FILE" || amixer -c Wireless set Master 100% unmute 2>>"$LOG_FILE" || true
-amixer -c "$CARD_NAME" sset Capture 100% unmute 2>>"$LOG_FILE" || true
-amixer -c "$CARD_NAME" sset Mic 100% unmute 2>>"$LOG_FILE" || true
-amixer -c "$CARD_NAME" sset "Digital Mic" 100% unmute 2>>"$LOG_FILE" || true
-amixer -c "$CARD_NAME" sset Master 100% unmute 2>>"$LOG_FILE" || true
 
-log "INFO" "Paso 8: Guardando pipeline con Filtro Anti-Ruido en /tmp/jbl_pipeline..."
+log "INFO" "Paso 7: Guardando pipeline en /tmp/jbl_pipeline..."
 cat << 'EOP' > /tmp/jbl_pipeline
-alsasrc device=plug:microfono_laptop ! audio/x-raw, format=S16LE, rate=48000, channels=2 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=1.2 ! queue max-size-time=20000000 ! alsasink device=plug:dmix_speaker sync=false
+alsasrc device=plug:dsnoop_mic buffer-time=500 latency-time=250 blocksize=16 ! audio/x-raw, format=S16LE, rate=48000, channels=1 ! alsasink device=plug:dmix_speaker sync=false buffer-time=500 latency-time=250 blocksize=16
 EOP
 chmod 666 /tmp/jbl_pipeline 2>/dev/null || true
 
-log "INFO" "Paso 9: Iniciando loopback Laptop Mic -> JBL con Filtro Anti-Ruido en tiempo real..."
-nohup gst-launch-1.0 -q alsasrc device=plug:microfono_laptop ! audio/x-raw, format=S16LE, rate=48000, channels=2 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=1.2 ! queue max-size-time=20000000 ! alsasink device=plug:dmix_speaker sync=false </dev/null >/dev/null 2>&1 &
+log "INFO" "Paso 8: Iniciando loopback en tiempo real (~0.5ms latencia)..."
+nohup gst-launch-1.0 -q alsasrc device=plug:dsnoop_mic buffer-time=500 latency-time=250 blocksize=16 ! audio/x-raw, format=S16LE, rate=48000, channels=1 ! alsasink device=plug:dmix_speaker sync=false buffer-time=500 latency-time=250 blocksize=16 </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 sleep 0.5
 
 if pgrep -f "gst-launch-1.0" >/dev/null 2>&1; then
-    log "OK" "Loopback filtrado iniciado exitosamente (PID: $(pgrep -f "gst-launch-1.0" | tr '\n' ' '))."
+    log "OK" "Loopback en tiempo real iniciado exitosamente (PID: $(pgrep -f "gst-launch-1.0" | tr '\n' ' '))."
 else
     log "WARNING" "No se detectó el proceso gst-launch-1.0 en ejecución."
 fi
@@ -272,5 +267,5 @@ fi
 # Guardar estado actual para el siguiente script
 save_current_state
 
-log "OK" "Perfil activo: OUT=jbl-usb-wireless | IN=jbl-usb-wireless | FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp"
+log "OK" "Perfil activo: OUT=jbl-usb-wireless | IN=jbl-usb-wireless | LOOPBACK=jbl-usb-wireless"
 log "INFO" "Logs guardados en $LOG_FILE"

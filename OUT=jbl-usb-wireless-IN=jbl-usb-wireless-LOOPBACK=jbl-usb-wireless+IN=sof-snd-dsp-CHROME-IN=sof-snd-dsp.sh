@@ -1,10 +1,10 @@
 #!/bin/bash
 # ==============================================================================
-# Script: /home/user/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh
-# Perfil: Salida JBL + Captura Mic JBL + Loopback Anti-Ruido DSP del Micrófono Laptop (SOF) en JBL
+# Script: /home/user/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp-CHROME-IN=sof-snd-dsp.sh
+# Perfil: Salida JBL + Captura Mic JBL + Monitoreo Loopback del Micrófono Laptop (SOF) en JBL
 # ==============================================================================
 
-LOG_FILE="/tmp/out_jbl_in_jbl_filter_loopback_sof.log"
+LOG_FILE="/tmp/out_jbl_in_jbl_loopback_sof.log"
 STATE_FILE="/tmp/.apagar_esto_para_encender_el_siguiente"
 
 REQUIRED_MODULES=("snd-usb-audio" "snd-aloop" "snd_soc_skl_hda_dsp" "snd_sof_pci_intel_tgl" "snd_hda_intel")
@@ -69,7 +69,7 @@ save_current_state() {
     log "OK" "Estado guardado en $STATE_FILE"
 }
 
-echo "=== Inicio de Ejecución: OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp ($(date '+%Y-%m-%d %H:%M:%S')) ===" > "$LOG_FILE"
+echo "=== Inicio de Ejecución: OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp ($(date '+%Y-%m-%d %H:%M:%S')) ===" > "$LOG_FILE"
 chmod 666 "$LOG_FILE" 2>/dev/null || true
 
 # Ejecutar limpieza del estado previo
@@ -119,7 +119,7 @@ if [ "$CONNECTED" = false ]; then
     log "ERROR" "No se detectó el dispositivo USB Audio Wireless JBL."
     if command -v yad >/dev/null 2>&1; then
         yad --image=dialog-warning \
-            --title="Audio USB Wireless Filter Loopback" \
+            --title="Audio USB Wireless" \
             --text="No se detectó el dispositivo USB Audio Wireless JBL" \
             --button=GTK_STOCK_OK:0 \
             --width=350 --center 2>/dev/null &
@@ -129,7 +129,7 @@ else
     log "OK" "Dispositivo JBL Quantum 350 detectado correctamente."
 fi
 
-# Mute altavoces internos para evitar acople
+# Mute altavoces internos para que el sonido no salga por la laptop
 amixer -c "${CARD_NAME}" set Master mute >/dev/null 2>&1 || amixer -c 0 set Master mute >/dev/null 2>&1 || true
 amixer -c "${CARD_NAME}" set Capture unmute 100% 2>/dev/null || true
  amixer -c "${CARD_NAME}" sset 'Dmic0' 100% unmute cap 2>/dev/null || true
@@ -145,7 +145,7 @@ rm -f "$ASOUND_USER" 2>/dev/null || true
 
 cat << EOC > "$ASOUND_USER"
 # ==============================================================================
-# Configuración ALSA de Usuario: OUT=jbl + IN=jbl + FILTER-LOOPBACK(Laptop SOF -> JBL)
+# Configuración ALSA de Usuario: OUT=jbl + IN=jbl + LOOPBACK(Laptop SOF -> JBL)
 # ==============================================================================
 
 pcm.microfono_laptop {
@@ -252,19 +252,19 @@ amixer -c "$CARD_NAME" sset Mic 100% unmute 2>>"$LOG_FILE" || true
 amixer -c "$CARD_NAME" sset "Digital Mic" 100% unmute 2>>"$LOG_FILE" || true
 amixer -c "$CARD_NAME" sset Master 100% unmute 2>>"$LOG_FILE" || true
 
-log "INFO" "Paso 8: Guardando pipeline con Filtro Anti-Ruido en /tmp/jbl_pipeline..."
+log "INFO" "Paso 8: Guardando pipeline en /tmp/jbl_pipeline..."
 cat << 'EOP' > /tmp/jbl_pipeline
-alsasrc device=plug:microfono_laptop ! audio/x-raw, format=S16LE, rate=48000, channels=2 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=1.2 ! queue max-size-time=20000000 ! alsasink device=plug:dmix_speaker sync=false
+alsasrc device=plug:microfono_laptop ! audio/x-raw, format=S16LE, rate=48000, channels=2 ! audioconvert ! queue max-size-time=20000000 ! alsasink device=plug:dmix_speaker sync=false
 EOP
 chmod 666 /tmp/jbl_pipeline 2>/dev/null || true
 
-log "INFO" "Paso 9: Iniciando loopback Laptop Mic -> JBL con Filtro Anti-Ruido en tiempo real..."
-nohup gst-launch-1.0 -q alsasrc device=plug:microfono_laptop ! audio/x-raw, format=S16LE, rate=48000, channels=2 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=1.2 ! queue max-size-time=20000000 ! alsasink device=plug:dmix_speaker sync=false </dev/null >/dev/null 2>&1 &
+log "INFO" "Paso 9: Iniciando loopback Laptop Mic -> JBL en tiempo real..."
+nohup gst-launch-1.0 -q alsasrc device=plug:microfono_laptop ! audio/x-raw, format=S16LE, rate=48000, channels=2 ! audioconvert ! queue max-size-time=20000000 ! alsasink device=plug:dmix_speaker sync=false </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 sleep 0.5
 
 if pgrep -f "gst-launch-1.0" >/dev/null 2>&1; then
-    log "OK" "Loopback filtrado iniciado exitosamente (PID: $(pgrep -f "gst-launch-1.0" | tr '\n' ' '))."
+    log "OK" "Loopback iniciado exitosamente (PID: $(pgrep -f "gst-launch-1.0" | tr '\n' ' '))."
 else
     log "WARNING" "No se detectó el proceso gst-launch-1.0 en ejecución."
 fi
@@ -272,5 +272,5 @@ fi
 # Guardar estado actual para el siguiente script
 save_current_state
 
-log "OK" "Perfil activo: OUT=jbl-usb-wireless | IN=jbl-usb-wireless | FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp"
+log "OK" "Perfil activo: OUT=jbl-usb-wireless | IN=jbl-usb-wireless | LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp"
 log "INFO" "Logs guardados en $LOG_FILE"

@@ -30,34 +30,48 @@
   // Escuchar mensajes de la página para el background
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
+    if (!chrome.runtime || !chrome.runtime.id) return;
 
     if (event.data && event.data.type === 'FROM_PAGE_FETCH') {
-      chrome.runtime.sendMessage({
-        action: 'fetch',
-        url: event.data.url,
-        options: event.data.options
-      }, (response) => {
-        window.postMessage({
-          type: 'FROM_CONTENT_FETCH_RESPONSE',
-          id: event.data.id,
-          response: response
-        }, '*');
-      });
+      try {
+        chrome.runtime.sendMessage({
+          action: 'fetch',
+          url: event.data.url,
+          options: event.data.options
+        }, (response) => {
+          if (chrome.runtime.lastError) return;
+          window.postMessage({
+            type: 'FROM_CONTENT_FETCH_RESPONSE',
+            id: event.data.id,
+            response: response
+          }, '*');
+        });
+      } catch (e) {}
     } else if (event.data && event.data.type === 'GET_MONKEY_STORAGE') {
-      chrome.storage.local.get(['pauseUntil', 'offHours'], (res) => {
-        window.postMessage({
-          type: 'FROM_MONKEY_STORAGE_RESPONSE',
-          id: event.data.id,
-          data: res
-        }, '*');
-      });
+      try {
+        if (chrome.storage && chrome.storage.local) {
+          chrome.storage.local.get(['pauseUntil', 'offHours'], (res) => {
+            if (chrome.runtime.lastError) return;
+            window.postMessage({
+              type: 'FROM_MONKEY_STORAGE_RESPONSE',
+              id: event.data.id,
+              data: res
+            }, '*');
+          });
+        }
+      } catch (e) {}
     } else if (event.data && event.data.type === 'SET_MONKEY_STORAGE') {
-      chrome.storage.local.set(event.data.data || {}, () => {
-        window.postMessage({
-          type: 'FROM_MONKEY_STORAGE_SET_RESPONSE',
-          id: event.data.id
-        }, '*');
-      });
+      try {
+        if (chrome.storage && chrome.storage.local) {
+          chrome.storage.local.set(event.data.data || {}, () => {
+            if (chrome.runtime.lastError) return;
+            window.postMessage({
+              type: 'FROM_MONKEY_STORAGE_SET_RESPONSE',
+              id: event.data.id
+            }, '*');
+          });
+        }
+      } catch (e) {}
     }
   });
 })();

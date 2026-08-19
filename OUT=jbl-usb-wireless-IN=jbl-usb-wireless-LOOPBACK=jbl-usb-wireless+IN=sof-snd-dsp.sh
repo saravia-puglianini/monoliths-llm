@@ -131,7 +131,10 @@ fi
 
 # Mute altavoces internos para que el sonido no salga por la laptop
 amixer -c "${CARD_NAME}" set Master mute >/dev/null 2>&1 || amixer -c 0 set Master mute >/dev/null 2>&1 || true
-amixer -c "${CARD_NAME}" set Capture unmute 100% >/dev/null 2>&1 || true
+amixer -c "${CARD_NAME}" set Capture unmute 100% 2>/dev/null || true
+ amixer -c "${CARD_NAME}" sset 'Dmic0' 100% unmute cap 2>/dev/null || true
+ amixer -c "${CARD_NAME}" sset 'Dmic1 2nd' 100% unmute cap 2>/dev/null || true
+ amixer -c "${CARD_NAME}" sset 'PGA2.0 2 Master' 100% unmute cap 2>/dev/null || true >/dev/null 2>&1 || true
 
 log "INFO" "Paso 5: Eliminando /etc/asound.conf..."
 doas rm -f /etc/asound.conf 2>>"$LOG_FILE" || true
@@ -146,6 +149,16 @@ cat << EOC > "$ASOUND_USER"
 # ==============================================================================
 
 pcm.microfono_laptop {
+    type plug
+    slave.pcm "dsnoop_sof"
+}
+
+pcm.sof_snd_dsp {
+    type plug
+    slave.pcm "dsnoop_sof"
+}
+
+pcm.chrome_in_sof_snd_dsp {
     type dsnoop
     ipc_key 1026
     ipc_key_add_uid false

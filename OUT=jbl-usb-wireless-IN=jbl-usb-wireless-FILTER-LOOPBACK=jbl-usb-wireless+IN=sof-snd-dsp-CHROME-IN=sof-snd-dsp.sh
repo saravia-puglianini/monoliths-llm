@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# Script: /home/user/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh
+# Script: /home/user/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp-CHROME-IN=sof-snd-dsp.sh
 # Perfil: Salida JBL + Captura Mic JBL + Loopback Anti-Ruido DSP del Micrófono Laptop (SOF) en JBL
 # ==============================================================================
 

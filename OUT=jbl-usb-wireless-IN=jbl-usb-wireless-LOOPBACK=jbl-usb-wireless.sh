@@ -7,7 +7,7 @@
 LOG_FILE="/tmp/out_jbl_in_jbl_loopback_jbl.log"
 STATE_FILE="/tmp/.apagar_esto_para_encender_el_siguiente"
 
-REQUIRED_MODULES=("snd-usb-audio" "snd-aloop")
+REQUIRED_MODULES=("snd-usb-audio" "snd-aloop" "snd_soc_skl_hda_dsp" "snd_sof_pci_intel_tgl" "snd_hda_intel")
 REQUIRED_PROCESSES=("gst-launch-1.0")
 
 log() {
@@ -75,22 +75,43 @@ chmod 666 "$LOG_FILE" 2>/dev/null || true
 # Ejecutar limpieza del estado previo
 cleanup_previous_state
 
-log "INFO" "Paso 2: Cargando módulos snd-usb-audio y snd-aloop..."
-if doas modprobe snd-usb-audio lowlatency=1 implicit_fb=0 2>>"$LOG_FILE"; then
-    log "OK" "Módulo snd-usb-audio cargado correctamente."
-else
-    log "WARNING" "Aviso al cargar snd-usb-audio."
+log "INFO" "Paso 2: Asegurando dsp_driver=3 y cargando módulos SOF, Loopback y JBL..."
+if [ -d /etc/modprobe.d ]; then
+    echo "options snd-intel-dspcfg dsp_driver=3" | doas tee /etc/modprobe.d/alsa-legacy.conf >/dev/null
 fi
 
-if doas modprobe snd-aloop 2>>"$LOG_FILE"; then
-    log "OK" "Módulo snd-aloop cargado correctamente."
-else
-    log "WARNING" "Aviso al cargar snd-aloop."
-fi
-
-amixer -c sofhdadsp set Master mute >/dev/null 2>&1 || amixer -c 0 set Master mute >/dev/null 2>&1 || true
+doas modprobe snd-usb-audio lowlatency=1 implicit_fb=0 2>>"$LOG_FILE" || true
+doas modprobe snd-aloop 2>>"$LOG_FILE" || true
+doas modprobe snd_sof_pci_intel_tgl 2>>"$LOG_FILE" || true
+doas modprobe snd_soc_skl_hda_dsp 2>>"$LOG_FILE" || true
+doas modprobe snd_hda_intel 2>>"$LOG_FILE" || true
 
 sleep 0.4
+
+# Detectar nombre de tarjeta interna en ALSA
+CARD_NAME="sofhdadsp"
+if grep -q -i "sofhdadsp" /proc/asound/cards 2>/dev/null; then
+    CARD_NAME="sofhdadsp"
+elif grep -q -i "sof" /proc/asound/cards 2>/dev/null; then
+    CARD_NAME="sof-hda-dsp"
+elif grep -q -i "pch" /proc/asound/cards 2>/dev/null; then
+    CARD_NAME="PCH"
+fi
+
+MIC_DEV="6"
+if arecord -l 2>/dev/null | grep -q "card.*${CARD_NAME}.*device 6"; then
+    MIC_DEV="6"
+else
+    MIC_DEV="0"
+fi
+log "INFO" "Micrófono Laptop SOF detectado en: hw:${CARD_NAME},${MIC_DEV}"
+
+# Silenciar altavoces internos si el módulo SOF estuvo activo
+amixer -c "${CARD_NAME}" set Master mute >/dev/null 2>&1 || amixer -c 0 set Master mute >/dev/null 2>&1 || true
+amixer -c "${CARD_NAME}" set Capture unmute 100% 2>/dev/null || true
+ amixer -c "${CARD_NAME}" sset 'Dmic0' 100% unmute cap 2>/dev/null || true
+ amixer -c "${CARD_NAME}" sset 'Dmic1 2nd' 100% unmute cap 2>/dev/null || true
+ amixer -c "${CARD_NAME}" sset 'PGA2.0 2 Master' 100% unmute cap 2>/dev/null || true >/dev/null 2>&1 || true
 
 log "INFO" "Paso 3: Validando conexión del dispositivo JBL Quantum 350..."
 CONNECTED=false
@@ -121,7 +142,7 @@ ASOUND_USER="/home/user/.asoundrc"
 log "INFO" "Paso 5: Escribiendo configuración limpia en ${ASOUND_USER}..."
 rm -f "$ASOUND_USER" 2>/dev/null || true
 
-cat << 'EOC' > "$ASOUND_USER"
+cat << EOC > "$ASOUND_USER"
 # ==============================================================================
 # Configuración ALSA de Usuario: OUT=jbl + IN=jbl + LOOPBACK=jbl
 # ==============================================================================
@@ -153,6 +174,35 @@ pcm.dsnoop_mic {
         period_time 0
         buffer_size 2048
     }
+}
+
+pcm.dsnoop_sof {
+    type dsnoop
+    ipc_key 1026
+    ipc_key_add_uid false
+    ipc_perm 0666
+    slave {
+        pcm "hw:${CARD_NAME},${MIC_DEV}"
+        rate 48000
+        channels 2
+        period_size 1024
+        buffer_size 4096
+    }
+}
+
+pcm.microfono_laptop {
+    type plug
+    slave.pcm "dsnoop_sof"
+}
+
+pcm.sof_snd_dsp {
+    type plug
+    slave.pcm "dsnoop_sof"
+}
+
+pcm.chrome_in_sof_snd_dsp {
+    type plug
+    slave.pcm "dsnoop_sof"
 }
 
 pcm.salida_jbl {
