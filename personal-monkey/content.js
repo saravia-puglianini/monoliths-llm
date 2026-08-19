@@ -43,6 +43,21 @@
           response: response
         }, '*');
       });
+    } else if (event.data && event.data.type === 'GET_MONKEY_STORAGE') {
+      chrome.storage.local.get(['pauseUntil', 'offHours'], (res) => {
+        window.postMessage({
+          type: 'FROM_MONKEY_STORAGE_RESPONSE',
+          id: event.data.id,
+          data: res
+        }, '*');
+      });
+    } else if (event.data && event.data.type === 'SET_MONKEY_STORAGE') {
+      chrome.storage.local.set(event.data.data || {}, () => {
+        window.postMessage({
+          type: 'FROM_MONKEY_STORAGE_SET_RESPONSE',
+          id: event.data.id
+        }, '*');
+      });
     }
   });
 })();

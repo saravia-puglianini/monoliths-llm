@@ -141,22 +141,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'PROCESS_ACTIVE_ROWS') {
     (async () => {
       try {
-        // Check if paused via local Python TTS server
+        // Check if paused via local Python TTS server or chrome storage
         let isPaused = false;
         try {
-          const pauseRes = await fetch('http://localhost:5005/is_paused');
-          if (pauseRes.ok) {
-            const pauseData = await pauseRes.json();
-            if (pauseData && pauseData.paused) {
-              isPaused = true;
-            }
+          const { pauseUntil = 0 } = await chrome.storage.local.get('pauseUntil');
+          if (pauseUntil && pauseUntil > Date.now()) {
+            isPaused = true;
           }
-        } catch (e) {
-          console.warn('Could not check pause state from local server, proceeding as unpaused.', e);
+        } catch (e) {}
+
+        if (!isPaused) {
+          try {
+            const pauseRes = await fetch('http://localhost:5005/is_paused');
+            if (pauseRes.ok) {
+              const pauseData = await pauseRes.json();
+              if (pauseData && pauseData.paused) {
+                isPaused = true;
+              }
+            }
+          } catch (e) {
+            console.warn('Could not check pause state from local server, proceeding as unpaused.', e);
+          }
         }
 
         if (isPaused) {
-          sendResponse({ success: true, message: 'Paused until configured date' });
+          sendResponse({ success: true, message: 'Paused until configured date/time' });
           return;
         }
 

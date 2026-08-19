@@ -12,13 +12,13 @@ while true; do
     opcion=$(yad --title='Selecciona una opcion' \
         --list \
         --column='ID' --column='Accion' \
-        1 "Chicle$([ -f "$HOME/.N_session_1' ] && echo ' ✔ listo')' \
-        2 "Mandíbula$([ -f "$HOME/.N_session_2' ] && echo ' ✔ listo')' \
-        3 "Labios$([ -f "$HOME/.N_session_3' ] && echo ' ✔ listo')' \
-        4 "Lengua$([ -f "$HOME/.N_session_4' ] && echo ' ✔ listo')' \
-        5 "Contar hasta quedarse sin aire$([ -f "$HOME/.N_session_5' ] && echo ' ✔ listo')' \
-        6 "Pasar la misma frase en tres idiomas$([ -f "$HOME/.N_session_6' ] && echo ' ✔ listo')' \
-        7 "Erre$([ -f "$HOME/.N_session_7' ] && echo ' ✔ listo')' \
+        1 "Chicle$([ -f \"$HOME/.N_session_1\" ] && echo ' ✔ listo')" \
+        2 "Mandíbula$([ -f \"$HOME/.N_session_2\" ] && echo ' ✔ listo')" \
+        3 "Labios$([ -f \"$HOME/.N_session_3\" ] && echo ' ✔ listo')" \
+        4 "Lengua$([ -f \"$HOME/.N_session_4\" ] && echo ' ✔ listo')" \
+        5 "Contar hasta quedarse sin aire$([ -f \"$HOME/.N_session_5\" ] && echo ' ✔ listo')" \
+        6 "Pasar la misma frase en tres idiomas$([ -f \"$HOME/.N_session_6\" ] && echo ' ✔ listo')" \
+        7 "Erre$([ -f \"$HOME/.N_session_7\" ] && echo ' ✔ listo')" \
         --height=300 \
         --width=400 \
         --button='Cancelar':1 \
@@ -43,7 +43,7 @@ while true; do
         esac
         
         # Lanzar el script
-        dash $HOME/monoliths-llm/simple_second_counter-N.sh 360
+        dash $HOME/monoliths-llm/simple_second_counter-N.sh 60
 
         # Marcar como ejecutado en esta sesión
         touch "$HOME/.N_session_$id"

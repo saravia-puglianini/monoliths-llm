@@ -17,6 +17,45 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
     window.__germanTranslatorActive = localStorage.getItem('monkey_german') !== null ? localStorage.getItem('monkey_german') === 'true' : true;
     const SERVER_URL = 'http://127.0.0.1:8888';
 
+    function isMonkeyPaused() {
+        const pauseUntil = parseInt(localStorage.getItem('monkey_pause_until') || '0', 10);
+        return pauseUntil && pauseUntil > Date.now();
+    }
+
+    // Sincronizar con chrome.storage (popup del addon)
+    function syncStorageWithExtension() {
+        window.postMessage({ type: 'GET_MONKEY_STORAGE', id: 'sync_' + Date.now() }, '*');
+    }
+
+    window.addEventListener('message', (event) => {
+        if (event.source !== window || !event.data) return;
+        if (event.data.type === 'FROM_MONKEY_STORAGE_RESPONSE') {
+            const { pauseUntil, offHours } = event.data.data || {};
+            if (pauseUntil !== undefined) {
+                localStorage.setItem('monkey_pause_until', pauseUntil);
+            }
+            if (offHours !== undefined) {
+                localStorage.setItem('monkey_off_hours', offHours);
+            }
+            if (typeof updateGlobalUI === 'function') {
+                updateGlobalUI();
+            }
+        }
+    });
+
+    setInterval(syncStorageWithExtension, 3000);
+    syncStorageWithExtension();
+
+    function setExtensionPause(targetTime, offHours) {
+        localStorage.setItem('monkey_pause_until', targetTime);
+        localStorage.setItem('monkey_off_hours', offHours);
+        window.postMessage({
+            type: 'SET_MONKEY_STORAGE',
+            id: 'set_' + Date.now(),
+            data: { pauseUntil: targetTime, offHours: offHours }
+        }, '*');
+    }
+
     async function gmFetch(url, options = {}) {
         return new Promise((resolve, reject) => {
             const id = Date.now() + '_' + Math.random().toString();
@@ -122,8 +161,122 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
                         localStorage.setItem('monkey_german', window.__germanTranslatorActive);
                         updateGlobalUI();
                     }
+                },
+                {
+                    id: 'btn-toggle-periodo-off',
+                    getSymbol: () => isMonkeyPaused() ? '⏸️' : '⏱️',
+                    getTitle: () => {
+                        if (isMonkeyPaused()) {
+                            const pUntil = parseInt(localStorage.getItem('monkey_pause_until') || '0', 10);
+                            const remMin = Math.round((pUntil - Date.now()) / 60000);
+                            return `Periodo OFF ACTIVO (Pausado por ~${remMin}m). Clic para reanudar.`;
+                        }
+                        const h = localStorage.getItem('monkey_off_hours') || '1';
+                        return `Hora en Periodo off... (${h}h). Clic para configurar / pausar.`;
+                    },
+                    getBg: () => isMonkeyPaused() ? '#d32f2f' : '#0284c7',
+                    getOpacity: () => '1',
+                    onClick: () => {
+                        showPeriodoOffModal();
+                    }
                 }
             ];
+
+            function showPeriodoOffModal() {
+                let existingModal = document.getElementById('monkey-periodo-off-modal');
+                if (existingModal) {
+                    existingModal.remove();
+                    return;
+                }
+
+                const backdrop = document.createElement('div');
+                backdrop.id = 'monkey-periodo-off-modal';
+                backdrop.style.cssText = 'position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;background:rgba(0,0,0,0.5)!important;backdrop-filter:blur(4px)!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;font-family:system-ui,-apple-system,sans-serif!important;';
+
+                const card = document.createElement('div');
+                card.style.cssText = 'background:#1e293b!important;color:#f8fafc!important;border:1px solid rgba(255,255,255,0.15)!important;border-radius:12px!important;padding:20px!important;width:300px!important;box-shadow:0 20px 40px rgba(0,0,0,0.4)!important;display:flex!important;flex-direction:column!important;gap:14px!important;';
+
+                const titleRow = document.createElement('div');
+                titleRow.style.cssText = 'display:flex!important;justify-content:space-between!important;align-items:center!important;';
+                const title = document.createElement('div');
+                title.style.cssText = 'font-weight:700!important;font-size:15px!important;color:#38bdf8!important;';
+                title.textContent = '⏱️ Personal Monkey';
+                const closeBtn = document.createElement('button');
+                closeBtn.textContent = '✕';
+                closeBtn.style.cssText = 'background:none!important;border:none!important;color:#94a3b8!important;font-size:16px!important;cursor:pointer!important;';
+                closeBtn.onclick = () => backdrop.remove();
+                titleRow.appendChild(title);
+                titleRow.appendChild(closeBtn);
+
+                const currentHours = localStorage.getItem('monkey_off_hours') || '1';
+                const inputRow = document.createElement('div');
+                inputRow.style.cssText = 'display:flex!important;justify-content:space-between!important;align-items:center!important;margin-top:4px!important;';
+                const label = document.createElement('span');
+                label.style.cssText = 'font-size:13px!important;font-weight:600!important;';
+                label.textContent = 'Hora en Periodo off...';
+                const numInput = document.createElement('input');
+                numInput.type = 'number';
+                numInput.min = '0.5';
+                numInput.max = '24';
+                numInput.step = '0.5';
+                numInput.value = currentHours;
+                numInput.style.cssText = 'width:60px!important;background:#0f172a!important;color:#f8fafc!important;border:1px solid #475569!important;border-radius:6px!important;padding:5px 8px!important;font-weight:bold!important;text-align:center!important;outline:none!important;';
+
+                inputRow.appendChild(label);
+                inputRow.appendChild(numInput);
+
+                const statusText = document.createElement('div');
+                statusText.style.cssText = 'font-size:11px!important;text-align:center!important;';
+                
+                const actionBtn = document.createElement('button');
+                actionBtn.style.cssText = 'width:100%!important;padding:9px!important;border:none!important;border-radius:6px!important;font-weight:700!important;font-size:13px!important;cursor:pointer!important;color:#fff!important;transition:all .2s ease!important;';
+
+                function updateModalState() {
+                    if (isMonkeyPaused()) {
+                        const pUntil = parseInt(localStorage.getItem('monkey_pause_until') || '0', 10);
+                        const remMin = Math.round((pUntil - Date.now()) / 60000);
+                        const dateStr = new Date(pUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        statusText.textContent = `Pausado hasta las ${dateStr} (~${remMin}m)`;
+                        statusText.style.color = '#f87171';
+                        actionBtn.textContent = '▶️ Reanudar Addon';
+                        actionBtn.style.background = '#059669';
+                    } else {
+                        statusText.textContent = 'Estado: Activo';
+                        statusText.style.color = '#38bdf8';
+                        const h = numInput.value || 1;
+                        actionBtn.textContent = `⏸️ Pausar por ${h} hora(s)`;
+                        actionBtn.style.background = '#dc2626';
+                    }
+                }
+
+                numInput.oninput = () => {
+                    localStorage.setItem('monkey_off_hours', numInput.value || '1');
+                    updateModalState();
+                };
+
+                actionBtn.onclick = () => {
+                    if (isMonkeyPaused()) {
+                        setExtensionPause(0, parseFloat(numInput.value) || 1);
+                    } else {
+                        const hours = parseFloat(numInput.value) || 1;
+                        const targetTime = Date.now() + (hours * 3600 * 1000);
+                        setExtensionPause(targetTime, hours);
+                    }
+                    updateGlobalUI();
+                    backdrop.remove();
+                };
+
+                updateModalState();
+
+                card.appendChild(titleRow);
+                card.appendChild(inputRow);
+                card.appendChild(actionBtn);
+                card.appendChild(statusText);
+                backdrop.appendChild(card);
+                backdrop.onclick = (e) => { if (e.target === backdrop) backdrop.remove(); };
+
+                document.body.appendChild(backdrop);
+            }
 
             function updateGlobalUI() {
                 if (styleGlobal) {
@@ -464,6 +617,7 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
         }
 
         function checkAutoMeetOpen() {
+            if (isMonkeyPaused()) return;
             const divsConAriaLabel = document.querySelectorAll('div[aria-label]');
             const ahora = new Date();
             divsConAriaLabel.forEach((div) => {
@@ -577,16 +731,62 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
 
             // Header
             const header = document.createElement('div');
-            header.style.cssText = 'padding:20px!important;background:#f8f9fa!important;border-bottom:1px solid #e0e0e0!important;display:flex!important;justify-content:space-between!important;align-items:center!important;';
+            header.style.cssText = 'padding:16px 20px!important;background:#f8f9fa!important;border-bottom:1px solid #e0e0e0!important;display:flex!important;justify-content:space-between!important;align-items:center!important;';
             const title = document.createElement('h2');
             title.id = 'monkey-german-title';
             title.style.cssText = 'margin:0!important;color:#202124!important;font-size:18px!important;font-weight:600!important;display:flex!important;align-items:center!important;gap:10px!important;';
             title.textContent = '🇩🇪 Redactar en Alemán';
+            
+            const headerRight = document.createElement('div');
+            headerRight.style.cssText = 'display:flex!important;align-items:center!important;gap:8px!important;';
+
             const statusDiv = document.createElement('div');
             statusDiv.id = 'monkey-german-status';
             statusDiv.style.cssText = 'color:#5f6368!important;font-size:13px!important;';
+
+            // Selector desplegable de dispositivo de micrófono
+            const micSelect = document.createElement('select');
+            micSelect.id = 'monkey-german-mic-select';
+            micSelect.tabIndex = -1;
+            micSelect.style.cssText = 'display:none!important;max-width:140px!important;font-size:12px!important;padding:3px 6px!important;border-radius:6px!important;border:1px solid #dadce0!important;background:#fff!important;color:#202124!important;outline:none!important;cursor:pointer!important;';
+
+            // Botón de Micrófono Web Speech API (Forzado estrictamente a Alemán de-DE)
+            const micBtn = document.createElement('button');
+            micBtn.id = 'monkey-german-speech-mic-btn';
+            micBtn.setAttribute('type', 'button');
+            micBtn.tabIndex = -1;
+            micBtn.setAttribute('title', 'Reconocer voz en Alemán (de-DE)');
+            micBtn.textContent = '🎤';
+            micBtn.style.cssText = 'background:#f1f3f4!important;border:1px solid #dadce0!important;font-size:16px!important;cursor:pointer!important;padding:4px 9px!important;border-radius:6px!important;display:flex!important;align-items:center!important;justify-content:center!important;transition:all 0.2s ease!important;outline:none!important;user-select:none!important;';
+
+            const closeBtn = document.createElement('button');
+            closeBtn.id = 'monkey-german-close-btn';
+            closeBtn.setAttribute('type', 'button');
+            closeBtn.setAttribute('aria-label', 'Cerrar');
+            closeBtn.textContent = '✕';
+            closeBtn.style.cssText = 'background:transparent!important;border:none!important;color:#5f6368!important;font-size:18px!important;font-weight:bold!important;cursor:pointer!important;padding:4px 8px!important;border-radius:6px!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important;transition:background 0.2s,color 0.2s!important;outline:none!important;';
+            closeBtn.addEventListener('mouseenter', () => {
+                closeBtn.style.background = '#e8eaed';
+                closeBtn.style.color = '#202124';
+            });
+            closeBtn.addEventListener('mouseleave', () => {
+                closeBtn.style.background = 'transparent';
+                closeBtn.style.color = '#5f6368';
+            });
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                stopSpeechRecognition();
+                closeModal(true);
+            });
+
+            headerRight.appendChild(micSelect);
+            headerRight.appendChild(micBtn);
+            headerRight.appendChild(statusDiv);
+            headerRight.appendChild(closeBtn);
+
             header.appendChild(title);
-            header.appendChild(statusDiv);
+            header.appendChild(headerRight);
 
             // Phase 1 (Input)
             const phase1 = document.createElement('div');
@@ -697,6 +897,7 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
             inputArea.addEventListener('keydown', async (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
+                    stopSpeechRecognition();
                     const text = inputArea.value.trim();
                     if (!text) return;
                     
@@ -710,6 +911,7 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
                     }
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
+                    stopSpeechRecognition();
                     closeModal(true);
                 }
             });
@@ -718,6 +920,230 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
         }
 
         ensureModalInDOM();
+
+        // ----------------------------------------------------
+        // RECONOCIMIENTO DE VOZ EXCLUSIVAMENTE EN ALEMÁN (de-DE)
+        // Con Selector Dinámico y Persistente de Micrófono
+        // ----------------------------------------------------
+        let recognition = null;
+        let isListening = false;
+        let currentMediaStream = null;
+        let speechReceivedInSession = false;
+        async function populateAudioDevices(forceShow = false) {
+            const els = getModalElements();
+            if (!els.micSelect) return;
+
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                    return;
+                }
+
+                // Pedir permiso temporalmente solo para descubrir etiquetas si no las tenemos
+                let tempStream = null;
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const hasLabels = devices.some(d => d.kind === 'audioinput' && d.label);
+                    if (!hasLabels) {
+                        tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    }
+                } catch (err) {}
+
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioInputs = devices.filter(d => d.kind === 'audioinput');
+
+                // IMPORTANTE: Detener y liberar el stream inmediatamente para que no bloquee el micro a SpeechRecognition
+                if (tempStream) {
+                    tempStream.getTracks().forEach(t => t.stop());
+                    tempStream = null;
+                }
+                if (currentMediaStream) {
+                    currentMediaStream.getTracks().forEach(t => t.stop());
+                    currentMediaStream = null;
+                }
+
+                if (audioInputs.length === 0) return;
+
+                els.micSelect.innerHTML = '';
+                audioInputs.forEach((dev, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = dev.deviceId;
+                    opt.textContent = dev.label || `Micrófono ${idx + 1}`;
+                    if (dev.deviceId === selectedAudioDeviceId || (!selectedAudioDeviceId && idx === 0)) {
+                        opt.selected = true;
+                    }
+                    els.micSelect.appendChild(opt);
+                });
+
+                if (forceShow || audioInputs.length > 1) {
+                    els.micSelect.style.setProperty('display', 'inline-block', 'important');
+                }
+
+                els.micSelect.onchange = async () => {
+                    selectedAudioDeviceId = els.micSelect.value;
+                    localStorage.setItem('monkey_german_mic_id', selectedAudioDeviceId);
+                    
+                    if (isListening) {
+                        stopSpeechRecognition();
+                        setTimeout(() => toggleSpeechRecognition(), 300);
+                    }
+                };
+            } catch (err) {
+                console.warn('Error al enumerar micrófonos:', err);
+            }
+        }
+
+        function updateMicButtonUI(listening) {
+            const els = getModalElements();
+            if (!els.micBtn) return;
+
+            if (listening) {
+                els.micBtn.textContent = '🔴';
+                els.micBtn.title = 'Escuchando en Alemán (clic para detener)...';
+                els.micBtn.style.background = '#fce8e6';
+                els.micBtn.style.borderColor = '#d93025';
+                els.micBtn.style.boxShadow = '0 0 8px rgba(217, 48, 37, 0.5)';
+                if (els.statusDiv) {
+                    els.statusDiv.textContent = '🎙️ Sprechen Sie auf Deutsch...';
+                    els.statusDiv.style.color = '#d93025';
+                }
+            } else {
+                els.micBtn.textContent = '🎤';
+                els.micBtn.title = 'Hablar en Alemán (de-DE)';
+                els.micBtn.style.background = '#f1f3f4';
+                els.micBtn.style.borderColor = '#dadce0';
+                els.micBtn.style.boxShadow = 'none';
+                if (els.statusDiv && els.statusDiv.textContent.includes('Sprechen')) {
+                    els.statusDiv.textContent = '';
+                    els.statusDiv.style.color = '#5f6368';
+                }
+            }
+        }
+
+        function stopSpeechRecognition() {
+            if (currentMediaStream) {
+                try {
+                    currentMediaStream.getTracks().forEach(t => t.stop());
+                } catch (e) {}
+                currentMediaStream = null;
+            }
+            if (recognition) {
+                try {
+                    recognition.abort();
+                } catch (e) {}
+                recognition = null;
+            }
+            isListening = false;
+            updateMicButtonUI(false);
+        }
+
+        async function toggleSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const els = getModalElements();
+
+            if (!SpeechRecognition) {
+                if (els.statusDiv) {
+                    els.statusDiv.textContent = 'Reconocimiento de voz no soportado';
+                    els.statusDiv.style.color = '#d93025';
+                    setTimeout(() => { if (els.statusDiv) els.statusDiv.textContent = ''; }, 3000);
+                }
+                return;
+            }
+
+            if (isListening) {
+                // Si detiene manualmente y no se capturó nada, desplegar el selector de micrófono
+                if (!speechReceivedInSession) {
+                    await populateAudioDevices(true);
+                    if (els.statusDiv) {
+                        els.statusDiv.textContent = 'Seleccione su micrófono';
+                        els.statusDiv.style.color = '#d93025';
+                        setTimeout(() => { if (els.statusDiv) els.statusDiv.textContent = ''; }, 4000);
+                    }
+                }
+                stopSpeechRecognition();
+                return;
+            }
+
+            try {
+                // Asegurar que ningún stream previo esté ocupando el micrófono
+                if (currentMediaStream) {
+                    currentMediaStream.getTracks().forEach(t => t.stop());
+                    currentMediaStream = null;
+                }
+
+                speechReceivedInSession = false;
+
+                // Crear nueva instancia limpia
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'de-DE';
+                recognition.maxAlternatives = 1;
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    updateMicButtonUI(true);
+                };
+
+                recognition.onresult = (event) => {
+                    const modalEls = getModalElements();
+                    if (!modalEls.inputArea) return;
+
+                    let finalTranscript = '';
+                    let interimTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+
+                    if (finalTranscript) {
+                        speechReceivedInSession = true;
+                        const currentVal = modalEls.inputArea.value;
+                        const separator = currentVal && !currentVal.endsWith(' ') && !currentVal.endsWith('\n') ? ' ' : '';
+                        modalEls.inputArea.value = currentVal + separator + finalTranscript.trim();
+                        modalEls.inputArea.dispatchEvent(new Event('input', { bubbles: true }));
+                        modalEls.inputArea.scrollTop = modalEls.inputArea.scrollHeight;
+                    }
+                };
+
+                recognition.onerror = async (event) => {
+                    console.warn('Speech recognition error:', event.error);
+                    const modalEls = getModalElements();
+                    if (modalEls.statusDiv && event.error !== 'no-speech') {
+                        modalEls.statusDiv.textContent = `Mic: ${event.error}`;
+                        modalEls.statusDiv.style.color = '#d93025';
+                    }
+                    
+                    if (event.error === 'audio-capture' || event.error === 'not-allowed') {
+                        await populateAudioDevices(true);
+                    }
+                    stopSpeechRecognition();
+                };
+
+                recognition.onend = async () => {
+                    if (!speechReceivedInSession && isListening) {
+                        await populateAudioDevices(true);
+                        const modalEls = getModalElements();
+                        if (modalEls.statusDiv) {
+                            modalEls.statusDiv.textContent = 'Sin audio capturado';
+                            modalEls.statusDiv.style.color = '#d93025';
+                            setTimeout(() => { if (modalEls.statusDiv) modalEls.statusDiv.textContent = ''; }, 4000);
+                        }
+                    }
+                    isListening = false;
+                    updateMicButtonUI(false);
+                };
+
+                recognition.start();
+            } catch (err) {
+                console.error('Error al iniciar reconocimiento:', err);
+                await populateAudioDevices(true);
+                stopSpeechRecognition();
+            }
+        }
 
         function getModalElements() {
             ensureModalInDOM();
@@ -728,7 +1154,9 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
                 inputArea: document.getElementById('monkey-german-input'),
                 originalTextDiv: document.getElementById('monkey-german-original-text'),
                 translatedTextDiv: document.getElementById('monkey-german-translated-text'),
-                statusDiv: document.getElementById('monkey-german-status')
+                statusDiv: document.getElementById('monkey-german-status'),
+                micBtn: document.getElementById('monkey-german-speech-mic-btn'),
+                micSelect: document.getElementById('monkey-german-mic-select')
             };
         }
 
@@ -736,6 +1164,7 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
         let currentPhase = 0; // 0: closed, 1: input, 2: confirm
 
         function closeModal(skipTargetOnce = false) {
+            stopSpeechRecognition();
             const els = getModalElements();
             if (els.backdrop) els.backdrop.style.display = 'none';
             currentPhase = 0;
@@ -762,8 +1191,21 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
             els.backdrop.style.display = 'flex';
             els.statusDiv.textContent = '';
             
+            // Conectar el botón de micrófono exclusivamente a clics del mouse
+            if (els.micBtn) {
+                els.micBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSpeechRecognition();
+                };
+            }
+
             els.inputArea.value = ''; 
-            setTimeout(() => els.inputArea.focus(), 50);
+            setTimeout(() => {
+                els.inputArea.focus();
+                // Disparo automático del interpretador de voz en alemán al abrir
+                toggleSpeechRecognition();
+            }, 60);
         }
 
         async function translateText(text) {
@@ -868,6 +1310,7 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
         function handleFocus(target) {
             if (!target) return;
             if (!window.__germanTranslatorActive) return;
+            if (isMonkeyPaused()) return;
 
             const editable = getEditableTarget(target);
             if (editable) {
@@ -891,7 +1334,7 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
         // Fallback robusto por polling (para GChat, YouTube, etc. que secuestran focus)
         let lastActiveElement = null;
         setInterval(() => {
-            if (!window.__germanTranslatorActive || currentPhase !== 0) return;
+            if (!window.__germanTranslatorActive || currentPhase !== 0 || isMonkeyPaused()) return;
             
             let target = document.activeElement;
             if (target && target.shadowRoot) {
@@ -918,29 +1361,6 @@ window.__germanTranslatorActive = window.__germanTranslatorActive ?? true;
                 }, 200);
             }
         }, true);
-
-        const els = getModalElements();
-        if (els.inputArea) {
-            els.inputArea.addEventListener('keydown', async (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    const text = els.inputArea.value.trim();
-                    if (!text) return;
-                    
-                    const translated = await translateText(text);
-                    if (translated) {
-                        els.originalTextDiv.textContent = text;
-                        els.translatedTextDiv.textContent = translated;
-                        els.phase1.style.display = 'none';
-                        els.phase2.style.display = 'flex';
-                        currentPhase = 2;
-                    }
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    closeModal(true);
-                }
-            });
-        }
 
         document.addEventListener('keydown', (e) => {
             // Atajo Ctrl+Q (o Cmd+Q en Mac) para abrir manualmente el traductor

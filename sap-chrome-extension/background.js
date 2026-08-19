@@ -40,6 +40,13 @@ async function checkPendingCarga() {
   if (isProcessing) return;
 
   try {
+    const { pauseUntil = 0 } = await chrome.storage.local.get("pauseUntil");
+    if (pauseUntil && pauseUntil > Date.now()) {
+      return; // Addon pausado por periodo off
+    }
+  } catch (e) {}
+
+  try {
     const res = await fetch(`${SERVER_URL}/get-carga`);
     if (!res.ok) return;
 

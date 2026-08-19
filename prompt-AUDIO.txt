@@ -1,0 +1,85 @@
+Mira quiero trabajar 4 archivos... actualmente estoy trabajando un poco en desorden:
+
+tengo lo siguiente:
+
+el dispositivo: sof-snd-dsp
+
+el dispositivo: JBL usb wireless
+
+ahora... ponles nombres explicativos...
+
+OUT=sof-snd-dsp-IN=sof-snd-dsp.sh
+OUT=sof-snd-dsp-IN=sof-snd-dsp-IN-FILTER.sh
+
+OUT=jbl-usb-wireless-IN=jbl-usb-wireless.sh
+OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER.sh
+
+OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless.sh
+OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless.sh
+
+OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh
+OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh
+
+
+entonces busco que ninguna funcionalidad de audio se encienda ni en el openrc al encender...
+
+que toda funcionalidad se inserte en ~/.asoundrc cuando corro cada comando...
+
+teniendo en cuenta que /etc/asoundrc.conf ← practicamente no utilizaré... si es posible borrarlo
+
+entonces quisiera quitar toda configuración al encender, openrc y modprobe del arranque... y quiero que cada comando encienda el respectivo modprobe... ya que busco que mi máquina trabaje siempre con el mínimo esfuerzo... tener modprobes encendidos que no uso... malogra mi sistema por que me gusta estar siempre al mínimo recurso
+
+mira esto:
+
+    688|audio-sof|OUT=sof-snd-dsp-IN=sof-snd-dsp)
+	bash $HOME/monoliths-llm/OUT=sof-snd-dsp-IN=sof-snd-dsp.sh
+	;;
+    689|audio-sof-filter|OUT=sof-snd-dsp-IN=sof-snd-dsp-IN-FILTER)
+	bash $HOME/monoliths-llm/OUT=sof-snd-dsp-IN=sof-snd-dsp-IN-FILTER.sh
+	;;
+    690|audio-jbl|OUT=jbl-usb-wireless-IN=jbl-usb-wireless)
+	bash $HOME/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless.sh
+	;;
+    691|audio-jbl-filter|OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER)
+	bash $HOME/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER.sh
+	;;
+    692|audio-jbl-loopback-jbl|OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless)
+	bash $HOME/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless.sh
+	;;
+    693|audio-jbl-filter-loopback-jbl|OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless)
+	bash $HOME/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless.sh
+	;;
+    694|audio-jbl-loopback-sof|OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp)
+	bash $HOME/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh
+	;;
+    695|audio-jbl-filter-loopback-sof|OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp)
+	bash $HOME/monoliths-llm/OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh
+	;;
+
+que está en mi ~/monoliths-hm/my.shell.sh... que trabaja en conjunto con mi ~/monoliths-llm/*.sh
+
+necesito lo siguiente... hacer un...
+
+Pruebas QA-web...
+
+para validar lo mismo que valido en las pruebas YAD...
+
+pero agregando por cada item... el reconocimiento de voz... mira cada archivo de testing... debe tener el nombre del archivo .sh... ejemplo:
+
+.../OUT=sof-snd-dsp-IN=sof-snd-dsp.sh.htm
+
+y el si el nó lo vaz a recibir por el servicio que tengo de debugger que ya construiste antes...
+
+yo voy a publicar todos estos QA... para así poder enviarte la señal por el debuger y tu puedas verificar
+
+en la versión yad, tu probabas... IN y OUT... para la versión WEB... vas a verificar también el sistema de reconocimiento de voz.... me vas a preguntar... se escribió lo que dijiste?... cuestión que pruebo... salida... entrada y reconocimiento de voz... para cada una de las configuraciones...
+
+adicionalmente... mira cómo se mapea un dispositivo...
+
+	export DISPLAY=:0
+	ln -svf $HOME/monoliths-hm/asoundrc.conf ~/.asoundrc && setsid google-chrome-stable --use-alsa --disable-audio-service-sandbox --alsa-input-device=entrada_buena_jbl
+
+
+donde entrada_buena_jbl ← es mi dispositivo de entrada que voy a trabajar... entonces...
+
+comenzaremos con el mismo menú YAD y dispararas conjunto a 

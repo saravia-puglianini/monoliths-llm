@@ -11,7 +11,7 @@ fi
 
 # Calcular tiempo entre imágenes (considerando 21 imágenes: 0, 5, 10, ..., 100)
 NUM_IMAGES=21
-STEP_TIME=$(echo "$DURATION / ($NUM_IMAGES - 1)" | bc -l)
+STEP_TIME=$(awk "BEGIN {print $DURATION / ($NUM_IMAGES - 1)}")
 
 # Mostrar las imágenes
 for i in $(seq 0 $((NUM_IMAGES - 1))); do

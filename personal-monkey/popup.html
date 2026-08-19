@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Monkey</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --panel-bg: #1e293b;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 320px;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 16px;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+    }
+    header {
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 16px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .settings-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .settings-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    input[type="number"] {
+      width: 55px;
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 4px 6px;
+      font-weight: bold;
+      text-align: center;
+      outline: none;
+    }
+    .btn {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+    .btn-pause {
+      background: #dc2626;
+      color: #fff;
+    }
+    .btn-pause:hover {
+      background: #b91c1c;
+    }
+    .btn-resume {
+      background: #059669;
+      color: #fff;
+    }
+    .btn-resume:hover {
+      background: #047857;
+    }
+    .status-indicator {
+      font-size: 11px;
+      margin-top: 6px;
+      text-align: center;
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span>🐵</span> Personal Monkey</h1>
+    <p class="subtitle">Automatizaciones & Asistente Web</p>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="settings-row">
+        <div>
+          <div class="settings-title">Hora en Periodo off...</div>
+          <div class="settings-desc">Pausa el trabajo del addon</div>
+        </div>
+        <input type="number" id="num-off-hours" min="0.5" max="24" step="0.5" value="1">
+      </div>
+      <button class="btn btn-pause" id="btn-toggle-pause">⏸️ Pausar por 1 hora(s)</button>
+      <div class="status-indicator" id="pause-status-text">Estado: Activo</div>
+    </div>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>

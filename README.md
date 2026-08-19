@@ -1,167 +1,81 @@
-# Sistema de Recordatorios Automatizados (Jira & Ops360)
+# Monoliths LLM Workspace
 
-Este repositorio contiene un sistema interactivo de alertas diseñado para asegurar el registro diario de horas de trabajo en **Jira** (Atlassian) y los marcajes de asistencia (toques) en **Ops360 Entelgy**. 
+Repositorio de utilidades, automatizaciones del sistema y arquitectura de audio modular bajo demanda.
+
+---
+
+# 🎧 Sistema de Audio Modular Bajo Demanda y Plan de Pruebas QA
+
+Sistema de audio optimizado para **mínimo consumo de recursos en el sistema**:
+- **Arranque en Frío:** Cero servicios de audio en OpenRC y lista negra de módulos en modprobe (`/etc/modprobe.d/blacklist-audio.conf`).
+- **Módulos Bajo Demanda:** Cada comando carga únicamente los módulos del kernel requeridos (`snd_sof_*`, `snd-usb-audio`, `snd-aloop`).
+- **Auto-Apagado Dinámico:** Gestionado mediante `/tmp/.apagar_esto_para_encender_el_siguiente`, descargando con `modprobe -r` y deteniendo procesos previos que no se utilicen en el nuevo perfil.
+- **Configuración ALSA Centralizada:** Generación atómica en `~/.asoundrc` (eliminando `/etc/asound.conf`).
+
+---
+
+## 🎛️ Matriz de Scripts y Perfiles de Audio
+
+| Script | Salida (Playback) | Entrada (Capture) | Loopback / Monitoreo | Filtro DSP | Log |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`OUT=sof-snd-dsp-IN=sof-snd-dsp.sh`** | Altavoces Laptop SOF | Mic Laptop SOF | Ninguno | Directo | `/tmp/out_sof_in_sof.log` |
+| **`OUT=sof-snd-dsp-IN=sof-snd-dsp-IN-FILTER.sh`** | Altavoces Laptop SOF | Mic Laptop SOF | Ninguno | Filtro Anti-Ruido | `/tmp/out_sof_in_sof_filter.log` |
+| **`OUT=jbl-usb-wireless-IN=jbl-usb-wireless.sh`** | Auriculares JBL | Micrófono JBL | Ninguno | Directo | `/tmp/out_jbl_in_jbl.log` |
+| **`OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER.sh`** | Auriculares JBL | Micrófono JBL | Ninguno | Filtro Anti-Ruido | `/tmp/out_jbl_in_jbl_filter.log` |
+| **`OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless.sh`** | Auriculares JBL | Micrófono JBL | Mic JBL $\rightarrow$ JBL (~0.5ms) | Directo | `/tmp/out_jbl_in_jbl_loopback_jbl.log` |
+| **`OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless.sh`** | Auriculares JBL | Micrófono JBL | Mic JBL $\rightarrow$ JBL (~0.5ms) | Filtro Anti-Ruido | `/tmp/out_jbl_in_jbl_filter_loopback_jbl.log` |
+| **`OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh`** | Auriculares JBL | Mic JBL / SOF | Mic Laptop $\rightarrow$ JBL (~0.5ms) | Directo | `/tmp/out_jbl_in_jbl_loopback_sof.log` |
+| **`OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh`** | Auriculares JBL | Mic JBL / SOF | Mic Laptop $\rightarrow$ JBL (~0.5ms) | Filtro Anti-Ruido | `/tmp/out_jbl_in_jbl_filter_loopback_sof.log` |
+
+---
+
+## 🧪 Plan de Pruebas QA (Matriz de Casos de Prueba)
+
+Ejecuta la suite interactiva gráfica en cualquier momento con:
+```bash
+/home/user/monoliths-llm/qa_audio_test_plan.sh
+```
+
+### Casos de Prueba Detallados:
+
+| ID | Perfil a Probar | Validación Técnica (Automática) | Validación Auditiva (Tu Oído con YAD) | Criterio de Éxito |
+| :--- | :--- | :--- | :--- | :--- |
+| **TC-01** | `OUT=sof-snd-dsp-IN=sof-snd-dsp.sh` | • Módulos SOF cargados<br>• `snd-aloop` descargado<br>• `sofhdadsp` en `/proc/asound/cards` | • Tono de 520Hz por parlantes internos<br>• Grabación y reproducción de voz (3s) | Escuchas el tono y tu voz por los altavoces de la laptop. |
+| **TC-02** | `OUT=sof-snd-dsp-IN=sof-snd-dsp-IN-FILTER.sh` | • Pipeline generado en `/tmp/jbl_pipeline`<br>• Alias ALSA `dsnoop_mic` configurado | • Tono de prueba por parlantes de la laptop | Confirmas que el perfil SOF filtrado está activo. |
+| **TC-03** | `OUT=jbl-usb-wireless-IN=jbl-usb-wireless.sh` | • `snd-usb-audio` cargado<br>• Módulos SOF descargados<br>• `snd-aloop` descargado | • Tono de 440Hz en auriculares JBL<br>• Grabación y reproducción de voz (3s) | Escuchas en los audífonos JBL y nada por la laptop. |
+| **TC-04** | `OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER.sh` | • `snd-usb-audio` cargado<br>• Pipeline anti-ruido configurado | • Tono de prueba en auriculares JBL | Confirmas que el perfil JBL filtrado está activo. |
+| **TC-05** | `OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless.sh` | • `snd-usb-audio` y `snd-aloop` cargados<br>• Proceso `gst-launch-1.0` activo | • Habla por el micrófono JBL en tiempo real | Te escuchas en los auriculares JBL con latencia ultra-baja (~0.5ms). |
+| **TC-06** | `OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless.sh` | • Pipeline con `audiocheblimit` y `audiodynamic` activo en `gst-launch-1.0` | • Habla por el micrófono JBL y haz ruido de fondo suave | Tu voz se escucha clara y el ruido de fondo (tecleo, respiración) se atenúa. |
+| **TC-07** | `OUT=jbl-usb-wireless-IN=jbl-usb-wireless-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh` | • `snd-usb-audio`, `snd-aloop` y módulos SOF activos<br>• Altavoces laptop silenciados | • Habla o da golpecitos cerca del micrófono de la laptop | Escuchas el micrófono de la laptop en tus auriculares JBL. |
+| **TC-08** | `OUT=jbl-usb-wireless-IN=jbl-usb-wireless-FILTER-LOOPBACK=jbl-usb-wireless+IN=sof-snd-dsp.sh` | • `gst-launch-1.0` filtrando captura de laptop hacia sink JBL | • Habla hacia el micrófono de la laptop con ruido ambiente | Escuchas el micrófono de la laptop en tus JBL con filtro anti-ruido activo. |
+
+---
+
+## 💬 Guía de Validación Conjunta (Prompts de Prueba)
+
+Puedes lanzar cualquiera de estos prompts para validar juntos una prueba específica o el estado del sistema:
+
+* **Para ejecutar una prueba técnica y pedir tu confirmación:**
+  > *"Ejecuta la prueba TC-05 de Loopback JBL y valida si los procesos y módulos están correctos."*
+
+* **Para verificar el apagado de módulos al cambiar de perfil:**
+  > *"Cambia de SOF a JBL Directo y muéstrame el contenido de `/tmp/.apagar_esto_para_encender_el_siguiente` y `lsmod`."*
+
+* **Para auditar los logs tras una prueba:**
+  > *"Revisa los logs en `/tmp/qa_audio_report.txt` y `/tmp/out_jbl_in_jbl_filter_loopback_sof.log` y dime el diagnóstico."*
+
+---
+
+# 📋 Sistema de Recordatorios Automatizados (Jira & Ops360)
+
+Este repositorio también contiene un sistema interactivo de alertas diseñado para asegurar el registro diario de horas de trabajo en **Jira** (Atlassian) y los marcajes de asistencia (toques) en **Ops360 Entelgy**. 
 
 Las alertas se muestran visualmente a través de ventanas de diálogo interactivas en el escritorio y cuentan con sincronización automática mediante API.
 
----
+## Componentes del Sistema
 
-## 📋 Componentes del Sistema
-
-El sistema está compuesto por los siguientes scripts:
-
-1. **`jira-reminder.sh`**: Script en Bash que monitorea las horas laborales pendientes de registro en el día actual (9:00 AM a 6:00 PM). Compara las horas contra un archivo local de registros y solicita justificar las horas faltantes mediante una interfaz gráfica. Además:
-   - Permite transicionar de forma automática el estado de las tareas de Jira a *"En progreso"* e *"Hecho/Done"*.
-   - Genera respaldos automáticos de los logs locales.
-   - Sincroniza automáticamente los registros de Jira al inicio de cada iteración para soportar múltiples computadoras.
-2. **`ops360-reminder.sh`**: Script en Bash enfocado en los 4 toques obligatorios de la jornada laboral en Entelgy:
-   - **Entrada** (08:55 AM)
-   - **Inicio Almuerzo** (12:55 PM)
-   - **Fin Almuerzo** (14:00 PM)
-   - **Salida** (17:55 PM)
-3. **`run-reminders.sh`**: Un "driver" o despachador diseñado específicamente para entornos de **Crontab**. Debido a que cron solo permite programar tareas con una resolución mínima de 1 minuto, este script ejecuta un bucle de 1 minuto con intervalos de `sleep 5` para lanzar los recordatorios de Jira y Ops360 cada 5 segundos.
-4. **`ver-horas.sh`**: Lanzado por el recordatorio de Jira para visualizar de forma amigable (mediante tablas interactivas) las últimas 50 entradas guardadas en el log local y generar reportes.
-5. **`jira_helper.py`**: Script en Python que interactúa con la API de Atlassian Jira para listar tickets asignados, realizar transiciones de estado de tareas e historias padres, gestionar la subida de horas, y realizar la sincronización de logs entre múltiples dispositivos.
-
----
-
-## 🛠️ Requisitos y Dependencias
-
-Para instalar y ejecutar este sistema en otra máquina, debes contar con las siguientes herramientas instaladas en el sistema operativo:
-
-* **`yad`**: Herramienta indispensable para la creación de diálogos gráficos desde la terminal.
-  - En Debian/Ubuntu/Mint: `sudo apt install yad`
-  - En Arch/Manjaro: `sudo pacman -S yad`
-  - En Fedora/CentOS/RHEL/Rocky: `sudo dnf install yad`
-* **`python3`**: Para la ejecución de `jira_helper.py` (utiliza únicamente librerías estándar como `urllib`, `json`, y `base64`, por lo que no requiere de dependencias externas por `pip`).
-* **Utilidades del sistema**: `bash`, `pgrep` y `ps` (parte de `procps` para el manejo de archivos de bloqueo `.pid`).
-* **Navegador Web**: Un navegador configurado en el sistema (`firefox`, `chrome`, `chromium` o el comando general `xdg-open`) para abrir los portales web cuando el usuario lo solicite.
-
----
-
-## 📂 Archivos de Configuración y Datos
-
-Los datos persistentes y configuraciones se almacenan a nivel de usuario en las siguientes ubicaciones:
-
-* **`~/.justificar/jira_config`**: Archivo de credenciales de Jira. Si no existe, el script de recordatorio solicitará crearlo interactivamente la primera vez. Estructura interna:
-   ```ini
-   JIRA_EMAIL="tu-correo@dominio.com"
-   JIRA_API_TOKEN="token_generado_en_atlassian"
-   JIRA_DOMAIN="https://tu-organizacion.atlassian.net"
-   ```
-* **`~/.justificar/justificar.csv`**: Base de datos local plana donde se registran las horas guardadas.
-  - Formato: `YYYY-MM-DD;Hora (ej: 9am o 2pm);Proyecto/Ticket;Descripción;[Link-opcional]`
-* **`~/.justificar/backups/`**: Directorio donde se guardan copias de seguridad de `justificar.csv` cada vez que se arranca el script (se auto-limpia manteniendo únicamente los últimos 10 respaldos).
-* **`~/.pause_until`**: Contiene un timestamp para pausar temporalmente las notificaciones (si el usuario así lo decide).
-* **`~/.holidays`**: Archivo de texto plano con fechas de feriados (en formato `MM-DD`, una por línea) para que los recordatorios no se ejecuten en esos días.
-* **`/tmp/ops360_t[1-4]_YYYY-MM-DD`**: Archivos temporales tipo flag creados por `ops360-reminder.sh` para recordar qué toques diarios ya han sido marcados exitosamente y no volver a alertar por ellos durante el día.
-
----
-
-## 🔄 Funcionamiento de Sincronización Multi-dispositivo
-
-Para permitir que el sistema funcione en dos o más computadoras a la vez:
-1. Cada vez que `jira-reminder.sh` realiza un ciclo de verificación, ejecuta el comando `python3 jira_helper.py sync <FECHA>`.
-2. Este comando se conecta a la API de Jira y busca todas las horas registradas por el usuario logueado para ese día específico.
-3. Si encuentra registros en Jira que no están en el archivo local `justificar.csv`, los descarga y los inserta localmente asociándolos automáticamente a las horas de trabajo correspondientes de la mañana/tarde.
-4. De esta manera, el script en el segundo dispositivo sabe exactamente qué horas ya registraste en el primero y te preguntará únicamente por el saldo restante sin duplicar información.
-
----
-
-## 🚀 Guía de Instalación Paso a Paso (Para Sistemas IA y Desarrolladores)
-
-Sigue estos pasos detallados para instalar el sistema en una máquina limpia:
-
-### Paso 1: Clonar y Ubicar los Archivos
-Coloca los archivos de este repositorio en el directorio deseado (se asume `/home/user/monoliths-llm/` para los ejemplos de configuración, ajusta si es necesario).
-
-### Paso 2: Otorgar Permisos de Ejecución
-Asegúrate de dar permisos de ejecución a todos los scripts del sistema:
-```bash
-chmod +x /home/user/monoliths-llm/*.sh
-chmod +x /home/user/monoliths-llm/*.py
-```
-
-### Paso 3: Configuración de Credenciales de Jira
-Puedes dejar que el script te pregunte interactivamente al iniciar por primera vez, o puedes crear la configuración manualmente:
-```bash
-mkdir -p ~/.justificar
-cat <<EOF > ~/.justificar/jira_config
-JIRA_EMAIL="tu_email_de_jira@dominio.com"
-JIRA_API_TOKEN="tu_api_token_de_atlassian_jira"
-JIRA_DOMAIN="https://tu-organizacion.atlassian.net"
-EOF
-chmod 600 ~/.justificar/jira_config
-```
-
-### Paso 4: Automatizar la Ejecución
-
-Existen dos formas principales de automatizar y mantener vivos estos scripts en segundo plano:
-
-#### Opción A: Mediante Crontab (Portabilidad simple)
-
-Dado que los scripts requieren comunicarse con el servidor de pantallas gráfico (X11 o Wayland) para desplegar las ventanas de `yad`, es obligatorio proveer las variables de entorno `DISPLAY` y `XAUTHORITY` dentro del cron.
-
-1. Abre la edición de tu crontab de usuario:
-   ```bash
-   crontab -e
-   ```
-2. Añade la siguiente línea para ejecutar el orquestador cada minuto de lunes a viernes:
-   ```cron
-   * * * * 1-5 env DISPLAY=:0 XAUTHORITY=/home/user/.Xauthority /home/user/monoliths-llm/run-reminders.sh >/dev/null 2>&1
-   ```
-   > ⚠️ **IMPORTANTE:**
-   > - Reemplaza `/home/user/` por la ruta absoluta de tu directorio Home.
-   > - Asegúrate de que `DISPLAY` (comúnmente `:0`) y `XAUTHORITY` apunten a los valores correctos de tu sesión activa. Puedes validar tus valores actuales ejecutando `echo $DISPLAY` y `echo $XAUTHORITY` en tu terminal gráfica.
-
----
-
-#### Opción B: Mediante Systemd User Units (Recomendado para persistencia y reinicios automáticos)
-
-Si la máquina destino utiliza `systemd`, se puede configurar como servicios de usuario (`--user`). Esta opción mantiene los scripts corriendo constantemente como "daemons" en segundo plano, controlando de manera nativa los reinicios ante fallas.
-
-1. Crea el directorio de servicios de usuario si no existe:
-   ```bash
-   mkdir -p ~/.config/systemd/user/
-   ```
-2. Crea el archivo de servicio para Jira en `~/.config/systemd/user/jira-reminder.service`:
-   ```ini
-   [Unit]
-   Description=Jira Reminder (Persistent Daemon)
-
-   [Service]
-   Type=simple
-   ExecStart=/home/user/monoliths-llm/jira-reminder.sh
-   Restart=always
-   RestartSec=10
-   Environment=DISPLAY=:0
-   Environment=XAUTHORITY=/home/user/.Xauthority
-
-   [Install]
-   WantedBy=default.target
-   ```
-3. Crea el archivo de servicio para Ops360 en `~/.config/systemd/user/ops360-reminder.service`:
-   ```ini
-   [Unit]
-   Description=Ops360 Reminder (Persistent Daemon)
-
-   [Service]
-   Type=simple
-   ExecStart=/home/user/monoliths-llm/ops360-reminder.sh
-   Restart=always
-   RestartSec=10
-   Environment=DISPLAY=:0
-   Environment=XAUTHORITY=/home/user/.Xauthority
-
-   [Install]
-   WantedBy=default.target
-   ```
-4. Recarga el demonio de systemd de usuario, habilita e inicia los servicios:
-   ```bash
-   systemctl --user daemon-reload
-   systemctl --user enable --now jira-reminder.service ops360-reminder.service
-   ```
-5. Para verificar que estén corriendo correctamente:
-   ```bash
-   systemctl --user status jira-reminder.service ops360-reminder.service
-   ```
+1. **`jira-reminder.sh`**: Monitorea las horas laborales pendientes de registro en el día actual (9:00 AM a 6:00 PM).
+2. **`ops360-reminder.sh`**: Enfocado en los 4 toques obligatorios de la jornada laboral en Entelgy.
+3. **`run-reminders.sh`**: Despachador para entornos de Crontab.
+4. **`ver-horas.sh`**: Visualización en tabla interactiva de las últimas 50 entradas.
+5. **`jira_helper.py`**: Interacción con la API de Atlassian Jira.

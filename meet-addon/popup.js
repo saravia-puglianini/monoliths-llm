@@ -212,6 +212,34 @@ async function checkDynamicPermissions() {
   }
 }
 
+// Off Period Pause Logic
+async function updatePauseUI() {
+  const pauseStatusEl = document.getElementById('pause-status-meet');
+  const btnTogglePause = document.getElementById('btn-toggle-pause');
+  const numOffHours = document.getElementById('num-off-hours');
+  if (!pauseStatusEl || !btnTogglePause) return;
+
+  const { pauseUntil = 0 } = await chrome.storage.local.get('pauseUntil');
+  const now = Date.now();
+
+  if (pauseUntil && pauseUntil > now) {
+    const remainingMin = Math.round((pauseUntil - now) / 60000);
+    const dateStr = new Date(pauseUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    pauseStatusEl.textContent = `Pausado hasta las ${dateStr} (~${remainingMin}m)`;
+    pauseStatusEl.style.color = '#f87171';
+    btnTogglePause.textContent = '▶️ Reanudar Addon';
+    btnTogglePause.style.borderColor = 'rgba(34,197,94,0.4)';
+    btnTogglePause.style.color = '#86efac';
+  } else {
+    pauseStatusEl.textContent = 'Estado: Activo';
+    pauseStatusEl.style.color = '#38bdf8';
+    const hours = numOffHours ? numOffHours.value || 1 : 1;
+    btnTogglePause.textContent = `⏸️ Pausar por ${hours} hora(s)`;
+    btnTogglePause.style.borderColor = 'rgba(239,68,68,0.4)';
+    btnTogglePause.style.color = '#fca5a5';
+  }
+}
+
 // Initialize on popup load
 document.addEventListener('DOMContentLoaded', async () => {
   await checkDynamicPermissions();
@@ -226,5 +254,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     chkAutoReopen.addEventListener('change', async (e) => {
       await chrome.storage.local.set({ autoReopen: e.target.checked });
     });
+  }
+
+  // Load and bind off-period input and button
+  const numOffHours = document.getElementById('num-off-hours');
+  const btnTogglePause = document.getElementById('btn-toggle-pause');
+  if (numOffHours && btnTogglePause) {
+    const { offHours = 1 } = await chrome.storage.local.get('offHours');
+    numOffHours.value = offHours;
+
+    numOffHours.addEventListener('input', async (e) => {
+      const val = parseFloat(e.target.value) || 1;
+      await chrome.storage.local.set({ offHours: val });
+      updatePauseUI();
+    });
+
+    btnTogglePause.addEventListener('click', async () => {
+      const { pauseUntil = 0 } = await chrome.storage.local.get('pauseUntil');
+      const now = Date.now();
+      if (pauseUntil && pauseUntil > now) {
+        // Reanudar inmediatamente
+        await chrome.storage.local.set({ pauseUntil: 0 });
+      } else {
+        const hours = parseFloat(numOffHours.value) || 1;
+        const targetTime = now + (hours * 3600 * 1000);
+        await chrome.storage.local.set({ pauseUntil: targetTime });
+      }
+      await updatePauseUI();
+    });
+
+    await updatePauseUI();
+    setInterval(updatePauseUI, 5000);
   }
 });

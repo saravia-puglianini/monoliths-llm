@@ -14,6 +14,6 @@ if pgrep -f "anoisesrc=c=pink" >/dev/null 2>&1; then
 fi
 
 # Si no está ejecutándose, lo iniciamos en segundo plano (activar)
-ffmpeg -loglevel quiet -re -f lavfi -i "anoisesrc=c=pink:r=48000:a=0.1" -f alsa default >/dev/null
+ffmpeg -loglevel quiet -re -f lavfi -i "anoisesrc=c=pink:r=48000:a=0.20" -f alsa default >/dev/null
 echo $! > "$PID_FILE"
 echo "Inhibidor de ambiente activado."
