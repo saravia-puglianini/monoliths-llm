@@ -10,6 +10,7 @@
 #include <strings.h>
 #include <unistd.h>
 #include <locale.h>
+#include <stdarg.h>
 
 #define MAX_WINDOWS 1000
 
@@ -123,16 +124,59 @@ void add_window(Window w) {
     }
 }
 
+FILE *log_file = NULL;
+
+void log_wm(const char *format, ...) {
+    if (!log_file) {
+        log_file = fopen("/tmp/alt_tab_wm.log", "a");
+    }
+    if (log_file) {
+        va_list args;
+        va_start(args, format);
+        vfprintf(log_file, format, args);
+        va_end(args);
+        fprintf(log_file, "\n");
+        fflush(log_file);
+    }
+}
+
 int is_manageable(Window w) {
     XWindowAttributes attrs;
-    if (!XGetWindowAttributes(dpy, w, &attrs) || attrs.override_redirect) {
+    if (!XGetWindowAttributes(dpy, w, &attrs)) {
+        log_wm("[is_manageable] Window 0x%lx: Failed to get attributes -> NO", (unsigned long)w);
+        return 0;
+    }
+    if (attrs.override_redirect) {
+        log_wm("[is_manageable] Window 0x%lx: override_redirect=True -> NO", (unsigned long)w);
         return 0;
     }
 
     // Exclude transient windows (popups, dropdowns, dialogs linked to a parent main window)
     Window transient_for = None;
     if (XGetTransientForHint(dpy, w, &transient_for) && transient_for != None && transient_for != root) {
+        log_wm("[is_manageable] Window 0x%lx: transient_for=0x%lx -> NO", (unsigned long)w, (unsigned long)transient_for);
         return 0;
+    }
+
+    // Check size hints (fixed-size dialogs/popups or windows requesting specific positions)
+    XSizeHints size_hints;
+    long supplied_hints;
+    if (XGetWMNormalHints(dpy, w, &size_hints, &supplied_hints)) {
+        if ((size_hints.flags & PMinSize) && (size_hints.flags & PMaxSize)) {
+            if (size_hints.min_width > 0 && size_hints.min_height > 0 &&
+                size_hints.min_width == size_hints.max_width &&
+                size_hints.min_height == size_hints.max_height) {
+                log_wm("[is_manageable] Window 0x%lx: fixed size (%dx%d) -> NO",
+                       (unsigned long)w, size_hints.min_width, size_hints.min_height);
+                return 0;
+            }
+        }
+        if ((size_hints.flags & PMaxSize) &&
+            (size_hints.max_width < screen_width / 2 || size_hints.max_height < screen_height / 2)) {
+            log_wm("[is_manageable] Window 0x%lx: max_size too small (%dx%d) -> NO",
+                   (unsigned long)w, size_hints.max_width, size_hints.max_height);
+            return 0;
+        }
     }
 
     // Exclude popup, dropdown, menu, tooltip, utility, and dialog window types
@@ -156,25 +200,73 @@ int is_manageable(Window w) {
         Atom type_dialog = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
         Atom type_dock = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DOCK", False);
         Atom type_splash = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_SPLASH", False);
+        Atom type_normal = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_NORMAL", False);
 
+        int has_non_normal = 0;
         for (unsigned long i = 0; i < nitems; i++) {
             if (types[i] == type_dropdown || types[i] == type_popup ||
                 types[i] == type_menu || types[i] == type_tooltip ||
                 types[i] == type_notification || types[i] == type_combo ||
                 types[i] == type_utility || types[i] == type_dialog ||
                 types[i] == type_dock || types[i] == type_splash) {
-                XFree(prop);
-                return 0;
+                has_non_normal = 1;
+                break;
+            }
+        }
+        if (has_non_normal) {
+            log_wm("[is_manageable] Window 0x%lx: Matched non-normal _NET_WM_WINDOW_TYPE -> NO", (unsigned long)w);
+            XFree(prop);
+            return 0;
+        }
+
+        int has_normal = 0;
+        for (unsigned long i = 0; i < nitems; i++) {
+            if (types[i] == type_normal) {
+                has_normal = 1;
+                break;
+            }
+        }
+        XFree(prop);
+        if (has_normal) {
+            log_wm("[is_manageable] Window 0x%lx: Explicit _NET_WM_WINDOW_TYPE_NORMAL -> YES", (unsigned long)w);
+            return 1;
+        }
+    }
+
+    // Check Motif Hints (dialogs/popups without decorations)
+    Atom motif_wm_hints = XInternAtom(dpy, "_MOTIF_WM_HINTS", False);
+    if (XGetWindowProperty(dpy, w, motif_wm_hints, 0, 20, False,
+                           motif_wm_hints, &actual_type, &actual_format,
+                           &nitems, &bytes_after, &prop) == Success && prop) {
+        if (nitems >= 5) {
+            unsigned long *hints = (unsigned long *)prop;
+            unsigned long flags = hints[0];
+            unsigned long decorations = hints[2];
+            // MWM_HINTS_DECORATIONS = 2. If decorations specified and 0, and not normal window
+            if ((flags & 2) && decorations == 0) {
+                char title[256];
+                get_window_title(w, title, sizeof(title));
+                // If it doesn't have a title or is small, likely a dropdown/popup
+                if (attrs.width < screen_width * 0.8 && attrs.height < screen_height * 0.8) {
+                    log_wm("[is_manageable] Window 0x%lx ('%s'): MWM undecorated + dimensions (%dx%d) -> NO",
+                           (unsigned long)w, title, attrs.width, attrs.height);
+                    XFree(prop);
+                    return 0;
+                }
             }
         }
         XFree(prop);
     }
 
+    char title[256];
+    get_window_title(w, title, sizeof(title));
+    log_wm("[is_manageable] Window 0x%lx ('%s'): default -> YES", (unsigned long)w, title);
     return 1;
 }
 
 void maximize_window(Window w) {
     if (is_manageable(w)) {
+        log_wm("[maximize_window] Maximizing Window 0x%lx to (%d x %d)", (unsigned long)w, screen_width, screen_height);
         XMoveResizeWindow(dpy, w, 0, 0, screen_width, screen_height);
         XSetWindowBorderWidth(dpy, w, 0);
     }
@@ -264,6 +356,9 @@ int main() {
 
     XSetErrorHandler(handle_error);
 
+    log_wm("=================================================");
+    log_wm("[WM STARTED] Initializing window manager");
+
     screen = DefaultScreen(dpy);
     root = RootWindow(dpy, screen);
     screen_width = DisplayWidth(dpy, screen);
@@ -272,9 +367,22 @@ int main() {
     Atom net_supported = XInternAtom(dpy, "_NET_SUPPORTED", False);
     Atom net_active = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
     Atom net_wm_name = XInternAtom(dpy, "_NET_WM_NAME", False);
-    Atom supported[] = { net_active, net_wm_name };
+    Atom net_wm_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
+    Atom net_wm_type_normal = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_NORMAL", False);
+    Atom net_wm_type_dropdown = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU", False);
+    Atom net_wm_type_popup = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_POPUP_MENU", False);
+    Atom net_wm_type_menu = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_MENU", False);
+    Atom net_wm_type_tooltip = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_TOOLTIP", False);
+    Atom net_wm_type_dialog = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
+    Atom net_wm_type_utility = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_UTILITY", False);
+
+    Atom supported[] = {
+        net_active, net_wm_name, net_wm_type, net_wm_type_normal,
+        net_wm_type_dropdown, net_wm_type_popup, net_wm_type_menu,
+        net_wm_type_tooltip, net_wm_type_dialog, net_wm_type_utility
+    };
     XChangeProperty(dpy, root, net_supported, XA_ATOM, 32, PropModeReplace,
-                    (unsigned char *)supported, 2);
+                    (unsigned char *)supported, sizeof(supported) / sizeof(Atom));
 
     XSetWindowBackground(dpy, root, WhitePixel(dpy, screen));
     XClearWindow(dpy, root);
@@ -334,8 +442,10 @@ int main() {
         for (unsigned int i = 0; i < nwindows; i++) {
             XWindowAttributes attrs;
             if (XGetWindowAttributes(dpy, windows[i], &attrs) && !attrs.override_redirect && attrs.map_state == IsViewable) {
-                add_window(windows[i]);
-                maximize_window(windows[i]);
+                if (is_manageable(windows[i])) {
+                    add_window(windows[i]);
+                    maximize_window(windows[i]);
+                }
             }
         }
         XFree(windows);
@@ -370,27 +480,37 @@ int main() {
         switch (ev.type) {
             case MapRequest: {
                 Window w = ev.xmaprequest.window;
+                char title[256];
+                get_window_title(w, title, sizeof(title));
+                log_wm("[EVENT: MapRequest] Window 0x%lx ('%s')", (unsigned long)w, title);
                 int manageable = is_manageable(w);
                 if (manageable) {
                     add_window(w);
                     maximize_window(w);
+                    XMapWindow(dpy, w);
+                    XSetInputFocus(dpy, w, RevertToPointerRoot, CurrentTime);
+                    set_active_window_prop(w);
+                    glitch_window(w);
+                } else {
+                    // Non-manageable window (e.g. dropdown, popup, tooltip, dialog):
+                    // Map and raise it above parent without forcing fullscreen or taking main focus away aggressively
+                    XMapRaised(dpy, w);
                 }
-                XMapWindow(dpy, w);
-                XSetInputFocus(dpy, w, RevertToPointerRoot, CurrentTime);
-                set_active_window_prop(w);
-                if (manageable) glitch_window(w);
                 break;
             }
             case ConfigureRequest: {
                 XConfigureRequestEvent *cre = &ev.xconfigurerequest;
                 XWindowChanges wc;
                 if (is_manageable(cre->window)) {
+                    log_wm("[EVENT: ConfigureRequest] Manageable window 0x%lx -> forcing fullscreen", (unsigned long)cre->window);
                     wc.x = 0; wc.y = 0;
                     wc.width = screen_width; wc.height = screen_height;
                     wc.border_width = 0;
                     wc.sibling = cre->above; wc.stack_mode = cre->detail;
                     XConfigureWindow(dpy, cre->window, cre->value_mask | CWX | CWY | CWWidth | CWHeight | CWBorderWidth, &wc);
                 } else {
+                    log_wm("[EVENT: ConfigureRequest] Non-manageable window 0x%lx -> allowing requested geom (%d,%d %dx%d)",
+                           (unsigned long)cre->window, cre->x, cre->y, cre->width, cre->height);
                     wc.x = cre->x; wc.y = cre->y;
                     wc.width = cre->width; wc.height = cre->height;
                     wc.border_width = cre->border_width;
@@ -400,6 +520,7 @@ int main() {
                 break;
             }
             case UnmapNotify:
+                log_wm("[EVENT: UnmapNotify] Window 0x%lx", (unsigned long)ev.xunmap.window);
                 if (ev.xunmap.window == ignore_unmap_window) {
                     ignore_unmap_window = None;
                     break;
@@ -408,6 +529,7 @@ int main() {
                 if (num_managed == 0) XClearWindow(dpy, root);
                 break;
             case DestroyNotify:
+                log_wm("[EVENT: DestroyNotify] Window 0x%lx", (unsigned long)ev.xdestroywindow.window);
                 remove_window(ev.xdestroywindow.window);
                 if (num_managed == 0) XClearWindow(dpy, root);
                 break;
@@ -422,6 +544,7 @@ int main() {
                 Atom net_active = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
                 if (ev.xclient.message_type == net_active) {
                     Window w = ev.xclient.window;
+                    log_wm("[EVENT: ClientMessage _NET_ACTIVE_WINDOW] Window 0x%lx", (unsigned long)w);
                     if (w != None && is_manageable(w)) {
                         XRaiseWindow(dpy, w);
                         XSetInputFocus(dpy, w, RevertToPointerRoot, CurrentTime);
@@ -440,6 +563,7 @@ int main() {
             }
         }
     }
+    if (log_file) fclose(log_file);
     XCloseDisplay(dpy);
     return 0;
 }

@@ -99,9 +99,9 @@ elif grep -q -i "pch" /proc/asound/cards 2>/dev/null; then
     CARD_NAME="PCH"
 fi
 
-MIC_DEV="6"
+MIC_DEV="7"
 if arecord -l 2>/dev/null | grep -q "card.*${CARD_NAME}.*device 6"; then
-    MIC_DEV="6"
+    MIC_DEV="7"
 else
     MIC_DEV="0"
 fi
@@ -144,6 +144,7 @@ log "INFO" "Paso 6: Escribiendo configuración limpia en ${ASOUND_USER}..."
 rm -f "$ASOUND_USER" 2>/dev/null || true
 
 cat << EOC > "$ASOUND_USER"
+defaults.pcm.rate_converter "linear"
 # ==============================================================================
 # Configuración ALSA de Usuario: OUT=jbl + IN=jbl + FILTER-LOOPBACK(Laptop SOF -> JBL)
 # ==============================================================================
@@ -165,10 +166,10 @@ pcm.chrome_in_sof_snd_dsp {
     ipc_perm 0666
     slave {
         pcm "hw:${CARD_NAME},${MIC_DEV}"
-        rate 48000
+        rate 16000
         channels 2
-        period_size 1024
-        buffer_size 4096
+        period_size 512
+        buffer_size 2048
     }
 }
 
@@ -233,6 +234,36 @@ pcm.!default {
 pcm.!sysdefault {
     type plug
     slave.pcm "default"
+}
+
+ctl.microfono_laptop {
+    type hw
+    card "${CARD_NAME}"
+}
+
+ctl.sof_snd_dsp {
+    type hw
+    card "${CARD_NAME}"
+}
+
+ctl.chrome_in_sof_snd_dsp {
+    type hw
+    card "${CARD_NAME}"
+}
+
+ctl.entrada_buena_jbl {
+    type hw
+    card "Wireless"
+}
+
+ctl.entrada_buena_16k_jbl {
+    type hw
+    card "Wireless"
+}
+
+ctl.salida_jbl {
+    type hw
+    card "Wireless"
 }
 
 ctl.!default {
