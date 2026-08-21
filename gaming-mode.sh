@@ -128,6 +128,43 @@ elif [[ -f /proc/sys/vm/swappiness ]]; then
 fi
 
 # --------------------------------------
+# DESCARGAR MÓDULOS INNECESARIOS (MÍNIMOS RECURSOS)
+# --------------------------------------
+echo
+echo "[+] Descargando módulos de kernel innecesarios..."
+
+# 1. Tarjeta Atheros (ath9k_htc, ath9k, ath9k_common, ath9k_hw, ath)
+for mod in ath9k_htc ath9k ath9k_common ath9k_hw ath; do
+    if lsmod | grep -q "^${mod} "; then
+        modprobe -r "$mod" 2>/dev/null || rmmod "$mod" 2>/dev/null || true
+    fi
+done
+
+# 2. Cámara / Webcam (uvcvideo y componentes v4l2 dependientes)
+for mod in uvcvideo uvc videobuf2_vmalloc videobuf2_memops videobuf2_v4l2; do
+    if lsmod | grep -q "^${mod} "; then
+        modprobe -r "$mod" 2>/dev/null || rmmod "$mod" 2>/dev/null || true
+    fi
+done
+
+# 3. Journaling (jbd2) y Sistema de Archivos (ext4)
+# Nota: En Linux moderno ext4 maneja ext2 (CONFIG_EXT4_USE_FOR_EXT2=y).
+# Si no hay montajes ext3 ni ext4 activos, se puede intentar descargar jbd2.
+if ! mount | grep -E -q '\btype (ext3|ext4)\b'; then
+    echo "[+] Verificado: No hay particiones ext3/ext4 montadas (trabajando en ext2)."
+    # Intentar descargar jbd2 si no está en uso
+    if lsmod | grep -q "^jbd2 "; then
+        modprobe -r jbd2 2>/dev/null || rmmod jbd2 2>/dev/null || true
+    fi
+    # Si ext4 no está en uso por la partición raíz/montajes, intentar descargarlo
+    if lsmod | grep -q "^ext4 " && [ "$(awk '$1=="ext4"{print $3}' /proc/modules)" = "0" ]; then
+        modprobe -r ext4 2>/dev/null || rmmod ext4 2>/dev/null || true
+    fi
+else
+    echo "[!] Hay particiones montadas con ext3/ext4. Manteniendo ext4/jbd2."
+fi
+
+# --------------------------------------
 # TRANSPARENT HUGEPAGES
 # --------------------------------------
 if [[ -f /sys/kernel/mm/transparent_hugepage/enabled ]]; then
