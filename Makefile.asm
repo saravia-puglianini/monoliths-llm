@@ -1,5 +1,4 @@
-CC ?= as
-LD ?= ld
+CC ?= gcc
 STRIP ?= strip
 
 TARGET = alt_tab_maximize_emacs_asm
@@ -7,15 +6,14 @@ SRC = alt_tab_maximize_emacs.s
 OBJ = alt_tab_maximize_emacs.o
 
 PREFIX ?= /usr/local
-DYNAMIC_LINKER ?= /lib64/ld-linux-x86-64.so.2
 
 all: $(TARGET)
 
 $(OBJ): $(SRC)
-	as $(SRC) -o $(OBJ)
+	gcc -c $(SRC) -o $(OBJ)
 
 $(TARGET): $(OBJ)
-	ld -O1 --gc-sections -z norelro --build-id=none -s $(OBJ) -lX11 -dynamic-linker $(DYNAMIC_LINKER) -o $(TARGET)
+	gcc -no-pie -s $(OBJ) -lX11 -lXi -o $(TARGET)
 	chmod 755 $(TARGET)
 
 clean:
@@ -27,3 +25,4 @@ install: all
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/$(TARGET)
 
 .PHONY: all clean install
+

@@ -121,14 +121,17 @@ append_str:
  *   /usr/local/bin/ocr_fast vociferar es
  * ------------------------------------------------------------- */
 _start:
-    /* Leer argc y argv desde la pila */
-    pop rcx             /* argc */
+    /* Leer argc desde la pila */
+    mov rcx, [rsp]          /* argc */
     cmp rcx, 3
     jl .Lexit_err
 
-    pop rdx             /* argv[0] */
-    pop r12             /* argv[1] = action ("vociferar" o "traducir") */
-    pop r13             /* argv[2] = lang ("es", "en", "de") */
+    mov r12, [rsp + 16]     /* argv[1] = action ("vociferar" o "traducir") */
+    mov r13, [rsp + 24]     /* argv[2] = lang ("es", "en", "de") */
+
+    /* Calcular puntero a envp en la pila: rsp + 8 + (argc + 1)*8 */
+    lea r14, [rsp + 8]      /* &argv[0] */
+    lea r14, [r14 + rcx*8 + 8] /* envp */
 
     /* 1. Nanosleep rápido (80ms) para liberar modificadores */
     mov rax, SYS_nanosleep
@@ -177,7 +180,7 @@ _start:
     mov rax, SYS_execve
     lea rdi, [rip + buf_target_path]
     lea rsi, [rip + argv_exec]
-    xor rdx, rdx            /* envp = NULL (hereda o vacío) */
+    mov rdx, r14            /* envp (DISPLAY, PATH, HOME) */
     syscall
 
 .Lexit_err:

@@ -4,16 +4,25 @@
 	.globl	handle_error
 	.type	handle_error, @function
 handle_error:
+.LFB36:
+	.cfi_startproc
 	xorl	%eax, %eax
 	ret
+	.cfi_endproc
+.LFE36:
 	.size	handle_error, .-handle_error
 	.p2align 4,,15
 	.globl	get_color
 	.type	get_color, @function
 get_color:
+.LFB23:
+	.cfi_startproc
 	pushq	%rbx
+	.cfi_def_cfa_offset 16
+	.cfi_offset 3, -16
 	movq	%rdi, %rdx
 	subq	$16, %rsp
+	.cfi_def_cfa_offset 32
 	movq	dpy(%rip), %rdi
 	movslq	screen(%rip), %rax
 	movq	%rsp, %rcx
@@ -31,11 +40,15 @@ get_color:
 	addq	232(%rdx), %rax
 	movq	96(%rax), %rax
 	addq	$16, %rsp
+	.cfi_remember_state
+	.cfi_def_cfa_offset 16
 	popq	%rbx
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L13:
+	.cfi_restore_state
 	movq	dpy(%rip), %rdi
 	movq	%rsp, %rdx
 	movq	%rbx, %rsi
@@ -44,8 +57,12 @@ get_color:
 	je	.L4
 	movq	(%rsp), %rax
 	addq	$16, %rsp
+	.cfi_def_cfa_offset 16
 	popq	%rbx
+	.cfi_def_cfa_offset 8
 	ret
+	.cfi_endproc
+.LFE23:
 	.size	get_color, .-get_color
 	.section	.rodata.str1.1,"aMS",@progbits,1
 .LC0:
@@ -67,7 +84,10 @@ get_color:
 	.globl	init_colors
 	.type	init_colors, @function
 init_colors:
+.LFB24:
+	.cfi_startproc
 	subq	$8, %rsp
+	.cfi_def_cfa_offset 16
 	movl	$.LC0, %edi
 	call	get_color
 	movl	$.LC1, %edi
@@ -90,7 +110,10 @@ init_colors:
 	call	get_color
 	movq	%rax, color_magenta(%rip)
 	addq	$8, %rsp
+	.cfi_def_cfa_offset 8
 	ret
+	.cfi_endproc
+.LFE24:
 	.size	init_colors, .-init_colors
 	.section	.rodata.str1.1
 .LC7:
@@ -106,15 +129,26 @@ init_colors:
 	.globl	get_window_title
 	.type	get_window_title, @function
 get_window_title:
+.LFB25:
+	.cfi_startproc
 	pushq	%r13
+	.cfi_def_cfa_offset 16
+	.cfi_offset 13, -16
 	pushq	%r12
+	.cfi_def_cfa_offset 24
+	.cfi_offset 12, -24
 	movq	%rsi, %r12
 	movq	%rdi, %rsi
 	pushq	%rbp
+	.cfi_def_cfa_offset 32
+	.cfi_offset 6, -32
 	movq	%rdi, %rbp
 	pushq	%rbx
+	.cfi_def_cfa_offset 40
+	.cfi_offset 3, -40
 	movslq	%edx, %rbx
 	subq	$56, %rsp
+	.cfi_def_cfa_offset 96
 	movq	dpy(%rip), %rdi
 	movq	$0, 8(%rsp)
 	leaq	8(%rsp), %rdx
@@ -143,21 +177,28 @@ get_window_title:
 	xorl	%r9d, %r9d
 	xorl	%ecx, %ecx
 	pushq	%rdx
+	.cfi_def_cfa_offset 104
 	movq	dpy(%rip), %rdi
 	movl	$1024, %r8d
 	movq	%rbp, %rsi
 	leaq	40(%rsp), %rdx
 	pushq	%rdx
+	.cfi_def_cfa_offset 112
 	leaq	40(%rsp), %rdx
 	pushq	%rdx
+	.cfi_def_cfa_offset 120
 	leaq	28(%rsp), %rdx
 	pushq	%rdx
+	.cfi_def_cfa_offset 128
 	leaq	48(%rsp), %rdx
 	pushq	%rdx
+	.cfi_def_cfa_offset 136
 	movq	%rax, %rdx
 	pushq	%r13
+	.cfi_def_cfa_offset 144
 	call	XGetWindowProperty
 	addq	$48, %rsp
+	.cfi_def_cfa_offset 96
 	testl	%eax, %eax
 	jne	.L21
 	movq	40(%rsp), %rcx
@@ -171,14 +212,21 @@ get_window_title:
 	call	snprintf
 .L16:
 	addq	$56, %rsp
+	.cfi_remember_state
+	.cfi_def_cfa_offset 40
 	popq	%rbx
+	.cfi_def_cfa_offset 32
 	popq	%rbp
+	.cfi_def_cfa_offset 24
 	popq	%r12
+	.cfi_def_cfa_offset 16
 	popq	%r13
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L17:
+	.cfi_restore_state
 	testq	%rdi, %rdi
 	je	.L18
 	jmp	.L19
@@ -192,14 +240,21 @@ get_window_title:
 	movq	40(%rsp), %rdi
 	call	XFree
 	addq	$56, %rsp
+	.cfi_remember_state
+	.cfi_def_cfa_offset 40
 	popq	%rbx
+	.cfi_def_cfa_offset 32
 	popq	%rbp
+	.cfi_def_cfa_offset 24
 	popq	%r12
+	.cfi_def_cfa_offset 16
 	popq	%r13
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L33:
+	.cfi_restore_state
 	movq	%rdi, %rcx
 	movl	$.LC7, %edx
 	movq	%r12, %rdi
@@ -209,6 +264,8 @@ get_window_title:
 	movq	8(%rsp), %rdi
 	call	XFree
 	jmp	.L16
+	.cfi_endproc
+.LFE25:
 	.size	get_window_title, .-get_window_title
 	.section	.rodata.str1.1
 .LC11:
@@ -218,10 +275,17 @@ get_window_title:
 	.globl	is_emacs
 	.type	is_emacs, @function
 is_emacs:
+.LFB26:
+	.cfi_startproc
 	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
 	movq	%rdi, %rsi
 	pushq	%rbx
+	.cfi_def_cfa_offset 24
+	.cfi_offset 3, -24
 	subq	$24, %rsp
+	.cfi_def_cfa_offset 48
 	movq	dpy(%rip), %rdi
 	movq	%rsp, %rdx
 	call	XGetClassHint
@@ -248,13 +312,18 @@ is_emacs:
 	call	XFree
 .L35:
 	addq	$24, %rsp
+	.cfi_remember_state
+	.cfi_def_cfa_offset 24
 	movl	%ebx, %eax
 	popq	%rbx
+	.cfi_def_cfa_offset 16
 	popq	%rbp
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L38:
+	.cfi_restore_state
 	movq	8(%rsp), %rdi
 	xorl	%ebx, %ebx
 	testq	%rdi, %rdi
@@ -279,6 +348,8 @@ is_emacs:
 	testl	%eax, %eax
 	sete	%bl
 	jmp	.L41
+	.cfi_endproc
+.LFE26:
 	.size	is_emacs, .-is_emacs
 	.section	.rodata.str1.1
 .LC12:
@@ -292,12 +363,21 @@ is_emacs:
 	.globl	update_window_list_file
 	.type	update_window_list_file, @function
 update_window_list_file:
+.LFB27:
+	.cfi_startproc
 	pushq	%r12
+	.cfi_def_cfa_offset 16
+	.cfi_offset 12, -16
 	movl	$.LC12, %esi
 	movl	$.LC13, %edi
 	pushq	%rbp
+	.cfi_def_cfa_offset 24
+	.cfi_offset 6, -24
 	pushq	%rbx
+	.cfi_def_cfa_offset 32
+	.cfi_offset 3, -32
 	subq	$256, %rsp
+	.cfi_def_cfa_offset 288
 	call	fopen
 	testq	%rax, %rax
 	je	.L51
@@ -337,20 +417,30 @@ update_window_list_file:
 	call	fclose
 .L51:
 	addq	$256, %rsp
+	.cfi_def_cfa_offset 32
 	popq	%rbx
+	.cfi_def_cfa_offset 24
 	popq	%rbp
+	.cfi_def_cfa_offset 16
 	popq	%r12
+	.cfi_def_cfa_offset 8
 	ret
+	.cfi_endproc
+.LFE27:
 	.size	update_window_list_file, .-update_window_list_file
 	.p2align 4,,15
 	.globl	remove_window
 	.type	remove_window, @function
 remove_window:
+.LFB28:
+	.cfi_startproc
 	movl	num_managed(%rip), %esi
 	testl	%esi, %esi
 	jle	.L71
 	cmpq	managed_windows(%rip), %rdi
 	pushq	%rbx
+	.cfi_def_cfa_offset 16
+	.cfi_offset 3, -16
 	je	.L74
 	leal	-1(%rsi), %ecx
 	movl	$1, %eax
@@ -368,10 +458,13 @@ remove_window:
 	cmpq	%rax, %rcx
 	jne	.L66
 	popq	%rbx
+	.cfi_remember_state
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L75:
+	.cfi_restore_state
 	movl	%esi, %eax
 	subl	%edx, %eax
 	salq	$3, %rdx
@@ -386,35 +479,55 @@ remove_window:
 	movl	%ebx, num_managed(%rip)
 	xorl	%eax, %eax
 	popq	%rbx
+	.cfi_remember_state
+	.cfi_restore 3
+	.cfi_def_cfa_offset 8
 	jmp	update_window_list_file
 .L74:
+	.cfi_restore_state
 	movl	%esi, %eax
 	movl	$managed_windows, %edi
 	movl	$8, %esi
 	leal	-1(%rax), %ebx
 	jmp	.L63
 .L71:
+	.cfi_def_cfa_offset 8
+	.cfi_restore 3
 	ret
+	.cfi_endproc
+.LFE28:
 	.size	remove_window, .-remove_window
 	.p2align 4,,15
 	.globl	add_window
 	.type	add_window, @function
 add_window:
+.LFB29:
+	.cfi_startproc
 	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
 	movq	%rdi, %rbp
 	pushq	%rbx
+	.cfi_def_cfa_offset 24
+	.cfi_offset 3, -24
 	subq	$8, %rsp
+	.cfi_def_cfa_offset 32
 	call	remove_window
 	movl	num_managed(%rip), %ebx
 	cmpl	$999, %ebx
 	jle	.L79
 	addq	$8, %rsp
+	.cfi_remember_state
+	.cfi_def_cfa_offset 24
 	popq	%rbx
+	.cfi_def_cfa_offset 16
 	popq	%rbp
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L79:
+	.cfi_restore_state
 	movslq	%ebx, %rdx
 	movl	$managed_windows, %esi
 	movl	$managed_windows+8, %edi
@@ -428,10 +541,15 @@ add_window:
 	movl	%ebx, num_managed(%rip)
 	call	XSelectInput
 	addq	$8, %rsp
+	.cfi_def_cfa_offset 24
 	xorl	%eax, %eax
 	popq	%rbx
+	.cfi_def_cfa_offset 16
 	popq	%rbp
+	.cfi_def_cfa_offset 8
 	jmp	update_window_list_file
+	.cfi_endproc
+.LFE29:
 	.size	add_window, .-add_window
 	.section	.rodata.str1.1
 .LC15:
@@ -443,9 +561,14 @@ add_window:
 	.globl	log_wm
 	.type	log_wm, @function
 log_wm:
+.LFB30:
+	.cfi_startproc
 	pushq	%rbx
+	.cfi_def_cfa_offset 16
+	.cfi_offset 3, -16
 	movq	%rdi, %rbx
 	subq	$208, %rsp
+	.cfi_def_cfa_offset 224
 	movq	%rsi, 40(%rsp)
 	movq	%rdx, 48(%rsp)
 	movq	%rcx, 56(%rsp)
@@ -481,11 +604,15 @@ log_wm:
 	movq	log_file(%rip), %rdi
 	call	fflush
 	addq	$208, %rsp
+	.cfi_remember_state
+	.cfi_def_cfa_offset 16
 	popq	%rbx
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L82:
+	.cfi_restore_state
 	movl	$.LC15, %esi
 	movl	$.LC16, %edi
 	call	fopen
@@ -493,8 +620,12 @@ log_wm:
 	testq	%rax, %rax
 	jne	.L84
 	addq	$208, %rsp
+	.cfi_def_cfa_offset 16
 	popq	%rbx
+	.cfi_def_cfa_offset 8
 	ret
+	.cfi_endproc
+.LFE30:
 	.size	log_wm, .-log_wm
 	.section	.rodata.str1.8,"aMS",@progbits,1
 	.align 8
@@ -564,15 +695,30 @@ log_wm:
 	.globl	is_manageable
 	.type	is_manageable, @function
 is_manageable:
+.LFB31:
+	.cfi_startproc
 	pushq	%r15
+	.cfi_def_cfa_offset 16
+	.cfi_offset 15, -16
 	movq	%rdi, %rsi
 	pushq	%r14
+	.cfi_def_cfa_offset 24
+	.cfi_offset 14, -24
 	pushq	%r13
+	.cfi_def_cfa_offset 32
+	.cfi_offset 13, -32
 	pushq	%r12
+	.cfi_def_cfa_offset 40
+	.cfi_offset 12, -40
 	pushq	%rbp
+	.cfi_def_cfa_offset 48
+	.cfi_offset 6, -48
 	pushq	%rbx
+	.cfi_def_cfa_offset 56
+	.cfi_offset 3, -56
 	movq	%rdi, %rbx
 	subq	$648, %rsp
+	.cfi_def_cfa_offset 704
 	movq	dpy(%rip), %rdi
 	leaq	240(%rsp), %rdx
 	call	XGetWindowAttributes
@@ -631,6 +777,7 @@ is_manageable:
 	movq	$0, 152(%rsp)
 	call	XInternAtom
 	pushq	%r15
+	.cfi_def_cfa_offset 712
 	xorl	%r9d, %r9d
 	movl	$32, %r8d
 	movq	dpy(%rip), %rdi
@@ -638,16 +785,22 @@ is_manageable:
 	movq	%rbx, %rsi
 	leaq	152(%rsp), %r14
 	pushq	%r14
+	.cfi_def_cfa_offset 720
 	leaq	152(%rsp), %r13
 	pushq	%r13
+	.cfi_def_cfa_offset 728
 	leaq	132(%rsp), %rbp
 	pushq	%rbp
+	.cfi_def_cfa_offset 736
 	leaq	160(%rsp), %rcx
 	pushq	%rcx
+	.cfi_def_cfa_offset 744
 	xorl	%ecx, %ecx
 	pushq	$4
+	.cfi_def_cfa_offset 752
 	call	XGetWindowProperty
 	addq	$48, %rsp
+	.cfi_def_cfa_offset 704
 	movl	%eax, %r12d
 	testl	%eax, %eax
 	jne	.L95
@@ -779,20 +932,27 @@ is_manageable:
 	movl	$.LC34, %esi
 	call	XInternAtom
 	pushq	%r15
+	.cfi_def_cfa_offset 712
 	xorl	%r9d, %r9d
 	movl	$20, %r8d
 	pushq	%r14
+	.cfi_def_cfa_offset 720
 	movq	dpy(%rip), %rdi
 	movq	%rax, %rdx
 	movq	%rbx, %rsi
 	pushq	%r13
+	.cfi_def_cfa_offset 728
 	pushq	%rbp
+	.cfi_def_cfa_offset 736
 	leaq	160(%rsp), %rcx
 	pushq	%rcx
+	.cfi_def_cfa_offset 744
 	xorl	%ecx, %ecx
 	pushq	%rax
+	.cfi_def_cfa_offset 752
 	call	XGetWindowProperty
 	addq	$48, %rsp
+	.cfi_def_cfa_offset 704
 	movl	%eax, %r12d
 	testl	%eax, %eax
 	jne	.L147
@@ -819,17 +979,26 @@ is_manageable:
 	call	log_wm
 .L87:
 	addq	$648, %rsp
+	.cfi_remember_state
+	.cfi_def_cfa_offset 56
 	movl	%r12d, %eax
 	popq	%rbx
+	.cfi_def_cfa_offset 48
 	popq	%rbp
+	.cfi_def_cfa_offset 40
 	popq	%r12
+	.cfi_def_cfa_offset 32
 	popq	%r13
+	.cfi_def_cfa_offset 24
 	popq	%r14
+	.cfi_def_cfa_offset 16
 	popq	%r15
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L148:
+	.cfi_restore_state
 	movl	%eax, %r12d
 	movq	%rbx, %rsi
 	movl	$.LC17, %edi
@@ -958,6 +1127,8 @@ is_manageable:
 	movq	152(%rsp), %rdi
 	call	XFree
 	jmp	.L87
+	.cfi_endproc
+.LFE31:
 	.size	is_manageable, .-is_manageable
 	.section	.rodata.str1.8
 	.align 8
@@ -968,16 +1139,23 @@ is_manageable:
 	.globl	maximize_window
 	.type	maximize_window, @function
 maximize_window:
+.LFB32:
+	.cfi_startproc
 	pushq	%rbx
+	.cfi_def_cfa_offset 16
+	.cfi_offset 3, -16
 	movq	%rdi, %rbx
 	call	is_manageable
 	testl	%eax, %eax
 	jne	.L159
 	popq	%rbx
+	.cfi_remember_state
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L159:
+	.cfi_restore_state
 	movl	screen_height(%rip), %ecx
 	movq	%rbx, %rsi
 	movl	$.LC40, %edi
@@ -995,20 +1173,38 @@ maximize_window:
 	movq	%rbx, %rsi
 	xorl	%edx, %edx
 	popq	%rbx
+	.cfi_def_cfa_offset 8
 	jmp	XSetWindowBorderWidth
+	.cfi_endproc
+.LFE32:
 	.size	maximize_window, .-maximize_window
 	.p2align 4,,15
 	.globl	glitch_window
 	.type	glitch_window, @function
 glitch_window:
+.LFB33:
+	.cfi_startproc
 	pushq	%r15
+	.cfi_def_cfa_offset 16
+	.cfi_offset 15, -16
 	movq	%rdi, %rsi
 	pushq	%r14
+	.cfi_def_cfa_offset 24
+	.cfi_offset 14, -24
 	pushq	%r13
+	.cfi_def_cfa_offset 32
+	.cfi_offset 13, -32
 	pushq	%r12
+	.cfi_def_cfa_offset 40
+	.cfi_offset 12, -40
 	pushq	%rbp
+	.cfi_def_cfa_offset 48
+	.cfi_offset 6, -48
 	pushq	%rbx
+	.cfi_def_cfa_offset 56
+	.cfi_offset 3, -56
 	subq	$280, %rsp
+	.cfi_def_cfa_offset 336
 	movq	dpy(%rip), %rdi
 	leaq	128(%rsp), %rdx
 	call	XGetWindowAttributes
@@ -1018,16 +1214,25 @@ glitch_window:
 	je	.L179
 .L160:
 	addq	$280, %rsp
+	.cfi_remember_state
+	.cfi_def_cfa_offset 56
 	popq	%rbx
+	.cfi_def_cfa_offset 48
 	popq	%rbp
+	.cfi_def_cfa_offset 40
 	popq	%r12
+	.cfi_def_cfa_offset 32
 	popq	%r13
+	.cfi_def_cfa_offset 24
 	popq	%r14
+	.cfi_def_cfa_offset 16
 	popq	%r15
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L179:
+	.cfi_restore_state
 	movq	color_bg(%rip), %rax
 	movl	$1, 104(%rsp)
 	movq	$131072, 88(%rsp)
@@ -1038,11 +1243,17 @@ glitch_window:
 	movq	%rax, 40(%rsp)
 	leaq	16(%rsp), %rax
 	pushq	%rax
+	.cfi_def_cfa_offset 344
 	pushq	$2570
+	.cfi_def_cfa_offset 352
 	pushq	$0
+	.cfi_def_cfa_offset 360
 	pushq	$1
+	.cfi_def_cfa_offset 368
 	pushq	$0
+	.cfi_def_cfa_offset 376
 	pushq	$0
+	.cfi_def_cfa_offset 384
 	movl	188(%rsp), %r9d
 	movl	184(%rsp), %r8d
 	movl	180(%rsp), %ecx
@@ -1050,6 +1261,7 @@ glitch_window:
 	call	XCreateWindow
 	movq	dpy(%rip), %rdi
 	addq	$48, %rsp
+	.cfi_def_cfa_offset 336
 	movq	%rax, %rsi
 	movq	%rax, %rbp
 	call	XMapRaised
@@ -1074,6 +1286,7 @@ glitch_window:
 	movq	dpy(%rip), %rdi
 	call	XSetForeground
 	subq	$8, %rsp
+	.cfi_def_cfa_offset 344
 	xorl	%ecx, %ecx
 	movq	%rbp, %rsi
 	movl	148(%rsp), %eax
@@ -1081,6 +1294,7 @@ glitch_window:
 	xorl	%r8d, %r8d
 	movq	dpy(%rip), %rdi
 	pushq	%rax
+	.cfi_def_cfa_offset 352
 	movl	152(%rsp), %r9d
 	call	XFillRectangle
 	call	rand
@@ -1095,7 +1309,9 @@ glitch_window:
 	leal	(%rbx,%rbx,4), %eax
 	movl	%ecx, %ebx
 	popq	%rcx
+	.cfi_def_cfa_offset 344
 	popq	%rsi
+	.cfi_def_cfa_offset 336
 	addl	%eax, %eax
 	subl	%eax, %ebx
 	cmpl	$-4, %ebx
@@ -1141,6 +1357,7 @@ glitch_window:
 	idivl	136(%rsp)
 	movl	%r13d, %eax
 	subq	$8, %rsp
+	.cfi_def_cfa_offset 344
 	leal	50(%rdi), %r9d
 	movq	dpy(%rip), %rdi
 	movl	%edx, %ecx
@@ -1156,10 +1373,13 @@ glitch_window:
 	subl	%eax, %esi
 	addl	$2, %esi
 	pushq	%rsi
+	.cfi_def_cfa_offset 352
 	movq	%rbp, %rsi
 	call	XFillRectangle
 	popq	%rax
+	.cfi_def_cfa_offset 344
 	popq	%rdx
+	.cfi_def_cfa_offset 336
 	cmpl	8(%rsp), %r14d
 	jne	.L170
 .L167:
@@ -1183,6 +1403,8 @@ glitch_window:
 	testb	$1, %al
 	cmovne	color_bg(%rip), %rdx
 	jmp	.L166
+	.cfi_endproc
+.LFE33:
 	.size	glitch_window, .-glitch_window
 	.section	.rodata.str1.1
 .LC41:
@@ -1192,13 +1414,17 @@ glitch_window:
 	.globl	set_active_window_prop
 	.type	set_active_window_prop, @function
 set_active_window_prop:
+.LFB34:
+	.cfi_startproc
 	subq	$24, %rsp
+	.cfi_def_cfa_offset 32
 	xorl	%edx, %edx
 	movl	$.LC41, %esi
 	movq	%rdi, 8(%rsp)
 	movq	dpy(%rip), %rdi
 	call	XInternAtom
 	pushq	$1
+	.cfi_def_cfa_offset 40
 	xorl	%r9d, %r9d
 	movl	$32, %r8d
 	movq	root(%rip), %rsi
@@ -1206,19 +1432,30 @@ set_active_window_prop:
 	movl	$33, %ecx
 	leaq	16(%rsp), %rdx
 	pushq	%rdx
+	.cfi_def_cfa_offset 48
 	movq	%rax, %rdx
 	call	XChangeProperty
 	addq	$40, %rsp
+	.cfi_def_cfa_offset 8
 	ret
+	.cfi_endproc
+.LFE34:
 	.size	set_active_window_prop, .-set_active_window_prop
 	.p2align 4,,15
 	.globl	focus_emacs
 	.type	focus_emacs, @function
 focus_emacs:
+.LFB35:
+	.cfi_startproc
 	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
 	pushq	%rbx
+	.cfi_def_cfa_offset 24
+	.cfi_offset 3, -24
 	xorl	%ebx, %ebx
 	subq	$40, %rsp
+	.cfi_def_cfa_offset 64
 	movl	num_managed(%rip), %edx
 	testl	%edx, %edx
 	jg	.L184
@@ -1252,12 +1489,17 @@ focus_emacs:
 	call	glitch_window
 .L183:
 	addq	$40, %rsp
+	.cfi_remember_state
+	.cfi_def_cfa_offset 24
 	popq	%rbx
+	.cfi_def_cfa_offset 16
 	popq	%rbp
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L188:
+	.cfi_restore_state
 	movq	root(%rip), %rsi
 	leaq	4(%rsp), %r9
 	leaq	24(%rsp), %r8
@@ -1312,6 +1554,8 @@ focus_emacs:
 .L189:
 	call	XFree
 	jmp	.L183
+	.cfi_endproc
+.LFE35:
 	.size	focus_emacs, .-focus_emacs
 	.section	.rodata.str1.8
 	.align 8
@@ -1356,14 +1600,29 @@ focus_emacs:
 	.globl	main
 	.type	main, @function
 main:
+.LFB37:
+	.cfi_startproc
 	pushq	%r15
+	.cfi_def_cfa_offset 16
+	.cfi_offset 15, -16
 	xorl	%edi, %edi
 	pushq	%r14
+	.cfi_def_cfa_offset 24
+	.cfi_offset 14, -24
 	pushq	%r13
+	.cfi_def_cfa_offset 32
+	.cfi_offset 13, -32
 	pushq	%r12
+	.cfi_def_cfa_offset 40
+	.cfi_offset 12, -40
 	pushq	%rbp
+	.cfi_def_cfa_offset 48
+	.cfi_offset 6, -48
 	pushq	%rbx
+	.cfi_def_cfa_offset 56
+	.cfi_offset 3, -56
 	subq	$680, %rsp
+	.cfi_def_cfa_offset 736
 	call	XOpenDisplay
 	movq	%rax, dpy(%rip)
 	testq	%rax, %rax
@@ -1459,8 +1718,10 @@ main:
 	movq	%r12, 200(%rsp)
 	movq	%rbp, 208(%rsp)
 	pushq	$10
+	.cfi_def_cfa_offset 744
 	leaq	152(%rsp), %rax
 	pushq	%rax
+	.cfi_def_cfa_offset 752
 	movq	16(%rsp), %rdx
 	call	XChangeProperty
 	movq	dpy(%rip), %rdi
@@ -1483,7 +1744,9 @@ main:
 	movl	$.LC46, %esi
 	call	XCreateFontSet
 	popq	%rsi
+	.cfi_def_cfa_offset 744
 	popq	%rdi
+	.cfi_def_cfa_offset 736
 	movq	%rax, font_set(%rip)
 	testq	%rax, %rax
 	je	.L202
@@ -1563,16 +1826,20 @@ main:
 	addq	$4, %r14
 .L206:
 	subq	$8, %rsp
+	.cfi_def_cfa_offset 744
 	orl	%r12d, %edx
 	movl	$1, %r9d
 	xorl	%r8d, %r8d
 	movq	root(%rip), %rcx
 	movzbl	tab_code(%rip), %esi
 	pushq	$1
+	.cfi_def_cfa_offset 752
 	movq	dpy(%rip), %rdi
 	call	XGrabKey
 	popq	%rdx
+	.cfi_def_cfa_offset 744
 	popq	%rcx
+	.cfi_def_cfa_offset 736
 	cmpq	%r14, %rbp
 	jne	.L204
 	addq	$4, %rbx
@@ -1678,17 +1945,26 @@ main:
 	.section	.text.startup
 .L202:
 	addq	$680, %rsp
+	.cfi_remember_state
+	.cfi_def_cfa_offset 56
 	movl	$1, %eax
 	popq	%rbx
+	.cfi_def_cfa_offset 48
 	popq	%rbp
+	.cfi_def_cfa_offset 40
 	popq	%r12
+	.cfi_def_cfa_offset 32
 	popq	%r13
+	.cfi_def_cfa_offset 24
 	popq	%r14
+	.cfi_def_cfa_offset 16
 	popq	%r15
+	.cfi_def_cfa_offset 8
 	ret
 	.p2align 4,,10
 	.p2align 3
 .L226:
+	.cfi_restore_state
 	movq	dpy(%rip), %rdi
 	xorl	%edx, %edx
 	movl	$.LC41, %esi
@@ -2000,6 +2276,8 @@ main:
 	movq	(%rax,%r13,8), %rdi
 	call	maximize_window
 	jmp	.L211
+	.cfi_endproc
+.LFE37:
 	.size	main, .-main
 	.globl	log_file
 	.bss

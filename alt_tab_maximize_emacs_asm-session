@@ -1,10 +1,28 @@
 #!/bin/sh
-# Session wrapper for ultra-fast Assembly x86_64 alt_tab_maximize_emacs_asm
+# Session wrapper with automatic fallback:
+# 1. Tries ASM version first
+# 2. If ASM fails or crashes, falls back to C (non-ASM) version so X never dies
 
-if [ -x "/usr/local/bin/alt_tab_maximize_emacs_asm" ]; then
-    exec /usr/local/bin/alt_tab_maximize_emacs_asm
-elif [ -x "$HOME/.local/bin/alt_tab_maximize_emacs_asm" ]; then
-    exec "$HOME/.local/bin/alt_tab_maximize_emacs_asm"
+run_non_asm_fallback() {
+    echo "[WM-FALLBACK] Falling back to non-ASM window manager..." >&2
+    if [ -x "/usr/local/bin/alt_tab_maximize_emacs-buffer_only" ]; then
+        exec /usr/local/bin/alt_tab_maximize_emacs-buffer_only
+    elif [ -x "$HOME/.local/bin/alt_tab_maximize_only" ]; then
+        exec "$HOME/.local/bin/alt_tab_maximize_only"
+    elif [ -x "/usr/local/bin/alt_tab_maximize_only" ]; then
+        exec /usr/local/bin/alt_tab_maximize_only
+    else
+        exec alt_tab_maximize_only
+    fi
+}
+
+# Try ASM version
+if [ -x "$HOME/.local/bin/alt_tab_maximize_emacs_asm" ]; then
+    "$HOME/.local/bin/alt_tab_maximize_emacs_asm" || run_non_asm_fallback
+elif [ -x "/usr/local/bin/alt_tab_maximize_emacs_asm" ]; then
+    /usr/local/bin/alt_tab_maximize_emacs_asm || run_non_asm_fallback
+elif which alt_tab_maximize_emacs_asm >/dev/null 2>&1; then
+    alt_tab_maximize_emacs_asm || run_non_asm_fallback
 else
-    exec alt_tab_maximize_emacs_asm
+    run_non_asm_fallback
 fi

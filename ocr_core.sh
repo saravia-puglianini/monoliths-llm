@@ -45,27 +45,17 @@ case "$TARGET_LANG" in
         ;;
 esac
 
-# 1. Check internet to set OCR lang and translation mechanism
-if ping -c 1 gnu.org >/dev/null 2>&1; then
-    ONLINE=1
-    OCR_LANG="$OCR_LANG_ONLINE"
-else
-    ONLINE=0
-    # For offline "vociferar", the text language is the target language itself
-    if [ "$ACTION" = "vociferar" ]; then
-        case "$TARGET_LANG" in
-            es) OCR_LANG="spa" ;;
-            en) OCR_LANG="eng" ;;
-            de) OCR_LANG="deu" ;;
-        esac
-    else
-        OCR_LANG="$OCR_LANG_OFFLINE"
-    fi
+# 1. CAPTURA IMMEDIATA (Cero retardo: scrot se ejecuta al instante)
+TMP_IMG=$(mktemp /tmp/ocr_scrot.XXXXXX.png)
+if ! scrot -s -o "$TMP_IMG" 2>/dev/null || [ ! -s "$TMP_IMG" ]; then
+    rm -f "$TMP_IMG"
+    exit 0
 fi
 
-# 2. CAPTURA AND OCR
-# We take a screenshot of a selected area and run OCR on it
-RAW_TEXT=$(scrot -s -o - 2>/dev/null | tesseract stdin stdout -l "$OCR_LANG" --oem 1 --psm 6 2>/dev/null)
+# 2. OCR multilingüe directo
+OCR_LANG="spa+deu+eng"
+RAW_TEXT=$(tesseract "$TMP_IMG" stdout -l "$OCR_LANG" --oem 1 --psm 6 2>/dev/null)
+rm -f "$TMP_IMG"
 
 # Clean up raw text (remove linebreaks, hyphenations, excess spaces)
 CLEAN_TEXT=$(printf '%s\n' "$RAW_TEXT" | tr '\n' ' ' | tr -s ' ' | sed -E 's/^[[:space:]]*//;s/[[:space:]]*$//;s/- //g')
@@ -77,33 +67,36 @@ fi
 
 # 3. TRANSLATION (if action is 'traducir')
 if [ "$ACTION" = "traducir" ]; then
-    if [ "$ONLINE" -eq 1 ]; then
+    TRANS_TEXT=""
+    # Intento directo con googletrans
+    case "$TARGET_LANG" in
+        es)
+            TRANS_TEXT=$($HOME/googletrans/dist/googletrans-es "$CLEAN_TEXT" 2>/dev/null || true)
+            ;;
+        en)
+            TRANS_TEXT=$($HOME/googletrans/dist/googletrans-en "$CLEAN_TEXT" 2>/dev/null || true)
+            ;;
+        de)
+            TRANS_TEXT=$($HOME/googletrans/dist/googletrans-de "$CLEAN_TEXT" 2>/dev/null || true)
+            ;;
+    esac
+
+    # Fallback automático a apertium si googletrans falla o no devuelve nada
+    if [ -z "$TRANS_TEXT" ]; then
         case "$TARGET_LANG" in
             es)
-                TRANS_TEXT=$($HOME/googletrans/dist/googletrans-es "$CLEAN_TEXT" 2>/dev/null)
+                TRANS_TEXT=$(printf '%s\n' "$CLEAN_TEXT" | apertium deu-eng 2>/dev/null | apertium eng-spa 2>/dev/null | tr -d '*' | tr -d '#' || true)
                 ;;
             en)
-                TRANS_TEXT=$($HOME/googletrans/dist/googletrans-en "$CLEAN_TEXT" 2>/dev/null)
+                TRANS_TEXT=$(printf '%s\n' "$CLEAN_TEXT" | apertium spa-eng 2>/dev/null | tr -d '*' | tr -d '#' || true)
                 ;;
             de)
-                TRANS_TEXT=$($HOME/googletrans/dist/googletrans-de "$CLEAN_TEXT" 2>/dev/null)
-                ;;
-        esac
-    else
-        # Offline via apertium
-        case "$TARGET_LANG" in
-            es)
-                TRANS_TEXT=$(printf '%s\n' "$CLEAN_TEXT" | apertium deu-eng 2>/dev/null | apertium eng-spa 2>/dev/null | tr -d '*' | tr -d '#')
-                ;;
-            en)
-                TRANS_TEXT=$(printf '%s\n' "$CLEAN_TEXT" | apertium spa-eng 2>/dev/null | tr -d '*' | tr -d '#')
-                ;;
-            de)
-                TRANS_TEXT=$(printf '%s\n' "$CLEAN_TEXT" | apertium spa-eng 2>/dev/null | apertium eng-deu 2>/dev/null | tr -d '*' | tr -d '#')
+                TRANS_TEXT=$(printf '%s\n' "$CLEAN_TEXT" | apertium spa-eng 2>/dev/null | apertium eng-deu 2>/dev/null | tr -d '*' | tr -d '#' || true)
                 ;;
         esac
     fi
-    # If translation failed or returned empty, fallback to clean text
+
+    # Si todo falla, usar el texto limpio original
     if [ -z "$TRANS_TEXT" ]; then
         TEXT_TO_SPEAK="$CLEAN_TEXT"
     else
