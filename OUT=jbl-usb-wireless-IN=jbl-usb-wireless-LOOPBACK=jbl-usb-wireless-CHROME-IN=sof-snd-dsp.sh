@@ -280,12 +280,12 @@ amixer -c Wireless sset Headphone 100% unmute 2>>"$LOG_FILE" || amixer -c Wirele
 
 log "INFO" "Paso 7: Guardando pipeline en /tmp/jbl_pipeline..."
 cat << 'EOP' > /tmp/jbl_pipeline
-alsasrc device=plug:dsnoop_mic buffer-time=500 latency-time=250 blocksize=16 ! audio/x-raw, format=S16LE, rate=48000, channels=1 ! alsasink device=plug:dmix_speaker sync=false buffer-time=500 latency-time=250 blocksize=16
+alsasrc device=plug:dsnoop_mic buffer-time=500 latency-time=250 blocksize=16 ! audio/x-raw, format=S16LE, rate=48000, channels=1 ! audioconvert ! volume volume=2.5 ! alsasink device=plug:dmix_speaker sync=false buffer-time=500 latency-time=250 blocksize=16
 EOP
 chmod 666 /tmp/jbl_pipeline 2>/dev/null || true
 
 log "INFO" "Paso 8: Iniciando loopback en tiempo real (~0.5ms latencia)..."
-nohup gst-launch-1.0 -q alsasrc device=plug:dsnoop_mic buffer-time=500 latency-time=250 blocksize=16 ! audio/x-raw, format=S16LE, rate=48000, channels=1 ! alsasink device=plug:dmix_speaker sync=false buffer-time=500 latency-time=250 blocksize=16 </dev/null >/dev/null 2>&1 &
+nohup gst-launch-1.0 -q alsasrc device=plug:dsnoop_mic buffer-time=500 latency-time=250 blocksize=16 ! audio/x-raw, format=S16LE, rate=48000, channels=1 ! audioconvert ! volume volume=2.5 ! alsasink device=plug:dmix_speaker sync=false buffer-time=500 latency-time=250 blocksize=16 </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 sleep 0.5
 

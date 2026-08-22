@@ -285,12 +285,12 @@ amixer -c "$CARD_NAME" sset Master 100% unmute 2>>"$LOG_FILE" || true
 
 log "INFO" "Paso 8: Guardando pipeline con Filtro Anti-Ruido en /tmp/jbl_pipeline..."
 cat << 'EOP' > /tmp/jbl_pipeline
-alsasrc device=plug:microfono_laptop ! audio/x-raw, format=S16LE, rate=48000, channels=2 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=1.2 ! queue max-size-time=20000000 ! alsasink device=plug:dmix_speaker sync=false
+alsasrc device=plug:microfono_laptop ! audio/x-raw, format=S16LE, rate=48000, channels=2 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=2.5 ! queue max-size-time=20000000 ! alsasink device=plug:dmix_speaker sync=false
 EOP
 chmod 666 /tmp/jbl_pipeline 2>/dev/null || true
 
 log "INFO" "Paso 9: Iniciando loopback Laptop Mic -> JBL con Filtro Anti-Ruido en tiempo real..."
-nohup gst-launch-1.0 -q alsasrc device=plug:microfono_laptop ! audio/x-raw, format=S16LE, rate=48000, channels=2 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=1.2 ! queue max-size-time=20000000 ! alsasink device=plug:dmix_speaker sync=false </dev/null >/dev/null 2>&1 &
+nohup gst-launch-1.0 -q alsasrc device=plug:microfono_laptop ! audio/x-raw, format=S16LE, rate=48000, channels=2 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=2.5 ! queue max-size-time=20000000 ! alsasink device=plug:dmix_speaker sync=false </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 sleep 0.5
 
