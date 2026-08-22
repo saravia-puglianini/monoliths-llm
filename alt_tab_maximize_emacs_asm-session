@@ -1,0 +1,10 @@
+#!/bin/sh
+# Session wrapper for ultra-fast Assembly x86_64 alt_tab_maximize_emacs_asm
+
+if [ -x "/usr/local/bin/alt_tab_maximize_emacs_asm" ]; then
+    exec /usr/local/bin/alt_tab_maximize_emacs_asm
+elif [ -x "$HOME/.local/bin/alt_tab_maximize_emacs_asm" ]; then
+    exec "$HOME/.local/bin/alt_tab_maximize_emacs_asm"
+else
+    exec alt_tab_maximize_emacs_asm
+fi

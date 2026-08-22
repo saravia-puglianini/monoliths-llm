@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vocal Delivery & Speech Training</title>
+  <style>
+    :root {
+      --bg-gradient: #f8fafc;
+      --surface: #ffffff;
+      --surface-subtle: #f8fafc;
+      --border: #e2e8f0;
+      --border-focus: #3b82f6;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #dbeafe;
+      --success: #10b981;
+      --success-bg: #ecfdf5;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      color: var(--text-main);
+      padding: 24px 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1140px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
+      margin-bottom: 4px;
+    }
+
+    .lang-switcher-group {
+      display: inline-flex;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 3px;
+      border-radius: 9999px;
+      box-shadow: var(--shadow-sm);
+      gap: 3px;
+    }
+
+    .lang-btn {
+      background: transparent;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 0.83rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .lang-btn:hover {
+      color: var(--text-main);
+      background: #f1f5f9;
+    }
+
+    .lang-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+    }
+
+    h1 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: #1e293b;
+      letter-spacing: -0.025em;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    /* Layout: 2 Columns Side by Side on Desktop */
+    .main-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      width: 100%;
+    }
+
+    @media (min-width: 860px) {
+      .main-grid {
+        display: grid;
+        grid-template-columns: minmax(420px, 1.3fr) minmax(360px, 1fr);
+        align-items: start;
+      }
+    }
+
+    /* Active Exercise Hero Card */
+    .hero-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 14px;
+      background: #e2e8f0;
+      color: var(--text-muted);
+      transition: all 0.3s ease;
+    }
+
+    .status-badge.active {
+      background: #fee2e2;
+      color: #dc2626;
+      animation: pulse-badge 1.8s infinite;
+    }
+
+    .status-badge.completed {
+      background: var(--success-bg);
+      color: var(--success);
+    }
+
+    @keyframes pulse-badge {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.04); opacity: 0.85; }
+    }
+
+    .exercise-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 14px;
+      min-height: 1.8em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.3;
+    }
+
+    .exercise-phonetics {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      padding: 16px 18px;
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      color: #1e293b;
+      margin-bottom: 16px;
+      width: 100%;
+      text-align: left;
+      line-height: 1.6;
+    }
+
+    .exercise-phonetics strong {
+      color: var(--primary);
+    }
+
+    .exercise-phonetics .multilang-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .lang-item {
+      padding: 10px 14px;
+      background: #ffffff;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border-top: 1px solid #f1f5f9;
+      border-right: 1px solid #f1f5f9;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .lang-tag {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .lang-text {
+      font-size: 0.95rem;
+      color: #0f172a;
+      font-weight: 500;
+      line-height: 1.45;
+    }
+
+    /* Timer Graphic (Circular Progress) */
+    .timer-container {
+      position: relative;
+      width: 170px;
+      height: 170px;
+      margin: 6px 0 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .timer-svg {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+    }
+
+    .timer-circle-bg {
+      fill: none;
+      stroke: #f1f5f9;
+      stroke-width: 10;
+    }
+
+    .timer-circle-progress {
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 565.48; /* 2 * PI * 90 */
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.2s linear, stroke 0.3s ease;
+    }
+
+    .timer-text-wrap {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .timer-display {
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timer-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* Timer Controls */
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button.btn {
+      border: none;
+      outline: none;
+      padding: 11px 20px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: var(--shadow-sm);
+    }
+
+    button.btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    .btn-next {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      color: #1e293b;
+    }
+
+    .btn-next:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .auto-advance-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.84rem;
+      color: #475569;
+      background: #f8fafc;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      margin-top: 14px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* Exercise List */
+    .list-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+      padding: 22px 20px;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .list-header h2 {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .progress-pill {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 4px 10px;
+      border-radius: 9999px;
+    }
+
+    .exercise-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      overflow-y: auto;
+      max-height: 560px;
+      padding-right: 4px;
+    }
+
+    .exercise-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .exercise-item:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      transform: translateX(2px);
+    }
+
+    .exercise-item.selected {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 1.5px #3b82f6 inset;
+    }
+
+    .exercise-item.completed {
+      background: var(--success-bg);
+      border-color: #a7f3d0;
+    }
+
+    .item-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .item-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #475569;
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .exercise-item.selected .item-num {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .exercise-item.completed .item-num {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .item-info {
+      text-align: left;
+      min-width: 0;
+    }
+
+    .item-title {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-phonetics {
+      font-size: 0.77rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-check {
+      font-size: 1.05rem;
+      color: #cbd5e1;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+
+    .exercise-item.completed .item-check {
+      color: var(--success);
+      font-weight: bold;
+    }
+
+    .list-footer {
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .btn-reset-all {
+      background: transparent;
+      border: 1px dashed #cbd5e1;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-reset-all:hover {
+      background: #fee2e2;
+      color: var(--danger);
+      border-color: #fca5a5;
+    }
+
+    .toggle-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .toggle-wrap input {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="top-bar">
+        <div class="lang-switcher-group" role="group" aria-label="Language selection">
+          <button id="langBtn-es" class="lang-btn" onclick="changeLanguage('es')">🇪🇸 Español</button>
+          <button id="langBtn-en" class="lang-btn" onclick="changeLanguage('en')">🇬🇧 English</button>
+          <button id="langBtn-de" class="lang-btn" onclick="changeLanguage('de')">🇩🇪 Deutsch</button>
+        </div>
+      </div>
+      <h1 id="uiMainTitle">🎙️ Entrenamiento de Entrega y Voz</h1>
+      <p id="uiSubtitle" class="subtitle">1 minuto por ejercicio • Modulación, articulación, calentamiento y trilingüe</p>
+    </header>
+
+    <main class="main-grid">
+      <!-- Main Display / Active Exercise -->
+      <section class="hero-card">
+        <div id="statusBadge" class="status-badge">Listo</div>
+        
+        <h2 id="currentTitle" class="exercise-title"><!-- Populated by JS --></h2>
+        <div id="currentPhonetics" class="exercise-phonetics">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="timer-container">
+          <svg class="timer-svg" viewBox="0 0 200 200">
+            <circle class="timer-circle-bg" cx="100" cy="100" r="90"></circle>
+            <circle id="timerCircle" class="timer-circle-progress" cx="100" cy="100" r="90"></circle>
+          </svg>
+          <div class="timer-text-wrap">
+            <div id="timerDisplay" class="timer-display">01:00</div>
+            <div id="timerSubLabel" class="timer-label">Tiempo Restante</div>
+          </div>
+        </div>
+
+        <div class="controls-row">
+          <button id="btnToggle" class="btn btn-primary" onclick="toggleTimer()">
+            <span id="btnToggleIcon">▶</span>
+            <span id="btnToggleText">Iniciar (1m)</span>
+          </button>
+          <button id="btnReset" class="btn btn-secondary" onclick="resetTimer()">
+            <span id="btnResetText">↺ Reiniciar</span>
+          </button>
+          <button id="btnNext" class="btn btn-next" onclick="nextExercise()">
+            <span id="btnNextText">Siguiente ❯</span>
+          </button>
+        </div>
+
+        <div class="auto-advance-wrap">
+          <input type="checkbox" id="autoAdvanceCheck" checked>
+          <label id="uiAutoAdvanceLabel" for="autoAdvanceCheck">Avanzar automáticamente al siguiente al terminar</label>
+        </div>
+      </section>
+
+      <!-- Exercise List & Tracking -->
+      <section class="list-card">
+        <div class="list-header">
+          <h2 id="uiListTitle">Lista de Ejercicios</h2>
+          <span id="progressPill" class="progress-pill">0 / 12 Completados</span>
+        </div>
+
+        <ul id="exerciseList" class="exercise-list">
+          <!-- Populated by JS -->
+        </ul>
+
+        <div class="list-footer">
+          <label class="toggle-wrap">
+            <input type="checkbox" id="soundCheck" checked>
+            <span id="uiSoundLabel">Sonido campana / pitido</span>
+          </label>
+          <button id="uiBtnResetAll" class="btn-reset-all" onclick="resetAllProgress()">Limpiar marcas</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const DURATION = 60; // 60 seconds (1 minute) per exercise
+
+    // UI Translations for the interface
+    const UI_STRINGS = {
+      es: {
+        mainTitle: "🎙️ Entrenamiento de Entrega y Voz",
+        subtitle: "1 minuto por ejercicio • Modulación, articulación, calentamiento y trilingüe",
+        listTitle: "Lista de Ejercicios",
+        completedPill: "Completados",
+        statusReady: "Listo",
+        statusRunning: "En Ejecución",
+        statusPaused: "En Pausa",
+        statusCompleted: "Completado",
+        timeRemaining: "Tiempo Restante",
+        startBtn: "Iniciar (1m)",
+        pauseBtn: "Pausar",
+        continueBtn: "Continuar",
+        resetBtn: "↺ Reiniciar",
+        nextBtn: "Siguiente ❯",
+        autoAdvance: "Avanzar automáticamente al siguiente al terminar",
+        soundLabel: "Sonido campana / pitido",
+        clearMarks: "Limpiar marcas",
+        confirmReset: "¿Deseas reiniciar el progreso de todos los ejercicios?",
+        finishCelebration: "🎉 ¡Felicitaciones! Has completado la rutina completa de entrenamiento vocal."
+      },
+      en: {
+        mainTitle: "🎙️ Vocal Delivery & Speech Training",
+        subtitle: "1 minute per exercise • Articulation, modulation, warmup & trilingual flow",
+        listTitle: "Exercise Routine",
+        completedPill: "Completed",
+        statusReady: "Ready",
+        statusRunning: "Running",
+        statusPaused: "Paused",
+        statusCompleted: "Completed",
+        timeRemaining: "Time Remaining",
+        startBtn: "Start (1m)",
+        pauseBtn: "Pause",
+        continueBtn: "Resume",
+        resetBtn: "↺ Reset",
+        nextBtn: "Next ❯",
+        autoAdvance: "Auto-advance to next exercise upon completion",
+        soundLabel: "Bell & beep sound",
+        clearMarks: "Clear checks",
+        confirmReset: "Do you want to reset all exercise progress?",
+        finishCelebration: "🎉 Congratulations! You completed the full vocal delivery training routine."
+      },
+      de: {
+        mainTitle: "🎙️ Sprech- & Artikulationstraining",
+        subtitle: "1 Minute pro Übung • Modulation, Artikulation, Aufwärmen und Dreisprachigkeit",
+        listTitle: "Übungsliste",
+        completedPill: "Abgeschlossen",
+        statusReady: "Bereit",
+        statusRunning: "Läuft",
+        statusPaused: "Pausiert",
+        statusCompleted: "Abgeschlossen",
+        timeRemaining: "Verbleibende Zeit",
+        startBtn: "Starten (1m)",
+        pauseBtn: "Pause",
+        continueBtn: "Fortsetzen",
+        resetBtn: "↺ Zurücksetzen",
+        nextBtn: "Weiter ❯",
+        autoAdvance: "Nach Ablauf automatisch zur nächsten Übung wechseln",
+        soundLabel: "Ton & Glockensignal",
+        clearMarks: "Markierungen löschen",
+        confirmReset: "Möchten Sie den gesamten Übungsfortschritt zurücksetzen?",
+        finishCelebration: "🎉 Herzlichen Glückwunsch! Sie haben das gesamte Sprechtraining abgeschlossen."
+      }
+    };
+
+    // Full 12 Exercises translated in Spanish, English, and German
+    const EXERCISES = [
+      {
+        id: 1,
+        title: {
+          es: "Gesto de comer chicle",
+          en: "Chewing gum face gesture",
+          de: "Kaugummi-Kauen Geste"
+        },
+        plainText: {
+          es: "Masticar de forma exagerada abriendo y cerrando la boca con rango completo para activar la musculatura facial.",
+          en: "Exaggerated chewing motion opening and closing the jaw fully to activate facial muscles.",
+          de: "Übertriebenes Kauen mit voller Mundöffnung, um die gesamte Gesichtsmuskulatur zu aktivieren."
+        },
+        htmlContent: {
+          es: `Masticar de forma <strong>exagerada</strong> y amplia (abriendo y cerrando bien la boca), movilizando mandíbula, mejillas, labios y lengua para calentar y desbloquear la musculatura facial.`,
+          en: `Perform an <strong>exaggerated chewing movement</strong> with wide open-close cycles, mobilizing jaw, cheeks, lips, and tongue to warm up and release facial tension.`,
+          de: `Führen Sie eine <strong>übertriebene Kaubewegung</strong> mit weiter Mundöffnung durch. Bewegen Sie Kiefer, Wangen, Lippen und Zunge zur Erwärmung der Gesichtsmuskeln.`
+        }
+      },
+      {
+        id: 2,
+        title: {
+          es: "Sorprendido y aburrido piquito",
+          en: "Surprised face & bored pout lips",
+          de: "Überrascht & gelangweilter Spitzmund"
+        },
+        plainText: {
+          es: "Alternar: Expresión de total sorpresa (abrir ojos y boca) con rostro relajado/aburrido haciendo labios en piquito.",
+          en: "Alternate: Wide-eyed surprise expression with relaxed/bored face and extended pout lips.",
+          de: "Abwechselnd: Weit aufgerissene Augen/Mund (Überraschung) und entspanntes Gesicht mit spitzem Kussmund."
+        },
+        htmlContent: {
+          es: `Alternar rítmicamente:<br>• <strong>Sorpresa:</strong> Ojos y boca bien abiertos, elevando cejas.<br>• <strong>Aburrido piquito:</strong> Rostro neutro/relajado estirando labios en piquito pronunciado.`,
+          en: `Alternate rhythmically:<br>• <strong>Surprise:</strong> Wide open eyes and mouth, raised eyebrows.<br>• <strong>Bored pout:</strong> Neutral/relaxed face stretching lips into a sharp pout.`,
+          de: `Rhythmisch abwechseln:<br>• <strong>Überraschung:</strong> Augen und Mund weit öffnen, Augenbrauen heben.<br>• <strong>Spitzmund:</strong> Entspanntes Gesicht mit deutlich vorgestreckten Lippen.`
+        }
+      },
+      {
+        id: 3,
+        title: {
+          es: "Mover mandíbula de lado a lado",
+          en: "Side-to-side jaw movement",
+          de: "Kiefer von Seite zu Seite bewegen"
+        },
+        plainText: {
+          es: "Movimiento suave, controlado y rítmico de la mandíbula inferior hacia la izquierda y derecha para relajar la articulación temporomandibular.",
+          en: "Smooth, controlled side-to-side movement of the lower jaw to release temporomandibular joint tension.",
+          de: "Sanfte, kontrollierte Bewegung des Unterkiefers nach links und rechts zur Entlastung des Kiefergelenks."
+        },
+        htmlContent: {
+          es: `Movimiento suave, controlado y rítmico de la <strong>mandíbula inferior de izquierda a derecha</strong> para liberar tensión en la articulación temporomandibular (ATM).`,
+          en: `Smooth, rhythmic, and controlled movement of the <strong>lower jaw from side to side</strong> to release tension in the temporomandibular joint (TMJ).`,
+          de: `Sanfte und kontrollierte Bewegung des <strong>Unterkiefers von links nach rechts</strong>, um Verspannungen im Kiefergelenk (TMG) gezielt zu lösen.`
+        }
+      },
+      {
+        id: 4,
+        title: {
+          es: "Hacer los labios como un motor",
+          en: "Lip trill / Motor lips (brrrrr)",
+          de: "Lippenflattern wie ein Motor (brrrrr)"
+        },
+        plainText: {
+          es: "Vibración labial continua (brrrrrr / trilling) expulsando aire constante y relajando los labios.",
+          en: "Continuous lip trill (brrrrrr) expelling steady breath support while relaxing the lips.",
+          de: "Kontinuierliches Lippenflattern (brrrrrr) mit gleichmäßigem Luftstrom und entspannten Lippen."
+        },
+        htmlContent: {
+          es: `Vibración labial continua (<strong>brrrrrr / lip trill</strong>) expulsando aire con soporte diafragmático constante, subiendo y bajando tonos sin forzar.`,
+          en: `Continuous lip trill (<strong>brrrrrr / lip bubble</strong>) expelling steady diaphragmatic air flow, gliding up and down pitch smoothly without strain.`,
+          de: `Kontinuierliches Lippenflattern (<strong>brrrrrr / Lip Trill</strong>) mit Zwerchfellstütze ausführen, Töne sanft auf- und abgleiten lassen.`
+        }
+      },
+      {
+        id: 5,
+        title: {
+          es: "Contar hasta quedarse sin aire (Español)",
+          en: "Count until out of breath (Spanish)",
+          de: "Zählen bis zum letzten Atemzug (Spanisch)"
+        },
+        plainText: {
+          es: "Inspirar profundamente y contar: Uno, dos, tres, cuatro, cinco... con dicción clara hasta el final del aire.",
+          en: "Take a deep breath and count: Uno, dos, tres, cuatro, cinco... with crisp Spanish diction until breath is depleted.",
+          de: "Tief einatmen und auf Spanisch zählen: Uno, dos, tres, cuatro... mit klarer Aussprache bis die Luft ausgeht."
+        },
+        htmlContent: {
+          es: `Inspirar diafragmáticamente a fondo y contar en voz alta con vocalización clara y constante:<br><strong>Uno, dos, tres, cuatro, cinco, seis, siete, ocho, nueve, diez...</strong><br><em>(Mantener tono firme y articulación nítida hasta agotar el aire, luego repetir el ciclo durante el minuto).</em>`,
+          en: `Take a deep diaphragmatic breath and count out loud with clear Spanish pronunciation:<br><strong>Uno, dos, tres, cuatro, cinco, seis, siete, ocho, nueve, diez...</strong><br><em>(Maintain steady volume and crisp diction until your air runs out, then repeat cycle).</em>`,
+          de: `Tief ins Zwerchfell einatmen und laut und deutlich auf Spanisch zählen:<br><strong>Uno, dos, tres, cuatro, cinco, seis, siete, ocho, nueve, diez...</strong><br><em>(Konstante Lautstärke und deutliche Aussprache halten, bis der Atem aufgebraucht ist).</em>`
+        }
+      },
+      {
+        id: 6,
+        title: {
+          es: "Contar hasta quedarse sin aire (Inglés)",
+          en: "Count until out of breath (English)",
+          de: "Zählen bis zum letzten Atemzug (Englisch)"
+        },
+        plainText: {
+          es: "Inspirar hondo y contar: One, two, three, four, five... con articulación nítida de consonantes en inglés.",
+          en: "Deep breath and count aloud: One, two, three, four, five... focusing on crisp English consonant articulation.",
+          de: "Tief einatmen und auf Englisch zählen: One, two, three, four, five... mit präzisen englischen Konsonanten."
+        },
+        htmlContent: {
+          es: `Inspirar hondo y contar en inglés enfocando las consonantes nítidas:<br><strong>One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve...</strong><br><em>(Articular con precisión 't', 'th', 'f', 's' hasta terminar el aire).</em>`,
+          en: `Take a deep breath and count continuously in English with crisp articulation:<br><strong>One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve...</strong><br><em>(Focus on crisp 't', 'th', 'f', and 's' sounds until your breath runs out).</em>`,
+          de: `Tief einatmen und kontinuierlich auf Englisch zählen:<br><strong>One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve...</strong><br><em>(Präzise englische Konsonanten wie 't', 'th', 'f' und 's' bis zum Atemende betonen).</em>`
+        }
+      },
+      {
+        id: 7,
+        title: {
+          es: "Contar hasta quedarse sin aire (Alemán)",
+          en: "Count until out of breath (German)",
+          de: "Zählen bis zum letzten Atemzug (Deutsch)"
+        },
+        plainText: {
+          es: "Inspirar profundamente y contar en alemán: Eins, zwei, drei, vier, fünf... con oclusivas y 'z' [ts] precisas.",
+          en: "Take a deep breath and count in German: Eins, zwei, drei, vier, fünf... with sharp German glottal stops.",
+          de: "Tief einatmen und auf Deutsch zählen: Eins, zwei, drei, vier, fünf... mit präzisem Knacklaut."
+        },
+        htmlContent: {
+          es: `Inspirar a fondo y contar en alemán con cortes limpios:<br><strong>Eins, zwei, drei, vier, fünf, sechs, sieben, acht, neun, zehn, elf, zwölf...</strong><br><em>(Pronunciar la 'z' [ts], 'ch' y consonantes secas alemanas con exactitud).</em>`,
+          en: `Take a deep breath and count in German with sharp glottal stops:<br><strong>Eins, zwei, drei, vier, fünf, sechs, sieben, acht, neun, zehn, elf, zwölf...</strong><br><em>(Pronounce the German 'z' [ts], 'ch' and sharp consonants cleanly until out of breath).</em>`,
+          de: `Tief in den Bauch einatmen und mit präzisem Knacklaut zählen:<br><strong>Eins, zwei, drei, vier, fünf, sechs, sieben, acht, neun, zehn, elf, zwölf...</strong><br><em>(Aussprache von 'z' [ts], 'ch' und scharfen Konsonanten sauber bis zum letzten Atemzug halten).</em>`
+        }
+      },
+      {
+        id: 8,
+        title: {
+          es: "Frase de dicción trilingüe (ES / EN / DE)",
+          en: "Trilingual delivery master phrase (ES / EN / DE)",
+          de: "Dreisprachiger Meister-Artikulationssatz (ES / EN / DE)"
+        },
+        plainText: {
+          es: "Decir la frase con excelente articulación en los tres idiomas sucesivamente durante el minuto.",
+          en: "Recite the delivery sentence with crisp articulation in all three languages sequentially.",
+          de: "Den Satz mit exzellenter Artikulation nacheinander in allen drei Sprachen während der Minute aufsagen."
+        },
+        htmlContent: {
+          es: `<div class="multilang-box">
+            <div class="lang-item">
+              <div class="lang-tag">🇪🇸 Español</div>
+              <div class="lang-text">«La clara articulación y el ritmo constante transmiten confianza, precisión y claridad en cada mensaje.»</div>
+            </div>
+            <div class="lang-item">
+              <div class="lang-tag">🇬🇧 English</div>
+              <div class="lang-text">«Clear articulation and steady rhythm convey confidence, precision, and clarity in every single message.»</div>
+            </div>
+            <div class="lang-item">
+              <div class="lang-tag">🇩🇪 Deutsch</div>
+              <div class="lang-text">«Eine klare Artikulation und ein stetiger Rhythmus vermitteln Selbstvertrauen, Präzision und Klarheit in jeder Botschaft.»</div>
+            </div>
+          </div>`,
+          en: `<div class="multilang-box">
+            <div class="lang-item">
+              <div class="lang-tag">🇬🇧 English</div>
+              <div class="lang-text">«Clear articulation and steady rhythm convey confidence, precision, and clarity in every single message.»</div>
+            </div>
+            <div class="lang-item">
+              <div class="lang-tag">🇪🇸 Español</div>
+              <div class="lang-text">«La clara articulación y el ritmo constante transmiten confianza, precisión y claridad en cada mensaje.»</div>
+            </div>
+            <div class="lang-item">
+              <div class="lang-tag">🇩🇪 Deutsch</div>
+              <div class="lang-text">«Eine klare Artikulation und ein stetiger Rhythmus vermitteln Selbstvertrauen, Präzision und Klarheit in jeder Botschaft.»</div>
+            </div>
+          </div>`,
+          de: `<div class="multilang-box">
+            <div class="lang-item">
+              <div class="lang-tag">🇩🇪 Deutsch</div>
+              <div class="lang-text">«Eine klare Artikulation und ein stetiger Rhythmus vermitteln Selbstvertrauen, Präzision und Klarheit in jeder Botschaft.»</div>
+            </div>
+            <div class="lang-item">
+              <div class="lang-tag">🇬🇧 English</div>
+              <div class="lang-text">«Clear articulation and steady rhythm convey confidence, precision, and clarity in every single message.»</div>
+            </div>
+            <div class="lang-item">
+              <div class="lang-tag">🇪🇸 Español</div>
+              <div class="lang-text">«La clara articulación y el ritmo constante transmiten confianza, precisión y claridad en cada mensaje.»</div>
+            </div>
+          </div>`
+        }
+      },
+      {
+        id: 9,
+        title: {
+          es: "Arra, Erre, Irri, Urru, Orro",
+          en: "Arra, Erre, Irri, Urru, Orro",
+          de: "Arra, Erre, Irri, Urru, Orro"
+        },
+        plainText: {
+          es: "Arra • Erre • Irri • Urru • Orro (Exagerar la articulación de la 'rr' y la vocalización limpia).",
+          en: "Arra • Erre • Irri • Urru • Orro (Exaggerate rolled 'rr' vibration and clean vowel open mouth shape).",
+          de: "Arra • Erre • Irri • Urru • Orro (Zungenspitzen-R rollen und saubere Vokalöffnungen betonen)."
+        },
+        htmlContent: {
+          es: `<strong>Arra • Erre • Irri • Urru • Orro</strong><br>Exagerar el punto de contacto alveolar de la <em>'rr'</em> vibrante y la apertura limpia de cada vocal.`,
+          en: `<strong>Arra • Erre • Irri • Urru • Orro</strong><br>Exaggerate the alveolar contact of the rolled <em>'rr'</em> with crisp, wide vowel projection.`,
+          de: `<strong>Arra • Erre • Irri • Urru • Orro</strong><br>Die Zungenspitzenvibration des gerollten <em>'rr'</em> und die saubere Mundöffnung bei jedem Vokal übertreiben.`
+        }
+      },
+      {
+        id: 10,
+        title: {
+          es: "Asch, Esch, Isch, Osch, Usch",
+          en: "Asch, Esch, Isch, Osch, Usch",
+          de: "Asch, Esch, Isch, Osch, Usch"
+        },
+        plainText: {
+          es: "Asch • Esch • Isch • Osch • Usch (Proyectar el sonido 'sch' con fuerza y aire continuo).",
+          en: "Asch • Esch • Isch • Osch • Usch (Project the fricative 'sch' sound with dense forward air stream).",
+          de: "Asch • Esch • Isch • Osch • Usch (Den Reibelaut 'sch' kraftvoll mit dichtem Luftstrom nach vorne projizieren)."
+        },
+        htmlContent: {
+          es: `<strong>Asch • Esch • Isch • Osch • Usch</strong><br>Proyectar la fricativa postalveolar <em>'sch' / [ʃ]</em> con aire denso y continuo hacia adelante.`,
+          en: `<strong>Asch • Esch • Isch • Osch • Usch</strong><br>Project the postalveolar fricative <em>'sch' / [ʃ]</em> with steady forward breath flow.`,
+          de: `<strong>Asch • Esch • Isch • Osch • Usch</strong><br>Den postalveolaren Reibelaut <em>'sch' / [ʃ]</em> mit kontinuierlichem Vorwärtsluftstrom projizieren.`
+        }
+      },
+      {
+        id: 11,
+        title: {
+          es: "Arrasch, Erresch, Irrisch, Orrosch, Urrusch",
+          en: "Arrasch, Erresch, Irrisch, Orrosch, Urrusch",
+          de: "Arrasch, Erresch, Irrisch, Orrosch, Urrusch"
+        },
+        plainText: {
+          es: "Arrasch • Erresch • Irrisch • Orrosch • Urrusch (Combinación ágil de vibración y fricción).",
+          en: "Arrasch • Erresch • Irrisch • Orrosch • Urrusch (Fast transition between rolled trill and fricative).",
+          de: "Arrasch • Erresch • Irrisch • Orrosch • Urrusch (Schneller Übergang zwischen Zungenschlag und Reibelaut)."
+        },
+        htmlContent: {
+          es: `<strong>Arrasch • Erresch • Irrisch • Orrosch • Urrusch</strong><br>Transición veloz y controlada entre la vibración fuerte de la lengua y el soplido de la <em>'sch'</em>.`,
+          en: `<strong>Arrasch • Erresch • Irrisch • Orrosch • Urrusch</strong><br>Fast and controlled transition between strong tongue trill vibration and the <em>'sch'</em> fricative.`,
+          de: `<strong>Arrasch • Erresch • Irrisch • Orrosch • Urrusch</strong><br>Schneller und kontrollierter Wechsel zwischen Zungenvibration und dem <em>'sch'</em>-Zischlaut.`
+        }
+      },
+      {
+        id: 12,
+        title: {
+          es: "Sch, mm, nn, atzt, etzt, itzt, otzt, utzt",
+          en: "Sch, mm, nn, atzt, etzt, itzt, otzt, utzt",
+          de: "Sch, mm, nn, atzt, etzt, itzt, otzt, utzt"
+        },
+        plainText: {
+          es: "Sch • mm • nn • atzt • etzt • itzt • otzt • utzt (Resonancia nasal y oclusivas secas alemanas).",
+          en: "Sch • mm • nn • atzt • etzt • itzt • otzt • utzt (Mask resonance with sharp German stops).",
+          de: "Sch • mm • nn • atzt • etzt • itzt • otzt • utzt (Maskenresonanz & knackige deutsche Verschlusslaute)."
+        },
+        htmlContent: {
+          es: `<strong>Sch • mm • nn • atzt • etzt • itzt • otzt • utzt</strong><br>Sentir la vibración resonadora en máscara (mm, nn) combinada con los cortes secos y explosivos alemanes <em>'tzt' [tst]</em>.`,
+          en: `<strong>Sch • mm • nn • atzt • etzt • itzt • otzt • utzt</strong><br>Feel facial mask resonance on hums (mm, nn) combined with sharp, dry German stops <em>'tzt' [tst]</em>.`,
+          de: `<strong>Sch • mm • nn • atzt • etzt • itzt • otzt • utzt</strong><br>Spüren Sie die Maskenresonanz (mm, nn) kombiniert mit den knackig-trockenen <em>'tzt' [tst]</em> Lauten.`
+        }
+      }
+    ];
+
+    // Detect initial language based on browser/system preference or fallback to 'es'
+    function detectInitialLang() {
+      const userLang = (navigator.language || navigator.userLanguage || 'es').toLowerCase();
+      if (userLang.startsWith('de')) return 'de';
+      if (userLang.startsWith('en')) return 'en';
+      return 'es';
+    }
+
+    let currentLang = detectInitialLang();
+    let currentIndex = 0;
+    let timeLeft = DURATION;
+    let timerInterval = null;
+    let isRunning = false;
+    const completedSet = new Set();
+
+    // DOM Elements
+    const uiMainTitleEl = document.getElementById('uiMainTitle');
+    const uiSubtitleEl = document.getElementById('uiSubtitle');
+    const uiListTitleEl = document.getElementById('uiListTitle');
+    const uiAutoAdvanceLabelEl = document.getElementById('uiAutoAdvanceLabel');
+    const uiSoundLabelEl = document.getElementById('uiSoundLabel');
+    const uiBtnResetAllEl = document.getElementById('uiBtnResetAll');
+    const btnResetTextEl = document.getElementById('btnResetText');
+    const btnNextTextEl = document.getElementById('btnNextText');
+    const timerSubLabelEl = document.getElementById('timerSubLabel');
+
+    const currentTitleEl = document.getElementById('currentTitle');
+    const currentPhoneticsEl = document.getElementById('currentPhonetics');
+    const timerDisplayEl = document.getElementById('timerDisplay');
+    const timerCircleEl = document.getElementById('timerCircle');
+    const statusBadgeEl = document.getElementById('statusBadge');
+    const btnToggleText = document.getElementById('btnToggleText');
+    const btnToggleIcon = document.getElementById('btnToggleIcon');
+    const exerciseListEl = document.getElementById('exerciseList');
+    const progressPillEl = document.getElementById('progressPill');
+    const autoAdvanceCheck = document.getElementById('autoAdvanceCheck');
+    const soundCheck = document.getElementById('soundCheck');
+
+    const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 90; // r=90 => ~565.48
+
+    // Change UI Language
+    function changeLanguage(lang) {
+      if (!UI_STRINGS[lang]) return;
+      currentLang = lang;
+      document.documentElement.lang = lang;
+
+      // Update active state on language buttons
+      ['es', 'en', 'de'].forEach(l => {
+        const btn = document.getElementById(`langBtn-${l}`);
+        if (btn) {
+          if (l === lang) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        }
+      });
+
+      const str = UI_STRINGS[lang];
+      uiMainTitleEl.textContent = str.mainTitle;
+      uiSubtitleEl.textContent = str.subtitle;
+      uiListTitleEl.textContent = str.listTitle;
+      uiAutoAdvanceLabelEl.textContent = str.autoAdvance;
+      uiSoundLabelEl.textContent = str.soundLabel;
+      uiBtnResetAllEl.textContent = str.clearMarks;
+      btnResetTextEl.textContent = str.resetBtn;
+      btnNextTextEl.textContent = str.nextBtn;
+      timerSubLabelEl.textContent = str.timeRemaining;
+
+      updateCard();
+    }
+
+    // Audio tone using Web Audio API
+    function playBeep(type = 'finish') {
+      if (!soundCheck.checked) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (type === 'finish') {
+          const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+          notes.forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.12);
+            gain.gain.setValueAtTime(0.18, audioCtx.currentTime + i * 0.12);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.12 + 0.6);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(audioCtx.currentTime + i * 0.12);
+            osc.stop(audioCtx.currentTime + i * 0.12 + 0.6);
+          });
+        } else if (type === 'tick') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.08);
+        }
+      } catch (e) {
+        console.log("Audio not allowed or supported yet:", e);
+      }
+    }
+
+    function renderList() {
+      exerciseListEl.innerHTML = '';
+      const str = UI_STRINGS[currentLang];
+
+      EXERCISES.forEach((ex, idx) => {
+        const li = document.createElement('li');
+        const isSelected = idx === currentIndex;
+        const isDone = completedSet.has(idx);
+
+        const titleText = ex.title[currentLang] || ex.title['es'];
+        const plainText = ex.plainText[currentLang] || ex.plainText['es'];
+
+        li.className = `exercise-item ${isSelected ? 'selected' : ''} ${isDone ? 'completed' : ''}`;
+        li.onclick = () => selectExercise(idx);
+
+        li.innerHTML = `
+          <div class="item-left">
+            <div class="item-num">${isDone ? '✓' : ex.id}</div>
+            <div class="item-info">
+              <div class="item-title">${ex.id}. ${titleText}</div>
+              <div class="item-phonetics">${plainText}</div>
+            </div>
+          </div>
+          <div class="item-check">${isDone ? '✔' : '○'}</div>
+        `;
+        exerciseListEl.appendChild(li);
+      });
+
+      progressPillEl.textContent = `${completedSet.size} / ${EXERCISES.length} ${str.completedPill}`;
+    }
+
+    function updateCard() {
+      const ex = EXERCISES[currentIndex];
+      const str = UI_STRINGS[currentLang];
+
+      currentTitleEl.textContent = `${ex.id}. ${ex.title[currentLang] || ex.title['es']}`;
+      currentPhoneticsEl.innerHTML = ex.htmlContent[currentLang] || ex.htmlContent['es'];
+
+      if (isRunning) {
+        statusBadgeEl.textContent = str.statusRunning;
+        statusBadgeEl.className = 'status-badge active';
+        btnToggleText.textContent = str.pauseBtn;
+        btnToggleIcon.textContent = '⏸';
+      } else if (completedSet.has(currentIndex) && timeLeft === DURATION) {
+        statusBadgeEl.textContent = str.statusCompleted;
+        statusBadgeEl.className = 'status-badge completed';
+        btnToggleText.textContent = str.startBtn;
+        btnToggleIcon.textContent = '▶';
+      } else if (timeLeft < DURATION && timeLeft > 0) {
+        statusBadgeEl.textContent = str.statusPaused;
+        statusBadgeEl.className = 'status-badge';
+        btnToggleText.textContent = str.continueBtn;
+        btnToggleIcon.textContent = '▶';
+      } else {
+        statusBadgeEl.textContent = str.statusReady;
+        statusBadgeEl.className = 'status-badge';
+        btnToggleText.textContent = str.startBtn;
+        btnToggleIcon.textContent = '▶';
+      }
+
+      renderList();
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function updateTimerDisplay() {
+      timerDisplayEl.textContent = formatTime(timeLeft);
+      
+      const fraction = (DURATION - timeLeft) / DURATION;
+      const offset = CIRCLE_CIRCUMFERENCE * fraction;
+      timerCircleEl.style.strokeDashoffset = offset;
+
+      if (timeLeft <= 10 && timeLeft > 0 && isRunning) {
+        timerCircleEl.style.stroke = 'var(--warning)';
+      } else if (timeLeft === 0) {
+        timerCircleEl.style.stroke = 'var(--success)';
+      } else {
+        timerCircleEl.style.stroke = 'var(--primary)';
+      }
+    }
+
+    function toggleTimer() {
+      if (isRunning) {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
+    }
+
+    function startTimer() {
+      if (timeLeft <= 0) {
+        timeLeft = DURATION;
+      }
+      isRunning = true;
+      updateCard();
+
+      timerInterval = setInterval(() => {
+        if (timeLeft > 0) {
+          timeLeft--;
+          if (timeLeft <= 3 && timeLeft > 0) {
+            playBeep('tick');
+          }
+          updateTimerDisplay();
+        } else {
+          finishCurrentExercise();
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      isRunning = false;
+      clearInterval(timerInterval);
+      updateCard();
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      timeLeft = DURATION;
+      updateTimerDisplay();
+      updateCard();
+    }
+
+    function finishCurrentExercise() {
+      pauseTimer();
+      completedSet.add(currentIndex);
+      playBeep('finish');
+      timeLeft = 0;
+      updateTimerDisplay();
+      updateCard();
+
+      const str = UI_STRINGS[currentLang];
+      if (autoAdvanceCheck.checked) {
+        setTimeout(() => {
+          if (currentIndex < EXERCISES.length - 1) {
+            selectExercise(currentIndex + 1);
+            startTimer();
+          } else {
+            alert(str.finishCelebration);
+          }
+        }, 1200);
+      }
+    }
+
+    function selectExercise(idx) {
+      if (isRunning) {
+        pauseTimer();
+      }
+      currentIndex = idx;
+      timeLeft = DURATION;
+      updateTimerDisplay();
+      updateCard();
+    }
+
+    function nextExercise() {
+      const nextIdx = (currentIndex + 1) % EXERCISES.length;
+      selectExercise(nextIdx);
+    }
+
+    function resetAllProgress() {
+      const str = UI_STRINGS[currentLang];
+      if (confirm(str.confirmReset)) {
+        completedSet.clear();
+        resetTimer();
+      }
+    }
+
+    // Keyboard shortcuts (Space to start/pause, N for next)
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT') {
+        e.preventDefault();
+        toggleTimer();
+      } else if ((e.key === 'n' || e.key === 'N') && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+        nextExercise();
+      }
+    });
+
+    // Initialize Language & View
+    changeLanguage(currentLang);
+    updateTimerDisplay();
+  </script>
+</body>
+</html>
