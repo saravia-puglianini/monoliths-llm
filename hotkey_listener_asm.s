@@ -42,8 +42,6 @@ sh_bin:             .asciz "/bin/sh"
 sh_arg_c:           .asciz "-c"
 
 # Comandos de Sistema
-cmd_bat:            .asciz "/home/user/monoliths-llm/bat_asm"
-cmd_ram:            .asciz "/home/user/monoliths-llm/ram_report_asm"
 cmd_alt3:           .asciz "touch /tmp/.stop && sleep 3 && [ -f /tmp/.stop ] && rm /tmp/.stop"
 cmd_alt4:           .asciz "sleep 0.5 && bash ~/monoliths-llm/english-or-german-to-clipboard-on-spanish.sh"
 cmd_alt5:           .asciz "sleep 0.5 && ([ -f /tmp/_xcalib_working ] && rm /tmp/_xcalib_working || touch /tmp/_xcalib_working ) ; xcalib -i -a"
@@ -249,23 +247,6 @@ main:
     # -------------------------------------------------------------------------
     # MODO TECLADO NORMAL:
     # -------------------------------------------------------------------------
-    cmp rdx, [kc_b]
-    jne .check_r
-    cmp ecx, Mod1Mask
-    jne .check_r
-    lea rdi, [cmd_bat]
-    call execute_command
-    jmp .main_event_loop
-
-.check_r:
-    cmp rdx, [kc_r]
-    jne .check_3
-    cmp ecx, Mod1Mask
-    jne .check_3
-    lea rdi, [cmd_ram]
-    call execute_command
-    jmp .main_event_loop
-
 .check_3:
     cmp rdx, [kc_3]
     jne .check_4
@@ -716,7 +697,7 @@ register_base_hotkeys:
     mov rdi, [kc_2]; mov rsi, Mod1Mask; call grab_key
     mov rdi, [kc_2]; mov rsi, Mod1Mask | Mod2Mask; call grab_key
 
-    # Alt + 3,4,5,6,8,9,B,R
+    # Alt + 3,4,5,6,8,9
     mov rdi, [kc_3]; mov rsi, Mod1Mask; call grab_key
     mov rdi, [kc_3]; mov rsi, Mod1Mask | Mod2Mask; call grab_key
     mov rdi, [kc_4]; mov rsi, Mod1Mask; call grab_key
@@ -731,10 +712,6 @@ register_base_hotkeys:
     mov rdi, [kc_8]; mov rsi, Mod1Mask | ShiftMask | Mod2Mask; call grab_key
     mov rdi, [kc_9]; mov rsi, Mod1Mask; call grab_key
     mov rdi, [kc_9]; mov rsi, Mod1Mask | Mod2Mask; call grab_key
-    mov rdi, [kc_b]; mov rsi, Mod1Mask; call grab_key
-    mov rdi, [kc_b]; mov rsi, Mod1Mask | Mod2Mask; call grab_key
-    mov rdi, [kc_r]; mov rsi, Mod1Mask; call grab_key
-    mov rdi, [kc_r]; mov rsi, Mod1Mask | Mod2Mask; call grab_key
 
     # Super / Mod4
     mov rdi, [kc_p]; mov rsi, Mod4Mask; call grab_key
