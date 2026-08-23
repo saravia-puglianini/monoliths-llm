@@ -99,6 +99,8 @@ ocr_cmd3:           .asciz "ocr_fast vociferar en"
 ocr_cmd4:           .asciz "ocr_fast traducir en"
 ocr_cmd5:           .asciz "ocr_fast vociferar de"
 ocr_cmd6:           .asciz "ocr_fast traducir de"
+fmt_dbg:            .asciz "[DBG] KeyPress: keycode=%d, state=%d\n"
+fmt_grab_dbg:       .asciz "[DBG] XGrabKey: keycode=%ld, modifiers=%ld -> status=%ld\n"
 
 .section .bss
 .align 8
@@ -642,45 +644,45 @@ init_keycodes:
     mov rbp, rsp
     sub rsp, 16
 
-    mov rdi, [display_ptr]; mov rsi, '1'; call XKeysymToKeycode; mov [kc_1], rax
-    mov rdi, [display_ptr]; mov rsi, '2'; call XKeysymToKeycode; mov [kc_2], rax
-    mov rdi, [display_ptr]; mov rsi, '3'; call XKeysymToKeycode; mov [kc_3], rax
-    mov rdi, [display_ptr]; mov rsi, '4'; call XKeysymToKeycode; mov [kc_4], rax
-    mov rdi, [display_ptr]; mov rsi, '5'; call XKeysymToKeycode; mov [kc_5], rax
-    mov rdi, [display_ptr]; mov rsi, '6'; call XKeysymToKeycode; mov [kc_6], rax
-    mov rdi, [display_ptr]; mov rsi, '8'; call XKeysymToKeycode; mov [kc_8], rax
-    mov rdi, [display_ptr]; mov rsi, '9'; call XKeysymToKeycode; mov [kc_9], rax
-    mov rdi, [display_ptr]; mov rsi, 'b'; call XKeysymToKeycode; mov [kc_b], rax
-    mov rdi, [display_ptr]; mov rsi, 'r'; call XKeysymToKeycode; mov [kc_r], rax
-    mov rdi, [display_ptr]; mov rsi, 'p'; call XKeysymToKeycode; mov [kc_p], rax
-    mov rdi, [display_ptr]; mov rsi, 'l'; call XKeysymToKeycode; mov [kc_l], rax
+    mov rdi, [display_ptr]; mov rsi, '1'; call XKeysymToKeycode; movzx eax, al; mov [kc_1], rax
+    mov rdi, [display_ptr]; mov rsi, '2'; call XKeysymToKeycode; movzx eax, al; mov [kc_2], rax
+    mov rdi, [display_ptr]; mov rsi, '3'; call XKeysymToKeycode; movzx eax, al; mov [kc_3], rax
+    mov rdi, [display_ptr]; mov rsi, '4'; call XKeysymToKeycode; movzx eax, al; mov [kc_4], rax
+    mov rdi, [display_ptr]; mov rsi, '5'; call XKeysymToKeycode; movzx eax, al; mov [kc_5], rax
+    mov rdi, [display_ptr]; mov rsi, '6'; call XKeysymToKeycode; movzx eax, al; mov [kc_6], rax
+    mov rdi, [display_ptr]; mov rsi, '8'; call XKeysymToKeycode; movzx eax, al; mov [kc_8], rax
+    mov rdi, [display_ptr]; mov rsi, '9'; call XKeysymToKeycode; movzx eax, al; mov [kc_9], rax
+    mov rdi, [display_ptr]; mov rsi, 'b'; call XKeysymToKeycode; movzx eax, al; mov [kc_b], rax
+    mov rdi, [display_ptr]; mov rsi, 'r'; call XKeysymToKeycode; movzx eax, al; mov [kc_r], rax
+    mov rdi, [display_ptr]; mov rsi, 'p'; call XKeysymToKeycode; movzx eax, al; mov [kc_p], rax
+    mov rdi, [display_ptr]; mov rsi, 'l'; call XKeysymToKeycode; movzx eax, al; mov [kc_l], rax
 
     # Teclas de modo mouse
-    mov rdi, [display_ptr]; mov rsi, 'q'; call XKeysymToKeycode; mov [kc_m_q], rax
-    mov rdi, [display_ptr]; mov rsi, 'w'; call XKeysymToKeycode; mov [kc_m_w], rax
-    mov rdi, [display_ptr]; mov rsi, 'e'; call XKeysymToKeycode; mov [kc_m_e], rax
-    mov rdi, [display_ptr]; mov rsi, 'a'; call XKeysymToKeycode; mov [kc_m_a], rax
-    mov rdi, [display_ptr]; mov rsi, 's'; call XKeysymToKeycode; mov [kc_m_s], rax
-    mov rdi, [display_ptr]; mov rsi, 'd'; call XKeysymToKeycode; mov [kc_m_d], rax
-    mov rdi, [display_ptr]; mov rsi, 'z'; call XKeysymToKeycode; mov [kc_m_z], rax
-    mov rdi, [display_ptr]; mov rsi, 'x'; call XKeysymToKeycode; mov [kc_m_x], rax
-    mov rdi, [display_ptr]; mov rsi, 'c'; call XKeysymToKeycode; mov [kc_m_c], rax
-    mov rdi, [display_ptr]; mov rsi, 'y'; call XKeysymToKeycode; mov [kc_m_y], rax
-    mov rdi, [display_ptr]; mov rsi, 'f'; call XKeysymToKeycode; mov [kc_m_f], rax
-    mov rdi, [display_ptr]; mov rsi, 'j'; call XKeysymToKeycode; mov [kc_m_j], rax
-    mov rdi, [display_ptr]; mov rsi, 'u'; call XKeysymToKeycode; mov [kc_m_u], rax
-    mov rdi, [display_ptr]; mov rsi, 'm'; call XKeysymToKeycode; mov [kc_m_m], rax
-    mov rdi, [display_ptr]; mov rsi, 'g'; call XKeysymToKeycode; mov [kc_m_g], rax
-    mov rdi, [display_ptr]; mov rsi, 'o'; call XKeysymToKeycode; mov [kc_m_o], rax
+    mov rdi, [display_ptr]; mov rsi, 'q'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_q], rax
+    mov rdi, [display_ptr]; mov rsi, 'w'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_w], rax
+    mov rdi, [display_ptr]; mov rsi, 'e'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_e], rax
+    mov rdi, [display_ptr]; mov rsi, 'a'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_a], rax
+    mov rdi, [display_ptr]; mov rsi, 's'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_s], rax
+    mov rdi, [display_ptr]; mov rsi, 'd'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_d], rax
+    mov rdi, [display_ptr]; mov rsi, 'z'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_z], rax
+    mov rdi, [display_ptr]; mov rsi, 'x'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_x], rax
+    mov rdi, [display_ptr]; mov rsi, 'c'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_c], rax
+    mov rdi, [display_ptr]; mov rsi, 'y'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_y], rax
+    mov rdi, [display_ptr]; mov rsi, 'f'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_f], rax
+    mov rdi, [display_ptr]; mov rsi, 'j'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_j], rax
+    mov rdi, [display_ptr]; mov rsi, 'u'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_u], rax
+    mov rdi, [display_ptr]; mov rsi, 'm'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_m], rax
+    mov rdi, [display_ptr]; mov rsi, 'g'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_g], rax
+    mov rdi, [display_ptr]; mov rsi, 'o'; call XKeysymToKeycode; movzx eax, al; mov [kc_m_o], rax
 
     # Teclas multimedia
-    lea rdi, [sym_vol_down]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; mov [kc_vol_down], rax
-    lea rdi, [sym_vol_up]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; mov [kc_vol_up], rax
-    lea rdi, [sym_vol_mute]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; mov [kc_vol_mute], rax
-    lea rdi, [sym_bright_down]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; mov [kc_bright_down], rax
-    lea rdi, [sym_bright_up]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; mov [kc_bright_up], rax
-    lea rdi, [sym_poweroff]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; mov [kc_poweroff], rax
-    lea rdi, [sym_touchpad]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; mov [kc_touchpad], rax
+    lea rdi, [sym_vol_down]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; movzx eax, al; mov [kc_vol_down], rax
+    lea rdi, [sym_vol_up]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; movzx eax, al; mov [kc_vol_up], rax
+    lea rdi, [sym_vol_mute]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; movzx eax, al; mov [kc_vol_mute], rax
+    lea rdi, [sym_bright_down]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; movzx eax, al; mov [kc_bright_down], rax
+    lea rdi, [sym_bright_up]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; movzx eax, al; mov [kc_bright_up], rax
+    lea rdi, [sym_poweroff]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; movzx eax, al; mov [kc_poweroff], rax
+    lea rdi, [sym_touchpad]; call XStringToKeysym; mov rdi, [display_ptr]; mov rsi, rax; call XKeysymToKeycode; movzx eax, al; mov [kc_touchpad], rax
 
     mov rsp, rbp
     pop rbp
