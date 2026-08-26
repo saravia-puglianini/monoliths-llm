@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light">
+  <title>Künstliche Intelligenz der 80er Jahre</title>
+  <style>
+    :root {
+      --paper: #f5f3ea;
+      --panel: #fffef9;
+      --ink: #24301f;
+      --muted: #687260;
+      --accent: #416b2a;
+      --line: #cbd2c4;
+      --danger: #a33c24;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 50% -20%, #ffffff 0, transparent 48%),
+        var(--paper);
+      color: var(--ink);
+      font: 16px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .app {
+      width: min(900px, 100%);
+      min-height: 100%;
+      margin: auto;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 22px clamp(14px, 4vw, 36px);
+    }
+    header {
+      display: flex;
+      gap: 16px;
+      align-items: baseline;
+      justify-content: space-between;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .header-actions { display: flex; gap: 12px; align-items: center; }
+    h1 { margin: 0; color: var(--accent); font-size: 1.05rem; letter-spacing: .16em; }
+    .title-group { display: flex; align-items: center; gap: 10px; }
+    #info {
+      width: 28px; min-height: 28px; padding: 0; border-radius: 50%;
+      background: transparent; color: var(--accent); font-weight: bold;
+    }
+    .status { color: var(--muted); font-size: .78rem; white-space: nowrap; }
+    .status::before { content: "●"; color: var(--accent); margin-right: 7px; }
+    #chat {
+      overflow-y: auto;
+      padding: 28px 0 32px;
+      scroll-behavior: smooth;
+    }
+    .message {
+      display: grid;
+      grid-template-columns: 6.5rem 1fr;
+      gap: 16px;
+      margin: 0 0 22px;
+      animation: arrive .18s ease-out;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .message:hover { background: #416b2a0a; }
+    .message:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    @keyframes arrive { from { opacity: 0; transform: translateY(4px); } }
+    .who { color: var(--muted); font-size: .78rem; padding-top: .2rem; }
+    .message.user .who { color: #626a5d; }
+    .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .ai .text::before { content: "> "; color: var(--accent); }
+    .user .text { color: #151a13; }
+    form {
+      border-top: 1px solid var(--line);
+      padding-top: 15px;
+    }
+    .input-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: end; }
+    textarea {
+      width: 100%; min-height: 50px; max-height: 170px; resize: none;
+      border: 1px solid var(--line); border-radius: 6px;
+      padding: 13px 14px; outline: none;
+      background: var(--panel); color: var(--ink); font: inherit;
+    }
+    textarea[readonly] { cursor: default; }
+    textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #416b2a1c; }
+    button {
+      min-height: 50px; border: 1px solid var(--line); border-radius: 6px;
+      padding: 0 17px; background: #e7ecdf; color: var(--accent);
+      font: inherit; cursor: pointer;
+    }
+    button:hover { background: #dce5d2; }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    #clear, #mic { width: 50px; padding: 0; font-size: 1.25rem; }
+    #clear:hover { color: var(--danger); background: #f2dfda; }
+    #mic.listening { color: #fff; background: var(--danger); border-color: var(--danger); animation: pulse 1.25s infinite; }
+    #mic:disabled { opacity: .45; cursor: not-allowed; }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 5px #a33c2425; } }
+    .meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 9px; color: var(--muted); font-size: .72rem; }
+    .settings { display: grid; grid-template-columns: minmax(180px, 320px); gap: 10px; margin-bottom: 10px; }
+    select {
+      width: 100%; border: 1px solid var(--line); border-radius: 6px;
+      padding: 10px 12px; background: var(--panel); color: var(--ink); font: inherit;
+    }
+    .notice { color: var(--muted); font-size: .72rem; margin: 0 0 10px; }
+    .notice.error { color: var(--danger); }
+    #reset { min-height: auto; padding: 0; border: 0; background: none; color: var(--muted); font-size: inherit; }
+    #reset:hover { color: var(--danger); }
+    #choose-language { min-height: auto; padding: 0; border: 0; background: none; color: var(--muted); font-size: .78rem; }
+    #choose-language:hover { color: var(--accent); }
+    dialog {
+      width: min(440px, calc(100% - 28px)); border: 1px solid var(--line); border-radius: 10px;
+      padding: 0; background: var(--panel); color: var(--ink); box-shadow: 0 18px 60px #18201035;
+    }
+    dialog::backdrop { background: #18201088; backdrop-filter: blur(2px); }
+    .language-dialog { padding: 24px; }
+    .language-dialog h2 { margin: 0 0 8px; color: var(--accent); font-size: 1.05rem; }
+    .language-dialog p { margin: 0 0 18px; color: var(--muted); font-size: .85rem; }
+    .language-dialog label { display: block; margin-bottom: 7px; font-size: .78rem; }
+    .language-dialog button { width: 100%; margin-top: 14px; }
+    .translation-original {
+      margin: 14px 0; padding: 12px; border-left: 3px solid var(--line);
+      background: var(--paper); white-space: pre-wrap; overflow-wrap: anywhere;
+    }
+    .translation-result {
+      min-height: 3rem; margin: 14px 0; white-space: pre-wrap; overflow-wrap: anywhere;
+    }
+    @media (max-width: 560px) {
+      .app { padding-top: 14px; }
+      .message { grid-template-columns: 1fr; gap: 2px; margin-bottom: 19px; }
+      .who { padding: 0; }
+      .input-row { grid-template-columns: 1fr; }
+      .settings { grid-template-columns: 1fr; }
+      #send { min-height: 42px; }
+      #clear, #mic { width: 100%; min-height: 42px; }
+      .meta span:first-child { display: none; }
+    }
+  </style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <div class="title-group">
+      <h1>→ KÜNSTLICHE INTELLIGENZ</h1>
+      <button id="info" type="button" title="Informationen über diese Anwendung" aria-label="Informationen über diese Anwendung">?</button>
+    </div>
+    <div class="header-actions">
+      <div class="status">ENGLISCHER KERN · DEUTSCHE AUSGABE</div>
+    </div>
+  </header>
+
+  <section id="chat" aria-live="polite" aria-label="Gespräch"></section>
+
+  <form id="form" autocomplete="off">
+    <p id="notice" class="notice">Die deutsche Ein- und Ausgabe wird intern über den englischen Kern verarbeitet.</p>
+    <div class="input-row">
+      <textarea id="input" rows="1" maxlength="1500" readonly inputmode="none" tabindex="-1" aria-label="Nur durch Sprache erzeugte Transkription" placeholder="Drücken Sie das Mikrofon und sprechen Sie…"></textarea>
+      <button id="clear" type="button" title="Gesamten Text löschen" aria-label="Gesamten Text löschen">⌫</button>
+      <button id="mic" type="button" title="Mit dem Mikrofon diktieren" aria-label="Diktat starten" aria-pressed="false">🎙</button>
+      <button id="send" type="submit">Senden ↵</button>
+    </div>
+    <div class="meta">
+      <span>Drücken Sie das Mikrofon, sprechen Sie und klicken Sie auf Senden</span>
+      <button id="reset" type="button">Sitzung neu starten</button>
+    </div>
+  </form>
+</main>
+
+<dialog id="info-dialog" aria-labelledby="info-title">
+  <form class="language-dialog" method="dialog">
+    <h2 id="info-title">Über diese Anwendung</h2>
+    <p><strong>doctor.el</strong> ist ein in GNU Emacs enthaltenes Gesprächsprogramm, das ursprünglich von <strong>Sidney Markowitz und Richard Stallman</strong> geschrieben und von ELIZA inspiriert wurde. Es simuliert einen Psychotherapeuten mithilfe von Sprachregeln und Mustern, ohne wirklich zu verstehen, was der Benutzer sagt. Es ist ein kleines, aber faszinierendes Beispiel für frühe Versuche, einen Computer wie einen menschlichen Gesprächspartner erscheinen zu lassen.</p>
+    <button type="submit">Schließen</button>
+  </form>
+</dialog>
+
+<dialog id="translation-dialog" aria-labelledby="translation-title">
+  <form class="language-dialog" method="dialog">
+    <h2 id="translation-title">Spanische Übersetzung</h2>
+    <p>Eine kleine Hilfe zur Kontrolle des Gesprächs.</p>
+    <div id="translation-original" class="translation-original" lang="de"></div>
+    <div id="translation-result" class="translation-result" lang="es" aria-live="polite"></div>
+    <button type="submit">Schließen</button>
+  </form>
+</dialog>
+
+<script>
+/*
+ * Browser port inspired by the classic English GNU Emacs ELIZA-style idea:
+ * Rogerian phrase-production program. English is the only internal language.
+ * The public Google Translate web endpoint is an optional transport around it.
+ */
+(() => {
+  "use strict";
+
+  // Adaptación frontal inspirada en el programa ELIZA incluido en GNU Emacs.
+  // No usa modelos, servidores, cookies, red ni bibliotecas externas.
+  const $ = selector => document.querySelector(selector);
+  const chat = $("#chat");
+  const input = $("#input");
+  const form = $("#form");
+
+  const language = { value: "de" }, notice = $("#notice");
+  const infoDialog = $("#info-dialog");
+  const translationDialog = $("#translation-dialog");
+  const translationOriginal = $("#translation-original");
+  const translationResult = $("#translation-result");
+  const clearButton = $("#clear");
+  const micButton = $("#mic");
+  const languages = { de:"Deutsch" };
+
+  const speechLocales = { de:"de-DE" };
+
+  const state = {
+    history: [],
+    replies: Object.create(null),
+    turns: 0,
+    lastTopic: "",
+    lastResponse: ""
+  };
+
+  const banks = {
+    hello:["How do you do?","Hello.","Hi. What would you like to discuss?","Hello. Please go on."],
+    how:["I am fine. Please describe how you are.","Let us talk about you. How do you feel today?"],
+    bye:["Goodbye.","See you later.","Fine, we will talk another time.","My secretary will send you a bill."],
+    short:["Can you elaborate on that?","Please continue.","Go on, do not be afraid.","I need a little more detail.","And?","Why must you respond so briefly?"],
+    repeat:["You have said that before. Why do you return to it?","Earlier you said something very similar. Why is it important?","Do you worry about repeating yourself?"],
+    question:["What do you think?","I will ask the questions, if you do not mind.","I might ask the same thing, but what do you believe?","Please try to answer that question yourself."],
+    family:["Tell me something about your family.","How do you feel about your family?","You seem to dwell on your family.","What family memory comes to mind?"],
+    school:["Describe your work or school in more detail.","Could this have something to do with your career?","How do you feel when you are at work?","What would you change about that situation?"],
+    machine:["You seem to have your mind on computers.","Does talking to a program bother you?","Machines do not feel, but you do. What do you feel now?","What does artificial intelligence mean to you?"],
+    fear:["When did you first feel afraid of {found}?","What do you think might happen?","You seem terrified by {found}.","Does that fear seem familiar?"],
+    mood:["What causes you to be {found}?","Are you {found} often?","What changes when you feel {found}?","Why do you think you are {found}?"],
+    death:["I am concerned that you mention death. Are you thinking of harming yourself right now?","That sounds serious. If danger is immediate, contact local emergency services or someone physically near you. Are you safe now?","I want to understand: is this an abstract thought, or are you considering harming yourself?"],
+    sex:["Describe your feelings about your sex life.","Are you satisfied with your intimate relationships?","What emotions arise when you discuss this?"],
+    drugs:["Do you use {found} often?","Are you worried about depending on {found}?","What effect does {found} have on your life?"],
+    alcohol:["Describe your drinking habits.","Do you drink often?","What do you feel before and after drinking?"],
+    foul:["Please watch your language.","Is your anger directed at me?","Describe why you need to express it that way."],
+    desire:["Why do you want {object}?","What would happen if you got {object}?","When did you first desire {object}?","What prevents you from getting {object}?"],
+    because:["Is that the real reason?","What other reasons might there be?","Does that explain anything else?","Are you certain about that causal connection?"],
+    negate:["Why not?","What makes you answer negatively?","Does it bother you that I ask?","How is that?"],
+    you:["We are discussing you, not me.","Why are you interested in what I might feel?","What would it mean to you if that were true?","Perhaps you attribute to me something you feel yourself."],
+    memory:["Earlier you said, “{memory}.” Would you like to return to that?","You mentioned that {memory}. How does that relate to how you feel now?","Do you still think that {memory}?"],
+    fallback:["Why do you say that {reflected}?","What makes you believe that {reflected}?","Please go into more detail.","I see... Please continue.","How does that make you feel?","What does that suggest to you?","Can you relate that to something in your childhood?","Perhaps your concerns are related to this."]
+  };
+
+  const topics = [
+    ["death",/\b(suicid\w*|kill\w*|death|die|dead|harm myself|end my life)\b/u],
+    ["foul",/\b(shit|fuck|bastard|asshole|idiot|stupid)\b/u],
+    ["family",/\b(family|mother|father|mom|mum|dad|sister|brother|wife|husband|grandparent|child)\w*\b/u],
+    ["school",/\b(work|company|office|boss|career|school|university|exam|teacher)\b/u],
+    ["machine",/\b(computer|machine|artificial intelligence|\bai\b|linux|gnu|emacs|program)\b/u],
+    ["fear",/\b(fear|afraid|frightened|terrified|scared|phobia|panic)\b/u],
+    ["sex",/\b(sex|sexual|partner|kiss|condom|intimacy)\b/u],
+    ["drugs",/\b(drug|cocaine|marijuana|cannabis|weed|pills)\b/u],
+    ["alcohol",/\b(alcohol|wine|beer|rum|gin|drunk)\b/u]
+  ];
+  const moods = ["frustrated","depressed","upset","sad","excited","worried","lonely","angry","jealous","happy","anxious"];
+
+  const normalize = text => text
+    .toLocaleLowerCase("en")
+    .normalize("NFC")
+    .replace(/[¿?¡!.,;:()"“”]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  function rotate(name) {
+    const list = banks[name];
+    const index = state.replies[name] || 0;
+    state.replies[name] = (index + 1) % list.length;
+    return list[index];
+  }
+
+  function reflect(text) {
+    const phrases = [["i am","you are"],["i was","you were"],["i have","you have"],
+      ["i feel","you feel"],["i want","you want"],["i need","you need"],["i can","you can"],
+      ["my","your"],["mine","yours"],["myself","yourself"],["me","you"],["i","you"],
+      ["you are","I am"],["you were","I was"],["your","my"],["yours","mine"],["you","I"]];
+    let result = ` ${normalize(text)} `;
+    phrases.forEach(([from], i) => {
+      result = result.replace(new RegExp(`\\b${from}\\b`, "gu"), ` __REFLECT_${i}__ `);
+    });
+    phrases.forEach(([, to], i) => {
+      result = result.replace(new RegExp(`__REFLECT_${i}__`, "g"), to);
+    });
+    result = result.replace(/\s+/g, " ");
+    return result.trim();
+  }
+
+  function fill(template, data = {}) {
+    return template.replace(/\{(\w+)\}/g, (_, key) => data[key] || "that");
+  }
+
+  function remember(text) {
+    if (text.length > 12 && !state.history.includes(text)) {
+      state.history.push(text);
+      if (state.history.length > 12) state.history.shift();
+    }
+  }
+
+  function answer(raw) {
+    const text = normalize(raw);
+    const words = text ? text.split(" ") : [];
+    state.turns++;
+
+    if (!text) return "Please say something.";
+    if (/^(goodbye|bye|farewell|see you|quit|leave)$/u.test(text)) return rotate("bye");
+    if (/^(hello|hi|howdy|greetings)$/u.test(text)) return rotate("hello");
+    if (/^(how are you|how is it going|what's up)$/u.test(text)) return rotate("how");
+
+    const duplicate = state.history.some(old => old === text || (text.length > 18 && similarity(old, text) > .86));
+    if (duplicate) return rotate("repeat");
+
+    const topic = topics.find(([, pattern]) => pattern.test(text));
+    if (topic) {
+      const [name, pattern] = topic;
+      const found = (text.match(pattern) || ["that"])[0];
+      state.lastTopic = name;
+      remember(text);
+      return fill(rotate(name), { found });
+    }
+
+    const mood = moods.find(word => words.includes(word));
+    if (mood) {
+      remember(text);
+      return fill(rotate("mood"), { found: mood });
+    }
+
+    const desire = text.match(/\b(?:i want|i wish|i need|i hope|i would like)\s+(.+)/u);
+    if (desire) {
+      remember(text);
+      return fill(rotate("desire"), { object: reflect(desire[1]) });
+    }
+
+    if (/\bbecause\b/u.test(text)) { remember(text); return rotate("because"); }
+    if (/^(no|never|i cannot|i can't|i do not|i don't)\b/u.test(text)) { remember(text); return rotate("negate"); }
+    if (/^(you|your|artificial intelligence|ai)\b/u.test(text)) { remember(text); return rotate("you"); }
+    if (raw.includes("?") || /^(why|how|when|where|who|can|is|are|do|does)\b/u.test(text)) {
+      remember(text); return rotate("question");
+    }
+    if (words.length < 3) { remember(text); return rotate("short"); }
+
+    // De vez en cuando recupera una frase previa, como el programa clásico.
+    if (state.history.length >= 3 && state.turns % 5 === 0) {
+      const memory = state.history[(state.turns + state.history.length) % state.history.length];
+      remember(text);
+      return fill(rotate("memory"), { memory: reflect(memory) });
+    }
+
+    const reflected = reflect(text);
+    remember(text);
+    return fill(rotate("fallback"), { reflected });
+  }
+
+  function similarity(a, b) {
+    const aa = new Set(a.split(" ")), bb = new Set(b.split(" "));
+    let common = 0;
+    aa.forEach(word => { if (bb.has(word)) common++; });
+    return common / Math.max(aa.size, bb.size, 1);
+  }
+
+  // Removes adjacent repeated words or phrases while preserving their first spelling.
+  // Example: "Esto es Esto es una prueba" becomes "Esto es una prueba".
+  function removeConsecutiveDuplicates(text) {
+    const tokens = text.trim().split(/\s+/u).filter(Boolean);
+    const clean = token => token.toLocaleLowerCase(language.value)
+      .normalize("NFD").replace(/\p{M}/gu, "").replace(/[^\p{L}\p{N}]/gu, "");
+    const normalized = tokens.map(clean);
+    const result = [];
+    const resultNormalized = [];
+
+    for (let index = 0; index < tokens.length;) {
+      let repeatedLength = 0;
+      const maxLength = Math.min(index, tokens.length - index);
+
+      // Prefer the longest repeated block ending exactly where the new one begins.
+      for (let length = maxLength; length >= 1; length--) {
+        let equal = true;
+        for (let offset = 0; offset < length; offset++) {
+          if (resultNormalized[resultNormalized.length - length + offset] !== normalized[index + offset]) {
+            equal = false;
+            break;
+          }
+        }
+        if (equal) {
+          repeatedLength = length;
+          break;
+        }
+      }
+
+      if (repeatedLength) {
+        index += repeatedLength;
+      } else {
+        result.push(tokens[index]);
+        resultNormalized.push(normalized[index]);
+        index++;
+      }
+    }
+    return result.join(" ");
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const isIOS = /iPad|iPhone|iPod/u.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  let recognition = null;
+  let dictationBase = "";
+  let microphoneAccessConfirmed = false;
+
+  async function requestMicrophoneAccess() {
+    if (!window.isSecureContext) {
+      throw new Error("Öffnen Sie diese Seite über HTTPS, um das Mikrofon zu verwenden.");
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Dieser Browser erlaubt auf dieser Seite keinen Zugriff auf das Mikrofon.");
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(track => track.stop());
+  }
+
+  function stopDictation() {
+    if (recognition) {
+      try { recognition.stop(); } catch (_) { /* It was not running. */ }
+    }
+  }
+
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    // Safari/iOS is more reliable with one utterance per microphone press.
+    recognition.continuous = !isIOS;
+    recognition.interimResults = true;
+
+    recognition.addEventListener("start", () => {
+      micButton.classList.add("listening");
+      micButton.setAttribute("aria-pressed", "true");
+      micButton.setAttribute("aria-label", "Diktat beenden");
+      micButton.title = "Diktat beenden";
+      setNotice("Ich höre auf Deutsch zu…");
+    });
+
+    recognition.addEventListener("result", event => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) transcript += `${event.results[i][0].transcript} `;
+      input.value = removeConsecutiveDuplicates(`${dictationBase} ${transcript}`).slice(0, 1500);
+      input.style.height = "auto";
+      input.style.height = `${Math.min(input.scrollHeight, 170)}px`;
+    });
+
+    recognition.addEventListener("error", event => {
+      const messages = {
+        "not-allowed":"Der Browser hat keine Berechtigung, das Mikrofon zu verwenden.",
+        "service-not-allowed":"Safari darf den Spracherkennungsdienst nicht verwenden.",
+        "no-speech":"Es wurde keine Sprache erkannt.",
+        "audio-capture":"Es wurde kein verfügbares Mikrofon gefunden.",
+        "network":"Der Spracherkennungsdienst von Safari ist nicht verfügbar. Prüfen Sie die Verbindung und ob die Diktierfunktion unter Einstellungen > Allgemein > Tastatur aktiviert ist.",
+        "aborted":"Die Spracherkennung wurde unterbrochen. Drücken Sie das Mikrofon, um es erneut zu versuchen."
+      };
+      setNotice(messages[event.error] || `Spracherkennungsfehler: ${event.error}.`, true);
+    });
+
+    recognition.addEventListener("end", () => {
+      micButton.classList.remove("listening");
+      micButton.setAttribute("aria-pressed", "false");
+      micButton.setAttribute("aria-label", "Diktat starten");
+      micButton.title = "Mit dem Mikrofon diktieren";
+      if (!notice.classList.contains("error")) setNotice("Diktat beendet · Deutsch.");
+    });
+
+    micButton.addEventListener("click", async () => {
+      if (micButton.classList.contains("listening")) return stopDictation();
+
+      // On iOS, recognition.start() must run directly inside a user gesture.
+      // Request microphone permission on the first press and start recognition
+      // synchronously on the following press, without crossing an await boundary.
+      if (!microphoneAccessConfirmed) {
+        micButton.disabled = true;
+        setNotice("Mikrofonberechtigung wird angefordert…");
+        try {
+          await requestMicrophoneAccess();
+          microphoneAccessConfirmed = true;
+          setNotice("Berechtigung erteilt. Drücken Sie das Mikrofon erneut, um zu sprechen.");
+        } catch (error) {
+          const permissionErrors = {
+            NotAllowedError:"Safari hat das Mikrofon blockiert. Wählen Sie unter Einstellungen > Safari > Mikrofon die Option Fragen oder Erlauben.",
+            SecurityError:"Safari erlaubt das Mikrofon nur auf einer sicheren HTTPS-Seite.",
+            NotFoundError:"Es wurde kein verfügbares Mikrofon gefunden.",
+            NotReadableError:"Das Mikrofon wird von einer anderen Anwendung verwendet."
+          };
+          setNotice(permissionErrors[error.name] || error.message || "Das Mikrofon konnte nicht autorisiert werden.", true);
+        } finally {
+          micButton.disabled = false;
+          micButton.focus();
+        }
+        return;
+      }
+
+      dictationBase = removeConsecutiveDuplicates(input.value);
+      recognition.lang = speechLocales[language.value] || language.value;
+      try {
+        // Keep this call synchronous: Safari ties it to the current tap.
+        recognition.start();
+      } catch (error) {
+        setNotice(error.name === "InvalidStateError"
+          ? "Die Spracherkennung wird bereits gestartet. Bitte warten Sie einen Moment."
+          : error.message || "Safari konnte die Spracherkennung nicht starten.", true);
+      }
+    });
+  } else {
+    micButton.disabled = true;
+    micButton.title = "Dieser Browser bietet keine Spracherkennung";
+  }
+
+  async function translate(text, source, target) {
+    if (source === target) return text;
+    const query = new URLSearchParams({client:"gtx",sl:source,tl:target,dt:"t",q:text});
+    const response = await fetch(`https://translate.googleapis.com/translate_a/single?${query}`);
+    if (!response.ok) throw new Error(`Die Übersetzung ist fehlgeschlagen (${response.status}).`);
+    const payload = await response.json();
+    const value = Array.isArray(payload?.[0])
+      ? payload[0].map(part => Array.isArray(part) ? part[0] : "").join("")
+      : "";
+    if (!value) throw new Error("Der Übersetzungsdienst hat keinen Text zurückgegeben.");
+    return value;
+  }
+
+  function setNotice(message, error=false) { notice.textContent=message; notice.classList.toggle("error",error); }
+
+  function addMessage(who, text) {
+    const article = document.createElement("article");
+    article.className = `message ${who}`;
+    article.tabIndex = 0;
+    article.setAttribute("role", "button");
+    article.setAttribute("aria-label", "Spanische Übersetzung anzeigen");
+    const label = document.createElement("div");
+    label.className = "who";
+    label.textContent = who === "ai" ? "→ Künstliche Intelligenz" : "BENUTZER";
+    const content = document.createElement("div");
+    content.className = "text";
+    content.textContent = text;
+    article.append(label, content);
+    article.addEventListener("click", () => showSpanishTranslation(text));
+    article.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        showSpanishTranslation(text);
+      }
+    });
+    chat.append(article);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  const spanishTranslationCache = new Map();
+  let translationRequestId = 0;
+
+  async function showSpanishTranslation(text) {
+    const requestId = ++translationRequestId;
+    translationOriginal.textContent = text;
+    translationResult.textContent = "Übersetzung wird geladen…";
+    translationDialog.showModal();
+    try {
+      let translated = spanishTranslationCache.get(text);
+      if (!translated) {
+        translated = await translate(text, "de", "es");
+        spanishTranslationCache.set(text, translated);
+      }
+      if (requestId === translationRequestId) translationResult.textContent = translated;
+    } catch (error) {
+      if (requestId === translationRequestId) {
+        translationResult.textContent = `Die spanische Übersetzung ist nicht verfügbar: ${error.message}`;
+      }
+    }
+  }
+
+  function speak(text) {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    let spokenText = text;
+    spokenText = spokenText.replace(/GNU Emacs/giu, language.value === "es" ? "Ñu Emacs" : "New Emacs");
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    utterance.lang = speechLocales[language.value] || language.value;
+    const voices = window.speechSynthesis.getVoices();
+    const locale = utterance.lang.toLocaleLowerCase();
+    utterance.voice = voices.find(voice => voice.lang.toLocaleLowerCase() === locale)
+      || voices.find(voice => voice.lang.toLocaleLowerCase().split("-")[0] === locale.split("-")[0])
+      || null;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function addAIMessage(text) {
+    addMessage("ai", text);
+    speak(text);
+  }
+
+  async function start() {
+    chat.replaceChildren();
+    state.history.length = 0;
+    state.turns = 0;
+    state.lastTopic = "";
+    state.replies = Object.create(null);
+    const welcome="Sind wir bereit für die Psychotherapie? Erzählen Sie mir, was ist das Problem? Ich werde versuchen, Ihnen zu helfen.";
+    try { addAIMessage(welcome); setNotice("Englischer Kern · deutsche Ein- und Ausgabe."); }
+    catch(error) { addAIMessage(welcome); setNotice(error.message,true); }
+    if (!recognition) setNotice("Diese Safari-Version bietet keine Spracherkennung im Web. Aktualisieren Sie iOS oder öffnen Sie die Seite in einem kompatiblen Browser.", true);
+    input.value = "";
+    micButton.focus();
+  }
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    stopDictation();
+    const raw = input.value.trim();
+    if (!raw) return;
+    addMessage("user", raw);
+    input.value = "";
+    input.style.height = "auto";
+    $("#send").disabled=true;
+    try {
+      setNotice("Die Eingabe wird verarbeitet…");
+      const englishInput=await translate(raw,language.value,"en");
+      const englishResponse=answer(englishInput);
+      state.lastResponse=englishResponse;
+      setNotice("Die Antwort wird ins Deutsche übertragen…");
+      addAIMessage(await translate(englishResponse,"en",language.value));
+      setNotice("Englischer Kern · deutsche Ein- und Ausgabe.");
+    } catch(error) { addAIMessage(`[Übersetzungsfehler] ${error.message}`); setNotice(error.message,true); }
+    finally { $("#send").disabled=false; micButton.focus(); }
+  });
+
+  input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 170)}px`;
+  });
+  clearButton.addEventListener("click", () => {
+    stopDictation();
+    dictationBase = "";
+    input.value = "";
+    input.style.height = "auto";
+    micButton.focus();
+  });
+  $("#reset").addEventListener("click", start);
+  $("#info").addEventListener("click", () => infoDialog.showModal());
+  start();
+})();
+</script>
+</body>
+</html>

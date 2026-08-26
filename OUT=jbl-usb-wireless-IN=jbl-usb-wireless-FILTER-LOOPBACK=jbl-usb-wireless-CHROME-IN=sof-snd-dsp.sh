@@ -280,12 +280,12 @@ amixer -c Wireless sset Headphone 100% unmute 2>>"$LOG_FILE" || amixer -c Wirele
 
 log "INFO" "Paso 7: Guardando pipeline con Filtro Anti-Ruido en /tmp/jbl_pipeline..."
 cat << 'EOP' > /tmp/jbl_pipeline
-alsasrc device=plug:dsnoop_mic buffer-time=500 latency-time=250 blocksize=16 ! audio/x-raw, format=S16LE, rate=48000, channels=1 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=2.5 ! alsasink device=plug:dmix_speaker sync=false buffer-time=500 latency-time=250 blocksize=16
+alsasrc device=plug:dsnoop_mic buffer-time=500 latency-time=250 blocksize=16 ! audio/x-raw, format=S16LE, rate=48000, channels=1 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=2.9 ! alsasink device=plug:dmix_speaker sync=false buffer-time=500 latency-time=250 blocksize=16
 EOP
 chmod 666 /tmp/jbl_pipeline 2>/dev/null || true
 
 log "INFO" "Paso 8: Iniciando loopback con Filtro Anti-Ruido en tiempo real..."
-nohup gst-launch-1.0 -q alsasrc device=plug:dsnoop_mic buffer-time=500 latency-time=250 blocksize=16 ! audio/x-raw, format=S16LE, rate=48000, channels=1 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=2.5 ! alsasink device=plug:dmix_speaker sync=false buffer-time=500 latency-time=250 blocksize=16 </dev/null >/dev/null 2>&1 &
+nohup gst-launch-1.0 -q alsasrc device=plug:dsnoop_mic buffer-time=500 latency-time=250 blocksize=16 ! audio/x-raw, format=S16LE, rate=48000, channels=1 ! audioconvert ! audiocheblimit mode=high-pass cutoff=150 poles=4 ! audiodynamic mode=expander threshold=0.03 ratio=10.0 characteristics=soft-knee ! audioconvert ! volume volume=2.9 ! alsasink device=plug:dmix_speaker sync=false buffer-time=500 latency-time=250 blocksize=16 </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 sleep 0.5
 

@@ -23,6 +23,12 @@ KeyCode tab_code;
 KeyCode alt_l_code, alt_r_code, meta_l_code, meta_r_code, super_l_code, super_r_code;
 Window ignore_unmap_window = None;
 
+// Cache X11 atoms once to avoid repeated server round trips in hot paths.
+Atom atom_net_active, atom_net_wm_name, atom_net_wm_type, atom_utf8_string;
+Atom atom_type_dropdown, atom_type_popup, atom_type_menu, atom_type_tooltip;
+Atom atom_type_notification, atom_type_combo, atom_type_utility, atom_type_dialog;
+Atom atom_type_dock, atom_type_splash, atom_type_normal, atom_motif_wm_hints;
+
 // Window list in MRU order
 Window managed_windows[MAX_WINDOWS];
 int num_managed = 0;
@@ -63,8 +69,8 @@ void get_window_title(Window w, char *buf, int max_len) {
     int actual_format;
     unsigned long nitems, bytes_after;
     unsigned char *prop = NULL;
-    if (XGetWindowProperty(dpy, w, XInternAtom(dpy, "_NET_WM_NAME", False), 0, 1024, False,
-                           XInternAtom(dpy, "UTF8_STRING", False), &actual_type, &actual_format,
+    if (XGetWindowProperty(dpy, w, atom_net_wm_name, 0, 1024, False,
+                           atom_utf8_string, &actual_type, &actual_format,
                            &nitems, &bytes_after, &prop) == Success && prop) {
         snprintf(buf, max_len, "%s", prop);
         XFree(prop);
@@ -114,7 +120,15 @@ void remove_window(Window w) {
 }
 
 void add_window(Window w) {
-    remove_window(w);
+    // Reorder an existing entry without exporting the list twice.
+    for (int i = 0; i < num_managed; i++) {
+        if (managed_windows[i] == w) {
+            memmove(&managed_windows[i], &managed_windows[i + 1],
+                    (num_managed - i - 1) * sizeof(Window));
+            num_managed--;
+            break;
+        }
+    }
     if (num_managed < MAX_WINDOWS) {
         memmove(&managed_windows[1], &managed_windows[0], num_managed * sizeof(Window));
         managed_windows[0] = w;
@@ -136,7 +150,7 @@ void log_wm(const char *format, ...) {
         vfprintf(log_file, format, args);
         va_end(args);
         fprintf(log_file, "\n");
-        fflush(log_file);
+        if (getenv("ALT_TAB_SYNC_LOG")) fflush(log_file);
     }
 }
 
@@ -184,31 +198,17 @@ int is_manageable(Window w) {
     int actual_format;
     unsigned long nitems, bytes_after;
     unsigned char *prop = NULL;
-    Atom net_wm_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
-
-    if (XGetWindowProperty(dpy, w, net_wm_type, 0, 32, False,
+    if (XGetWindowProperty(dpy, w, atom_net_wm_type, 0, 32, False,
                            XA_ATOM, &actual_type, &actual_format,
                            &nitems, &bytes_after, &prop) == Success && prop) {
         Atom *types = (Atom *)prop;
-        Atom type_dropdown = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU", False);
-        Atom type_popup = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_POPUP_MENU", False);
-        Atom type_menu = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_MENU", False);
-        Atom type_tooltip = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_TOOLTIP", False);
-        Atom type_notification = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_NOTIFICATION", False);
-        Atom type_combo = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_COMBO", False);
-        Atom type_utility = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_UTILITY", False);
-        Atom type_dialog = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
-        Atom type_dock = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DOCK", False);
-        Atom type_splash = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_SPLASH", False);
-        Atom type_normal = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_NORMAL", False);
-
         int has_non_normal = 0;
         for (unsigned long i = 0; i < nitems; i++) {
-            if (types[i] == type_dropdown || types[i] == type_popup ||
-                types[i] == type_menu || types[i] == type_tooltip ||
-                types[i] == type_notification || types[i] == type_combo ||
-                types[i] == type_utility || types[i] == type_dialog ||
-                types[i] == type_dock || types[i] == type_splash) {
+            if (types[i] == atom_type_dropdown || types[i] == atom_type_popup ||
+                types[i] == atom_type_menu || types[i] == atom_type_tooltip ||
+                types[i] == atom_type_notification || types[i] == atom_type_combo ||
+                types[i] == atom_type_utility || types[i] == atom_type_dialog ||
+                types[i] == atom_type_dock || types[i] == atom_type_splash) {
                 has_non_normal = 1;
                 break;
             }
@@ -221,7 +221,7 @@ int is_manageable(Window w) {
 
         int has_normal = 0;
         for (unsigned long i = 0; i < nitems; i++) {
-            if (types[i] == type_normal) {
+            if (types[i] == atom_type_normal) {
                 has_normal = 1;
                 break;
             }
@@ -234,9 +234,8 @@ int is_manageable(Window w) {
     }
 
     // Check Motif Hints (dialogs/popups without decorations)
-    Atom motif_wm_hints = XInternAtom(dpy, "_MOTIF_WM_HINTS", False);
-    if (XGetWindowProperty(dpy, w, motif_wm_hints, 0, 20, False,
-                           motif_wm_hints, &actual_type, &actual_format,
+    if (XGetWindowProperty(dpy, w, atom_motif_wm_hints, 0, 20, False,
+                           atom_motif_wm_hints, &actual_type, &actual_format,
                            &nitems, &bytes_after, &prop) == Success && prop) {
         if (nitems >= 5) {
             unsigned long *hints = (unsigned long *)prop;
@@ -273,6 +272,8 @@ void maximize_window(Window w) {
 }
 
 void glitch_window(Window w) {
+    const char *enabled = getenv("ALT_TAB_GLITCH");
+    if (enabled && strcmp(enabled, "0") == 0) return;
     XWindowAttributes attrs;
     if (!XGetWindowAttributes(dpy, w, &attrs) || attrs.map_state != IsViewable) return;
 
@@ -308,8 +309,7 @@ void glitch_window(Window w) {
 }
 
 void set_active_window_prop(Window w) {
-    Atom net_active = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
-    XChangeProperty(dpy, root, net_active, XA_WINDOW, 32, PropModeReplace,
+    XChangeProperty(dpy, root, atom_net_active, XA_WINDOW, 32, PropModeReplace,
                     (unsigned char *)&w, 1);
 }
 
@@ -365,21 +365,27 @@ int main() {
     screen_height = DisplayHeight(dpy, screen);
 
     Atom net_supported = XInternAtom(dpy, "_NET_SUPPORTED", False);
-    Atom net_active = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
-    Atom net_wm_name = XInternAtom(dpy, "_NET_WM_NAME", False);
-    Atom net_wm_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
-    Atom net_wm_type_normal = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_NORMAL", False);
-    Atom net_wm_type_dropdown = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU", False);
-    Atom net_wm_type_popup = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_POPUP_MENU", False);
-    Atom net_wm_type_menu = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_MENU", False);
-    Atom net_wm_type_tooltip = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_TOOLTIP", False);
-    Atom net_wm_type_dialog = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
-    Atom net_wm_type_utility = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_UTILITY", False);
+    atom_net_active = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
+    atom_net_wm_name = XInternAtom(dpy, "_NET_WM_NAME", False);
+    atom_net_wm_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
+    atom_utf8_string = XInternAtom(dpy, "UTF8_STRING", False);
+    atom_type_normal = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_NORMAL", False);
+    atom_type_dropdown = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU", False);
+    atom_type_popup = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_POPUP_MENU", False);
+    atom_type_menu = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_MENU", False);
+    atom_type_tooltip = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_TOOLTIP", False);
+    atom_type_notification = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_NOTIFICATION", False);
+    atom_type_combo = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_COMBO", False);
+    atom_type_utility = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_UTILITY", False);
+    atom_type_dialog = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
+    atom_type_dock = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DOCK", False);
+    atom_type_splash = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_SPLASH", False);
+    atom_motif_wm_hints = XInternAtom(dpy, "_MOTIF_WM_HINTS", False);
 
     Atom supported[] = {
-        net_active, net_wm_name, net_wm_type, net_wm_type_normal,
-        net_wm_type_dropdown, net_wm_type_popup, net_wm_type_menu,
-        net_wm_type_tooltip, net_wm_type_dialog, net_wm_type_utility
+        atom_net_active, atom_net_wm_name, atom_net_wm_type, atom_type_normal,
+        atom_type_dropdown, atom_type_popup, atom_type_menu,
+        atom_type_tooltip, atom_type_dialog, atom_type_utility
     };
     XChangeProperty(dpy, root, net_supported, XA_ATOM, 32, PropModeReplace,
                     (unsigned char *)supported, sizeof(supported) / sizeof(Atom));
@@ -534,15 +540,14 @@ int main() {
                 if (num_managed == 0) XClearWindow(dpy, root);
                 break;
             case PropertyNotify: {
-                if (ev.xproperty.atom == XInternAtom(dpy, "_NET_WM_NAME", False) ||
+                if (ev.xproperty.atom == atom_net_wm_name ||
                     ev.xproperty.atom == XA_WM_NAME) {
                     update_window_list_file();
                 }
                 break;
             }
             case ClientMessage: {
-                Atom net_active = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
-                if (ev.xclient.message_type == net_active) {
+                if (ev.xclient.message_type == atom_net_active) {
                     Window w = ev.xclient.window;
                     log_wm("[EVENT: ClientMessage _NET_ACTIVE_WINDOW] Window 0x%lx", (unsigned long)w);
                     if (w != None && is_manageable(w)) {

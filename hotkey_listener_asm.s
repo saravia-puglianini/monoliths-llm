@@ -161,6 +161,12 @@ main:
     # Guardar puntero al entorno (envp en rdx según System V ABI)
     mov [saved_envp], rdx
 
+    # Evitar zombis: el kernel libera automáticamente los hijos al terminar.
+    # signal(SIGCHLD, SIG_IGN)
+    mov edi, 17
+    mov esi, 1
+    call signal
+
     mov qword ptr [current_mode], 0
 
     # 1. Abrir Display
@@ -262,7 +268,7 @@ main:
     cmp rdx, [kc_4]
     jne .check_5
     cmp ecx, Mod1Mask
-    jne .check_4
+    jne .check_5
     lea rdi, [cmd_alt4]
     call execute_sh
     jmp .main_event_loop
@@ -271,7 +277,7 @@ main:
     cmp rdx, [kc_5]
     jne .check_6
     cmp ecx, Mod1Mask
-    jne .check_5
+    jne .check_6
     lea rdi, [cmd_alt5]
     call execute_sh
     jmp .main_event_loop
@@ -280,7 +286,7 @@ main:
     cmp rdx, [kc_6]
     jne .check_8
     cmp ecx, Mod1Mask
-    jne .check_6
+    jne .check_8
     lea rdi, [cmd_alt6]
     call execute_sh
     jmp .main_event_loop
@@ -546,7 +552,7 @@ execute_command:
     mov rdx, [saved_envp] # pasar variables de entorno (DISPLAY, PATH, HOME, etc.)
     mov rax, 59         # sys_execve
     syscall
-    mov rdi, 0; mov rax, 60; syscall
+    mov rdi, 127; mov rax, 60; syscall
 .fork_parent:
     pop rdi
     ret
@@ -570,7 +576,7 @@ execute_sh:
     mov rdx, [saved_envp] # pasar variables de entorno (DISPLAY, PATH, HOME, etc.)
     mov rax, 59         # sys_execve
     syscall
-    mov rdi, 0; mov rax, 60; syscall
+    mov rdi, 127; mov rax, 60; syscall
 .fork_parent_sh:
     pop rdi
     ret
