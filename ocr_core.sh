@@ -45,9 +45,9 @@ case "$TARGET_LANG" in
         ;;
 esac
 
-# 1. CAPTURA IMMEDIATA (Cero retardo: scrot se ejecuta al instante)
+# 1. CAPTURA IMMEDIATA (Cero retardo: import se ejecuta al instante)
 TMP_IMG=$(mktemp /tmp/ocr_scrot.XXXXXX.png)
-if ! scrot -s -o "$TMP_IMG" 2>/dev/null || [ ! -s "$TMP_IMG" ]; then
+if ! import "$TMP_IMG" 2>/dev/null || [ ! -s "$TMP_IMG" ]; then
     rm -f "$TMP_IMG"
     exit 0
 fi

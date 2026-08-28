@@ -3,7 +3,6 @@
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
 #include <X11/keysym.h>
-#include <X11/extensions/XInput2.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +17,6 @@ Display *dpy;
 Window root;
 int screen, screen_width, screen_height;
 
-int xi_opcode;
 KeyCode tab_code;
 KeyCode alt_l_code, alt_r_code, meta_l_code, meta_r_code, super_l_code, super_r_code;
 Window ignore_unmap_window = None;
@@ -34,7 +32,7 @@ Window managed_windows[MAX_WINDOWS];
 int num_managed = 0;
 
 // Colors & graphics
-unsigned long color_bg, color_fg, color_sel_bg, color_sel_fg, color_border, color_cyan, color_magenta;
+unsigned long color_bg, color_fg, color_sel_bg, color_sel_fg, color_border;
 XFontSet font_set;
 int font_ascent = 0;
 int font_descent = 0;
@@ -52,8 +50,6 @@ void init_colors() {
     color_sel_bg = get_color("#7209b7");
     color_sel_fg = get_color("#ffffff");
     color_border = get_color("#3f37c9");
-    color_cyan = get_color("#4cc9f0");
-    color_magenta = get_color("#f72585");
 }
 
 void get_window_title(Window w, char *buf, int max_len) {
@@ -119,6 +115,13 @@ void remove_window(Window w) {
     }
 }
 
+int is_managed_window(Window w) {
+    for (int i = 0; i < num_managed; i++) {
+        if (managed_windows[i] == w) return 1;
+    }
+    return 0;
+}
+
 void add_window(Window w) {
     // Reorder an existing entry without exporting the list twice.
     for (int i = 0; i < num_managed; i++) {
@@ -139,8 +142,10 @@ void add_window(Window w) {
 }
 
 FILE *log_file = NULL;
+int logging_enabled = 0;
 
 void log_wm(const char *format, ...) {
+    if (!logging_enabled) return;
     if (!log_file) {
         log_file = fopen("/tmp/alt_tab_wm.log", "a");
     }
@@ -271,49 +276,65 @@ void maximize_window(Window w) {
     }
 }
 
-void glitch_window(Window w) {
-    const char *enabled = getenv("ALT_TAB_GLITCH");
-    if (enabled && strcmp(enabled, "0") == 0) return;
-    XWindowAttributes attrs;
-    if (!XGetWindowAttributes(dpy, w, &attrs) || attrs.map_state != IsViewable) return;
-
-    XSetWindowAttributes sattrs;
-    sattrs.override_redirect = True;
-    sattrs.background_pixel = color_bg;
-    sattrs.border_pixel = color_border;
-    sattrs.event_mask = StructureNotifyMask;
-
-    Window overlay = XCreateWindow(dpy, root, attrs.x, attrs.y, attrs.width, attrs.height, 0,
-                                   CopyFromParent, InputOutput, CopyFromParent,
-                                   CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWEventMask, &sattrs);
-
-    XMapRaised(dpy, overlay);
-    XSync(dpy, False);
-
-    for (int f = 0; f < 5; f++) {
-        XSetForeground(dpy, gc, (rand() % 3 == 0) ? color_magenta : ((rand() % 2 == 0) ? color_cyan : color_bg));
-        XFillRectangle(dpy, overlay, gc, 0, 0, attrs.width, attrs.height);
-
-        int lines = 5 + (rand() % 10);
-        for (int i = 0; i < lines; i++) {
-            XSetForeground(dpy, gc, (rand() % 2) ? color_cyan : color_magenta);
-            XFillRectangle(dpy, overlay, gc, rand() % attrs.width, rand() % attrs.height,
-                           50 + (rand() % 150), 2 + (rand() % 20));
-        }
-        XFlush(dpy);
-        usleep(15000);
-    }
-
-    XDestroyWindow(dpy, overlay);
-    XFlush(dpy);
-}
-
 void set_active_window_prop(Window w) {
     XChangeProperty(dpy, root, atom_net_active, XA_WINDOW, 32, PropModeReplace,
                     (unsigned char *)&w, 1);
 }
 
+Window managed_ancestor(Window w) {
+    while (w != None && w != root) {
+        for (int i = 0; i < num_managed; i++) {
+            if (managed_windows[i] == w) return w;
+        }
+
+        Window root_ret, parent_ret, *children = NULL;
+        unsigned int nchildren = 0;
+        if (!XQueryTree(dpy, w, &root_ret, &parent_ret, &children, &nchildren)) {
+            break;
+        }
+        if (children) XFree(children);
+        if (parent_ret == w) break;
+        w = parent_ret;
+    }
+    return None;
+}
+
+void focus_next_window() {
+    if (num_managed < 1) return;
+
+    Window current = None;
+    int revert_to;
+    XGetInputFocus(dpy, &current, &revert_to);
+    current = managed_ancestor(current);
+
+    int current_index = -1;
+    for (int i = 0; i < num_managed; i++) {
+        if (managed_windows[i] == current) {
+            current_index = i;
+            break;
+        }
+    }
+
+    int target_index = current_index >= 0 ? (current_index + 1) % num_managed : 0;
+    Window target = managed_windows[target_index];
+    if (target == current) return;
+
+    XRaiseWindow(dpy, target);
+    XSetInputFocus(dpy, target, RevertToPointerRoot, CurrentTime);
+    set_active_window_prop(target);
+    add_window(target);
+}
+
 void focus_emacs() {
+    const char *persistent = getenv("emacs_persistent");
+
+    // Emacs conserva el comportamiento especial solamente cuando la sesión
+    // lo declaró persistente. En los demás modos, Alt-Tab es un cambio normal.
+    if (!persistent || strcasecmp(persistent, "true") != 0) {
+        focus_next_window();
+        return;
+    }
+
     for (int i = 0; i < num_managed; i++) {
         if (is_emacs(managed_windows[i])) {
             Window target = managed_windows[i];
@@ -321,7 +342,6 @@ void focus_emacs() {
             XSetInputFocus(dpy, target, RevertToPointerRoot, CurrentTime);
             set_active_window_prop(target);
             add_window(target);
-            glitch_window(target);
             return;
         }
     }
@@ -336,13 +356,15 @@ void focus_emacs() {
                 XSetInputFocus(dpy, target, RevertToPointerRoot, CurrentTime);
                 set_active_window_prop(target);
                 add_window(target);
-                glitch_window(target);
                 XFree(windows);
                 return;
             }
         }
         XFree(windows);
     }
+
+    // Sin Emacs, Alt-Tab actúa como un cambio directo y silencioso.
+    focus_next_window();
 }
 
 int handle_error(Display *d, XErrorEvent *e) {
@@ -355,6 +377,9 @@ int main() {
     if (!dpy) return 1;
 
     XSetErrorHandler(handle_error);
+
+    // Logging is opt-in so the normal event path performs no disk I/O.
+    logging_enabled = getenv("ALT_TAB_LOG") != NULL;
 
     log_wm("=================================================");
     log_wm("[WM STARTED] Initializing window manager");
@@ -428,20 +453,6 @@ int main() {
         }
     }
 
-    int xi_event, xi_error;
-    if (XQueryExtension(dpy, "XInputExtension", &xi_opcode, &xi_event, &xi_error)) {
-        unsigned char mask_bytes[XIMaskLen(XI_LASTEVENT)];
-        memset(mask_bytes, 0, sizeof(mask_bytes));
-        XISetMask(mask_bytes, XI_RawKeyPress);
-
-        XIEventMask evmask;
-        evmask.deviceid = XIAllMasterDevices;
-        evmask.mask_len = sizeof(mask_bytes);
-        evmask.mask = mask_bytes;
-
-        XISelectEvents(dpy, root, &evmask, 1);
-    }
-
     unsigned int nwindows;
     Window root_ret, parent_ret, *windows = NULL;
     if (XQueryTree(dpy, root, &root_ret, &parent_ret, &windows, &nwindows) && windows) {
@@ -461,34 +472,14 @@ int main() {
     while (1) {
         XNextEvent(dpy, &ev);
 
-        if (ev.type == GenericEvent && XGetEventData(dpy, &ev.xcookie)) {
-            XGenericEventCookie *cookie = &ev.xcookie;
-            if (cookie->extension == xi_opcode && cookie->evtype == XI_RawKeyPress) {
-                XIRawEvent *raw = (XIRawEvent *)cookie->data;
-                if (raw->detail == tab_code) {
-                    char keys[32];
-                    XQueryKeymap(dpy, keys);
-                    int alt_down = (alt_l_code && (keys[alt_l_code >> 3] & (1 << (alt_l_code & 7)))) ||
-                                   (alt_r_code && (keys[alt_r_code >> 3] & (1 << (alt_r_code & 7)))) ||
-                                   (meta_l_code && (keys[meta_l_code >> 3] & (1 << (meta_l_code & 7)))) ||
-                                   (meta_r_code && (keys[meta_r_code >> 3] & (1 << (meta_r_code & 7)))) ||
-                                   (super_l_code && (keys[super_l_code >> 3] & (1 << (super_l_code & 7)))) ||
-                                   (super_r_code && (keys[super_r_code >> 3] & (1 << (super_r_code & 7))));
-                    if (alt_down) {
-                        focus_emacs();
-                    }
-                }
-            }
-            XFreeEventData(dpy, cookie);
-            continue;
-        }
-
         switch (ev.type) {
             case MapRequest: {
                 Window w = ev.xmaprequest.window;
-                char title[256];
-                get_window_title(w, title, sizeof(title));
-                log_wm("[EVENT: MapRequest] Window 0x%lx ('%s')", (unsigned long)w, title);
+                if (logging_enabled) {
+                    char title[256];
+                    get_window_title(w, title, sizeof(title));
+                    log_wm("[EVENT: MapRequest] Window 0x%lx ('%s')", (unsigned long)w, title);
+                }
                 int manageable = is_manageable(w);
                 if (manageable) {
                     add_window(w);
@@ -496,7 +487,6 @@ int main() {
                     XMapWindow(dpy, w);
                     XSetInputFocus(dpy, w, RevertToPointerRoot, CurrentTime);
                     set_active_window_prop(w);
-                    glitch_window(w);
                 } else {
                     // Non-manageable window (e.g. dropdown, popup, tooltip, dialog):
                     // Map and raise it above parent without forcing fullscreen or taking main focus away aggressively
@@ -507,7 +497,12 @@ int main() {
             case ConfigureRequest: {
                 XConfigureRequestEvent *cre = &ev.xconfigurerequest;
                 XWindowChanges wc;
-                if (is_manageable(cre->window)) {
+                // A ConfigureRequest may arrive before Chrome has published the
+                // popup's type, title or size hints. Reclassifying it here made
+                // transient context-menu surfaces look like normal windows and
+                // forced them fullscreen. Only windows accepted during
+                // MapRequest/startup are allowed to receive fullscreen policy.
+                if (is_managed_window(cre->window)) {
                     log_wm("[EVENT: ConfigureRequest] Manageable window 0x%lx -> forcing fullscreen", (unsigned long)cre->window);
                     wc.x = 0; wc.y = 0;
                     wc.width = screen_width; wc.height = screen_height;
@@ -555,7 +550,6 @@ int main() {
                         XSetInputFocus(dpy, w, RevertToPointerRoot, CurrentTime);
                         set_active_window_prop(w);
                         add_window(w);
-                        glitch_window(w);
                     }
                 }
                 break;

@@ -71,7 +71,7 @@ latest_video=$(ls -t "$VIDEO_DIR"/simplescreenrecorder-*.mkv 2>/dev/null | head 
 if [ -n "$latest_video" ]; then
     OUT_FILE="$OUT_PREFIX-$DATE_TAG-${MINUTES}m.mp4"
     ffmpeg -i "$latest_video" -c copy "$OUT_FILE"
-    herbe "Saved: $OUT_FILE"
+    echo "Saved: $OUT_FILE" | osd_cat --pos=top --align=right --offset=50 --color=green --shadow=1 --delay=3 --lines=1 &
 else
     echo 'No se encontraron archivos simplescreenrecorder-*.mkv'
 fi

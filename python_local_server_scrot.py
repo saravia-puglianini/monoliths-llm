@@ -19,9 +19,8 @@ class ScreenshotHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/screenshot':
             try:
-                # Take screenshot using scrot
-                # -o flag overwrites the file
-                subprocess.run(['scrot', '-o', TEMP_FILE], check=True)
+                # Take screenshot using ImageMagick import
+                subprocess.run(['import', '-window', 'root', TEMP_FILE], check=True)
                 
                 if os.path.exists(TEMP_FILE):
                     with open(TEMP_FILE, "rb") as image_file:

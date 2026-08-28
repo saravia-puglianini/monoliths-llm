@@ -8,7 +8,7 @@ while true; do
     xdotool behave_screen_edge --delay 100 \
         exec sh -c '
             sleep 0.1  # Pequeña pausa para evitar capturar el mismo clic
-            scrot -s -o - | \
+            import png:- | \
             tesseract stdin stdout -l eng | \
             tr "\n" " " | \
             xargs -0 -I {} ~/literatura/googletrans-es "{}" | \

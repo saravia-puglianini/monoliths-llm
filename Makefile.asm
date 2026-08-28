@@ -13,7 +13,7 @@ $(OBJ): $(SRC)
 	gcc -c $(SRC) -o $(OBJ)
 
 $(TARGET): $(OBJ)
-	gcc -no-pie -s $(OBJ) -lX11 -lXi -o $(TARGET)
+	gcc -no-pie -s $(OBJ) -lX11 -o $(TARGET)
 	chmod 755 $(TARGET)
 
 clean:
@@ -25,4 +25,3 @@ install: all
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/$(TARGET)
 
 .PHONY: all clean install
-

@@ -5,7 +5,9 @@
 
 run_non_asm_fallback() {
     echo "[WM-FALLBACK] Falling back to non-ASM window manager..." >&2
-    if [ -x "/usr/local/bin/alt_tab_maximize_emacs-buffer_only" ]; then
+    if [ -x "$HOME/.local/bin/alt_tab_maximize_emacs-buffer-only" ]; then
+        exec "$HOME/.local/bin/alt_tab_maximize_emacs-buffer-only"
+    elif [ -x "/usr/local/bin/alt_tab_maximize_emacs-buffer_only" ]; then
         exec /usr/local/bin/alt_tab_maximize_emacs-buffer_only
     elif [ -x "$HOME/.local/bin/alt_tab_maximize_only" ]; then
         exec "$HOME/.local/bin/alt_tab_maximize_only"

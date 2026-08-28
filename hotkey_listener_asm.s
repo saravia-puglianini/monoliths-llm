@@ -50,9 +50,9 @@ cmd_alt8:           .asciz "sleep 0.5 && ( pgrep -x scrot && (killall scrot; cd 
 cmd_alt9:           .asciz "sleep 0.5 && (cat ~/.emacs.d/lineamientos.md; echo) | xclip -selection clipboard"
 cmd_alt_shift8:     .asciz "/home/user/monoliths-llm/screenshot.sh"
 
-cmd_vol_down:       .asciz "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
-cmd_vol_up:         .asciz "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
-cmd_vol_mute:       .asciz "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+cmd_vol_down:       .asciz "amixer -q sset Master 5%-"
+cmd_vol_up:         .asciz "amixer -q sset Master 5%+"
+cmd_vol_mute:       .asciz "amixer -q sset Master toggle"
 cmd_bright_down:    .asciz "/home/user/monoliths-llm/change_brightness.sh down"
 cmd_bright_up:      .asciz "/home/user/monoliths-llm/change_brightness.sh up"
 cmd_poweroff:       .asciz "doas poweroff"

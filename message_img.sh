@@ -46,18 +46,13 @@ message_img() {
         run_magick "convert"
     fi
 
-    # 6. Mostrar imagen con feh (Llamada asíncrona para no bloquear)
-    if command -v feh >/dev/null 2>&1; then
-        # Matamos procesos previos de feh con el mismo título para actualizar la pantalla
-        pkill -f "feh --title Lectura" 2>/dev/null
+    # 6. Mostrar imagen con ImageMagick display (Llamada asíncrona para no bloquear)
+    if command -v display >/dev/null 2>&1; then
+        # Matamos procesos previos de display de mensaje
+        pkill -f "display -title Lectura" 2>/dev/null
         # Mostramos la nueva imagen en segundo plano
-        feh --title "Lectura" --no-menus --scale-down --geometry "${width}x${height}+0+0" "$F" &
+        display -title "Lectura" -geometry "${width}x${height}+0+0" "$F" &
     fi
-    # =======
-    #     pgrep feh | xargs kill > /dev/null 2>&1 &
-    #     sleep 0.1
-    #     feh --borderless "$F" > /dev/null 2>&1 &
-    # >>>>>>> 92e42ee589715884bb8d0e168b35f1a83c0ea3b8
 }
 
 

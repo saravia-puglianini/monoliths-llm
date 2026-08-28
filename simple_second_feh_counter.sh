@@ -23,14 +23,14 @@ for i in $(seq 0 $((NUM_IMAGES - 1))); do
   
   # Verificar si el archivo existe
   if [ -f "$IMG_FILE" ]; then
-    # Cerrar feh anterior si está abierto
-    pkill feh 2>/dev/null
+    # Cerrar display anterior si está abierto
+    pkill -x display 2>/dev/null
     
-    # Mostrar nueva imagen (en segundo plano)
-    feh --fullscreen "$IMG_FILE" &
+    # Mostrar nueva imagen (en segundo plano) con ImageMagick display
+    display -window root "$IMG_FILE" &
     
-    # Registrar el PID de feh para poder cerrarlo después
-    FEH_PID=$!
+    # Registrar el PID para poder cerrarlo después
+    DISP_PID=$!
   else
     echo "Advertencia: Archivo $IMG_FILE no encontrado"
   fi
@@ -43,6 +43,6 @@ done
 
 # Cerrar la última imagen después de la duración total
 sleep $STEP_TIME
-pkill feh 2>/dev/null
+pkill -x display 2>/dev/null
 
 echo 'Presentación completada'
