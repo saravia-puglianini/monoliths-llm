@@ -249,12 +249,15 @@ Copia y ejecuta estos comandos en la terminal de la nueva máquina tras clonar l
 #!/bin/bash
 set -e
 
-echo "=== 1. Configurando directorios locales ==="
-mkdir -p /home/user/.local/lib/assembly-dispatch-9099
-mkdir -p /home/user/.local/lib/my-shell-9097
+echo "=== 1. Configurando directorios locales y enlaces simbólicos de servicios ==="
+mkdir -p /home/user/.local/lib
 mkdir -p /home/user/.local/state/assembly-dispatch-9099
 mkdir -p /home/user/.local/state/my-shell-9097
 mkdir -p /home/user/.justificar
+
+# Enlaces simbólicos de servicios hacia monoliths-llm (repositorio central)
+ln -sfn /home/user/monoliths-llm/services/my-shell-9097 /home/user/.local/lib/my-shell-9097
+ln -sfn /home/user/monoliths-llm/services/assembly-dispatch-9099 /home/user/.local/lib/assembly-dispatch-9099
 
 echo "=== 2. Enlaces simbólicos de sesión X11 ==="
 ln -sf /home/user/monoliths-hm/xinitrc /home/user/.xinitrc
@@ -299,7 +302,7 @@ if [ -d "/etc/init.d" ]; then
     sudo rc-service amd64gnu+linux-9099-service restart || true
 fi
 
-# NOTA PARA SISTEMAS SYSTEMD (como esta máquina):
+# NOTA PARA SISTEMAS SYSTEMD:
 # Si la máquina de destino utiliza systemd en lugar de OpenRC, crea los siguientes servicios:
 # 
 # /etc/systemd/system/registro-diario-broadway.service
@@ -326,11 +329,11 @@ echo "=== ¡Configuración completada con éxito! ==="
 
 ---
 
-## 📌 10. Archivos Faltantes a Transferir de la Otra Máquina
-Para homologar completamente el entorno en esta máquina, asegúrate de copiar los siguientes archivos desde la máquina origen:
-1. **Directorio `my-shell-9097`:**
-   - `/home/user/.local/lib/my-shell-9097/my_shell_9097.py`
-   - `/home/user/.local/lib/my-shell-9097/my-shell-9097-service.initd`
-2. **Directorio `assembly-dispatch-9099`:**
-   - `/home/user/.local/lib/assembly-dispatch-9099/assembly_dispatch_9099.py`
-   - `/home/user/.local/lib/assembly-dispatch-9099/amd64gnu+linux-9099-service.initd`
+## 📌 10. Servicios Incluidos en el Repositorio
+Los servicios web locales residen en este repositorio bajo `services/` y se vinculan simbólicamente a `~/.local/lib/`:
+1. **Directorio `services/my-shell-9097` $\rightarrow$ `~/.local/lib/my-shell-9097`:**
+   - `my_shell_9097.py`
+   - `my-shell-9097-service.initd`
+2. **Directorio `services/assembly-dispatch-9099` $\rightarrow$ `~/.local/lib/assembly-dispatch-9099`:**
+   - `assembly_dispatch_9099.py`
+   - `amd64gnu+linux-9099-service.initd`

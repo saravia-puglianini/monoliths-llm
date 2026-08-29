@@ -1,0 +1,25 @@
+#!/sbin/openrc-run
+
+name="amd64gnu+linux-9099-service"
+description="Panel web local para scripts de amd64gnu+linux"
+command="/usr/bin/python3"
+command_args="/home/user/.local/lib/assembly-dispatch-9099/assembly_dispatch_9099.py"
+command_user="user:libre"
+command_background="true"
+directory="/home/user/amd64gnu+linux"
+pidfile="/run/amd64gnu+linux-9099-service.pid"
+output_log="/home/user/.local/state/assembly-dispatch-9099/service.log"
+error_log="/home/user/.local/state/assembly-dispatch-9099/service.log"
+
+export HOME="/home/user"
+export USER="user"
+export LOGNAME="user"
+
+depend() {
+    need localmount
+    after bootmisc
+}
+
+start_pre() {
+    checkpath --directory --owner user:libre --mode 0750 /home/user/.local/state/assembly-dispatch-9099
+}

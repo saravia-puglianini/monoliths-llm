@@ -1,0 +1,20 @@
+#!/sbin/openrc-run
+
+name="my-shell-9097-service"
+description="Panel web concurrente para monoliths-hm/my.shell.sh"
+command="/usr/bin/python3"
+command_args="/home/user/.local/lib/my-shell-9097/my_shell_9097.py"
+command_user="user:libre"
+command_background="true"
+directory="/home/user"
+pidfile="/run/my-shell-9097-service.pid"
+output_log="/home/user/.local/state/my-shell-9097/service.log"
+error_log="/home/user/.local/state/my-shell-9097/service.log"
+export HOME="/home/user"
+export USER="user"
+export LOGNAME="user"
+export DISPLAY=":0"
+export XAUTHORITY="/home/user/.Xauthority"
+
+depend() { need localmount; after bootmisc; }
+start_pre() { checkpath --directory --owner user:libre --mode 0750 /home/user/.local/state/my-shell-9097; }
