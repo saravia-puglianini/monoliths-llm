@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Horas siempre disponible",
+  "version": "1.1.0",
+  "description": "Mantiene Horas abierto en una pestaña de lunes a viernes.",
+  "permissions": [
+    "alarms",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://localhost:8085/*",
+    "http://127.0.0.1:8085/*",
+    "https://saravia.org/*",
+    "https://*.atlassian.net/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:8085/*",
+        "http://127.0.0.1:8085/*"
+      ],
+      "js": [
+        "content-bridge.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Abrir Horas",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

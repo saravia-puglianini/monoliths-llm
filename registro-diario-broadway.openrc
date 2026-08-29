@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+# Servicio OpenRC para Registro Diario Broadway (Siempre activo en puerto 8085)
+
+name="registro-diario-broadway"
+description="Servicio persistente Registro Diario GTK3 con backend Broadway en puerto 8085"
+command="/home/user/monoliths-llm/registro-diario-broadway-daemon.py"
+command_background="true"
+pidfile="/run/registro-diario-broadway.pid"
+command_user="user:libre"
+
+export HOME="/home/user"
+
+depend() {
+    need localmount
+    after bootmisc
+}

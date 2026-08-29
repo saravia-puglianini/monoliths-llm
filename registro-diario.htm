@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Horas</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231769e8'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial' font-size='34' font-weight='700' fill='white'%3EH%3C/text%3E%3C/svg%3E">
+  <style>
+    :root{--ink:#16233b;--muted:#738096;--line:#e5e9f1;--paper:#fff;--page:#f5f7fb;--blue:#1769e8;--blue2:#0d4fb9;--green:#22a06b;--orange:#f59e0b;--red:#e5484d;--violet:#6d5ce7;--shadow:0 14px 40px rgba(28,44,74,.08)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input{font:inherit}button{cursor:pointer}.shell{max-width:1420px;margin:auto;padding:28px}.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}.brand{display:flex;gap:13px;align-items:center}.mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#1e77ee,#725ce7);display:grid;place-items:center;color:#fff;font-weight:900;box-shadow:0 8px 20px #1769e83b}.brand strong{display:block;font-size:16px}.brand small{color:var(--muted)}.today{display:flex;gap:10px;align-items:center;color:#516078;background:#fff;border:1px solid var(--line);padding:9px 13px;border-radius:12px}.dot{width:8px;height:8px;border-radius:50%;background:#23b26d;box-shadow:0 0 0 4px #23b26d1c}
+    .hero{background:linear-gradient(125deg,#0b3c89 0%,#1769e8 52%,#6d5ce7 120%);border-radius:24px;padding:20px 31px;color:#fff;display:grid;grid-template-columns:1fr;gap:14px;position:relative;overflow:hidden;box-shadow:0 20px 45px #1757b82a}.hero:after{content:"";position:absolute;width:360px;height:360px;border:70px solid #ffffff0b;border-radius:50%;right:-150px;top:-210px}.hero .topbar{position:relative;z-index:1;margin:0}.hero .brand strong{color:#fff}.hero .brand small{color:#d8e6ff}.hero .mark{background:#ffffff22;border:1px solid #ffffff38;box-shadow:none}.hero .today{color:#fff;background:#ffffff16;border-color:#ffffff38}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:800;opacity:.72}.progress-wrap{align-self:center;position:relative;z-index:1}.progress-top{display:flex;justify-content:space-between;align-items:end;margin-bottom:11px}.progress-top b{font-size:28px}.progress-top span{opacity:.78}.progress{height:13px;border-radius:20px;background:#ffffff26;overflow:hidden}.progress i{display:block;height:100%;width:100%;border-radius:inherit;background:linear-gradient(90deg,#70e2a9,#fff);transition:.35s}.status-line{margin-top:10px;display:flex;justify-content:space-between;font-size:12px;opacity:.82}
+    .layout{display:grid;grid-template-columns:380px 1fr;gap:22px;margin-top:22px}.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.card-head{padding:20px 21px 15px;display:flex;align-items:center;justify-content:space-between}.card-head h2{font-size:16px;margin:0}.card-head small{color:var(--muted)}.controls{padding:0 20px 20px}.selection{border:1px solid #dfe5ef;border-radius:15px;padding:16px;margin-bottom:14px;background:#fbfcfe}.selection-title{font-weight:750;margin-bottom:4px}.selection-sub{font-size:12px;color:var(--muted)}.counter{display:flex;align-items:center;justify-content:space-between;margin-top:14px}.counter b{font-size:28px}.round{width:37px;height:37px;border:1px solid #dce2ec;background:#fff;border-radius:11px;color:var(--blue);font-size:21px}.round:disabled{opacity:.35;cursor:not-allowed}.counter-actions{display:flex;gap:7px}.primary{width:100%;border:0;background:var(--blue);color:#fff;padding:13px;border-radius:12px;font-weight:750;box-shadow:0 8px 18px #1769e82a}.primary:hover{background:var(--blue2)}.ceremonies{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}.chip{border:1px solid #dfe4ed;background:#fff;color:#41506a;padding:10px 9px;border-radius:11px;text-align:left}.chip:hover,.chip.active{border-color:#8eb8f8;background:#edf5ff;color:#1257bc}.extra{display:flex;gap:7px;margin-top:8px}.extra input{min-width:0;flex:1;border:1px solid #dfe4ed;border-radius:11px;padding:10px 11px;outline:none}.info{margin-top:14px;border-radius:12px;padding:11px 12px;background:#fff8e8;color:#805d13;font-size:12px}.info strong{display:block;margin-bottom:2px}.settings{margin-top:12px;width:100%;border:0;background:transparent;color:#66748a;text-align:center;font-size:12px;padding:7px}
+    .controls .today{width:max-content;max-width:100%;margin:8px auto 0;color:#fff;background:linear-gradient(135deg,var(--blue2),var(--blue));border-color:#ffffff38;box-shadow:0 7px 16px #1769e82a}
+    .work{overflow:hidden}.work-head{padding:20px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.work-head h2{margin:0;font-size:18px}.work-head p{margin:3px 0 0;color:var(--muted);font-size:12px}.legend{display:flex;gap:13px;color:#69768a;font-size:11px}.legend span{display:flex;align-items:center;gap:5px}.legend i{width:7px;height:7px;border-radius:50%}.project{padding:18px 22px}.project+.project{border-top:1px solid var(--line)}.project-title{display:flex;gap:9px;align-items:center;text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:#65738a;font-weight:800;margin-bottom:12px}.project-title i{width:25px;height:25px;border-radius:8px;background:#e9f2ff;color:var(--blue);display:grid;place-items:center;font-style:normal}.issue{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:10px}.issue-main{display:grid;grid-template-columns:1fr auto;align-items:center;gap:15px;padding:14px 15px}.issue-id{color:var(--blue);font-size:12px;font-weight:800;margin-bottom:3px}.issue-name{font-weight:700}.issue-meta{margin-top:5px;color:var(--muted);font-size:12px}.hours{display:flex;align-items:center;gap:9px}.traffic{width:9px;height:9px;border-radius:50%}.green{background:var(--green)}.orange{background:var(--orange)}.red{background:var(--red)}.hours b{font-size:16px;min-width:32px;text-align:right}.insert{border:1px solid #b8cff3;background:#f6faff;color:#1764d6;border-radius:10px;padding:8px 11px;font-weight:700}.insert:hover{background:#eaf3ff}.worklog{display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:#f8fafc;border-top:1px solid var(--line);font-size:12px;color:#59677d}.slot{display:flex;gap:9px;align-items:center}.slot i{width:24px;height:24px;border-radius:8px;background:#e8f1ff;color:var(--blue);font-style:normal;display:grid;place-items:center}.slot strong{color:#273550}.slot-time{color:#7b8799}.empty{color:#9aa4b3}.footerbar{position:sticky;bottom:12px;margin:18px 22px 22px;padding:14px 16px;background:#17233b;color:#fff;border-radius:14px;box-shadow:0 12px 28px #17233b3d}.footer-main{display:flex;align-items:center;justify-content:space-between;gap:14px}.footer-actions{display:flex;align-items:center;gap:8px}.footerbar small{display:block;color:#b8c2d4}.footerbar strong{font-size:17px}.summary-toggle{border:1px solid #ffffff3d;border-radius:10px;background:#ffffff12;color:#fff;padding:10px 13px;font-weight:700}.summary-toggle:hover{background:#ffffff20}.summary-detail{border-top:1px solid #ffffff24;margin-top:13px;padding-top:6px}.summary-row{display:grid;grid-template-columns:100px 1fr auto;gap:12px;align-items:center;padding:9px 2px;border-bottom:1px solid #ffffff14}.summary-row:last-child{border-bottom:0}.summary-key{color:#91bcff;font-weight:800}.summary-name{color:#e8edf7}.summary-hours{font-weight:800;white-space:nowrap}.summary-empty{color:#b8c2d4;padding:9px 2px}.list-btn{border:0;border-radius:10px;background:#fff;color:#17233b;padding:10px 14px;font-weight:750}.toast{position:fixed;right:24px;bottom:24px;background:#17233b;color:#fff;border-radius:13px;padding:13px 16px;box-shadow:0 12px 30px #0003;transform:translateY(120px);opacity:0;transition:.3s;z-index:50}.toast.show{transform:none;opacity:1}
+    .gate{position:fixed;inset:0;background:#0b1730d9;backdrop-filter:blur(8px);display:grid;place-items:center;z-index:100;padding:20px}.gate.hidden{display:none}.gate-card{width:min(500px,100%);background:#fff;border-radius:22px;padding:28px;box-shadow:0 30px 80px #0006}.gate-card h2{font-size:24px;margin:7px 0}.gate-card p{color:var(--muted);margin:0 0 18px}.fields{display:grid;gap:11px}.field label{display:block;font-size:12px;font-weight:750;margin-bottom:5px}.field input{width:100%;padding:12px;border:1px solid #dce2ec;border-radius:11px;outline:none}.field input:focus{border-color:#6ba0ef;box-shadow:0 0 0 3px #1769e814}.safe{background:#edf8f3;color:#287458;padding:10px;border-radius:10px;font-size:11px;margin:13px 0}.gate-actions{display:flex;gap:8px}.gate-actions .primary{flex:1}.ghost{border:1px solid #dce2ec;background:#fff;border-radius:12px;padding:10px 13px;color:#5d6b80}.dialog{border:0;border-radius:18px;padding:0;max-width:560px;width:calc(100% - 32px);box-shadow:0 30px 80px #0005}.dialog::backdrop{background:#0a142a9c}.dialog-inner{padding:24px}.dialog h3{margin:0 0 5px}.dialog p{color:var(--muted);margin:0 0 17px}.link-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--line)}.link-row a{color:var(--blue);font-weight:750;text-decoration:none}.link-row small{color:var(--muted)}.dialog-close{float:right;border:0;background:#eef1f6;border-radius:9px;width:32px;height:32px}#summaryDialog{width:80vw;height:80vh;max-width:none;max-height:none}#summaryDialog .dialog-inner{height:100%;display:flex;flex-direction:column;padding:30px}#summaryDialog .dialog-close{position:absolute;top:24px;right:24px}#summaryDialogList{flex:1;min-height:0;overflow-y:auto;padding-right:8px}#summaryDialogList .link-row{padding:18px 4px}#summaryDialogList .link-row strong{font-size:18px}
+    .manual-help{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}.manual-help>strong{display:block;color:var(--ink);margin-bottom:3px}.manual-help>p{margin:0 0 10px;font-size:12px}.manual-worklog{display:grid;grid-template-columns:82px 1fr auto;gap:8px;align-items:center;margin-top:8px}.manual-worklog label{font-weight:800;color:var(--blue)}.manual-worklog input{min-width:0;width:100%;border:1px solid #dce2ec;border-radius:9px;padding:9px 10px}.manual-worklog .ghost{padding:9px 11px}
+    /* Vista de escritorio: toda la jornada cabe en una sola pantalla. */
+    @media(min-width:901px){
+      html,body{height:100%;overflow:hidden}
+      .shell{height:100dvh;max-width:1420px;padding:16px 28px;display:grid;grid-template-rows:172px minmax(0,1fr);gap:12px}
+      .mark{width:36px;height:36px;border-radius:11px}.today{padding:6px 11px}
+      .hero{height:172px;padding:15px 30px;border-radius:20px;align-items:center;gap:9px}.hero h1{font-size:32px;margin:6px 0}.hero p{font-size:12px}.hero .topbar{justify-content:flex-start}.progress-top{margin-bottom:6px}.progress-top b{font-size:22px}.progress{height:9px}.status-line{margin-top:6px;font-size:10px}
+      .layout{min-height:0;height:100%;margin:0;gap:14px;grid-template-columns:365px minmax(0,1fr)}
+      .controls-card,.work{height:100%;min-height:0}.controls-card{overflow:hidden}.card-head{padding:13px 18px 9px}.controls{padding:0 18px 12px}.selection{padding:11px 13px;margin-bottom:8px}.selection-sub{font-size:11px}.counter{margin-top:6px}.counter b{font-size:23px}.round{width:34px;height:34px}.primary{padding:10px}.ceremonies{margin-top:8px;gap:6px}.chip{padding:7px 8px}.extra{margin-top:6px}.extra input{padding:7px 9px}.info{margin-top:8px;padding:8px 10px;font-size:10px;line-height:1.35}.settings{margin-top:4px;padding:4px}.controls .today{margin-top:3px;padding:5px 10px;font-size:11px}
+      .work{display:flex;flex-direction:column}.work-head{flex:0 0 auto;padding:12px 20px}.work-head h2{font-size:16px}.work-head p{margin-top:1px}.project{flex:1;min-height:0;padding:0 12px 6px 20px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}.project::-webkit-scrollbar{width:8px}.project::-webkit-scrollbar-track{background:transparent}.project::-webkit-scrollbar-thumb{background:#cbd5e4;border-radius:10px;border:2px solid #fff}.project::-webkit-scrollbar-thumb:hover{background:#9eacc1}.project-title{position:sticky;top:0;z-index:2;flex:0 0 auto;margin:0;padding:10px 0 8px;background:var(--paper)}.issue{flex:0 0 auto;min-height:62px;margin:0;display:flex;align-items:center}.issue-main{width:100%;padding:7px 13px}.issue-id{font-size:10px;margin-bottom:1px}.issue-name{font-size:12px;line-height:1.2}.issue-meta{font-size:10px;margin-top:2px}.insert{padding:6px 9px}.hours b{font-size:14px}
+      .footerbar{position:static;flex:0 0 auto;margin:6px 20px 10px;padding:9px 13px;border-radius:12px}.footerbar strong{font-size:14px}.footer-actions button{padding:7px 10px}.summary-detail{position:absolute;left:20px;right:20px;bottom:60px;background:#17233b;border-radius:12px;padding:9px 13px;box-shadow:0 12px 30px #0005}.summary-row{padding:6px 2px}
+    }
+    @media(max-width:900px){body{overflow:auto}.shell{padding:16px}.hero{grid-template-columns:1fr}.layout{grid-template-columns:1fr}.controls-card{position:static}.legend{display:none}}@media(max-width:560px){.topbar{align-items:flex-start}.today{font-size:11px}.hero{padding:23px}.issue-main{grid-template-columns:1fr}.hours{justify-content:flex-end}.footer-main{align-items:flex-start;gap:12px;flex-direction:column}.footer-actions{width:100%;flex-direction:column}.summary-toggle,.list-btn{width:100%}.summary-row{grid-template-columns:82px 1fr}.summary-hours{grid-column:2}}
+    .history-nav{position:sticky;bottom:12px;margin:18px 22px 22px;display:grid;grid-template-columns:52px minmax(0,1fr) 52px;gap:9px}.history-nav .footerbar{position:static;margin:0}.history-arrow{border:0;background:#17233b;color:#fff;border-radius:14px;box-shadow:0 12px 28px #17233b3d;display:grid;place-items:center;font-size:26px;font-weight:800}.history-arrow:hover{background:#223251}.history-arrow:disabled{opacity:.35;cursor:not-allowed}
+    @media(min-width:901px){.history-nav{position:static;flex:0 0 auto;margin:6px 20px 10px;grid-template-columns:44px minmax(0,1fr) 44px;gap:7px}.history-nav .footerbar{padding:9px 13px}}
+    @media(max-width:560px){.history-nav{grid-template-columns:42px minmax(0,1fr) 42px;margin-left:0;margin-right:0}}
+  </style>
+  <style>
+    .projects{flex:1;min-height:0;overflow-y:auto}
+    .projects .project{display:block;overflow:visible}
+    .issues-loading{display:grid;place-items:center;align-content:center;gap:12px;min-height:220px;color:var(--muted)}
+    .spinner{width:34px;height:34px;border:4px solid #dbe8fb;border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .issues-error{text-align:center;padding:45px 20px;color:var(--muted)}
+    .issues-error strong{display:block;color:var(--ink);margin-bottom:7px}
+    .retry{margin-top:14px;border:1px solid #b8cff3;background:#f6faff;color:#1764d6;border-radius:10px;padding:8px 12px;font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="gate" id="gate">
+    <form class="gate-card" id="credentialsForm">
+      <div class="eyebrow" style="color:#1769e8;opacity:1">Configuración inicial</div>
+      <h2>Configura tu acceso</h2>
+      <p>Guarda tus datos una sola vez para preparar y consultar tus registros diarios.</p>
+      <div class="fields">
+        <div class="field"><label for="domain">Dominio</label><input id="domain" type="url" placeholder="https://tu-dominio.com" autocomplete="off" required></div>
+        <div class="field"><label for="email">Correo</label><input id="email" type="email" placeholder="nombre@empresa.com" required></div>
+        <div class="field"><label for="token">Key</label><input id="token" type="password" placeholder="••••••••••••••••" required></div>
+      </div>
+      <div class="safe">🔒 Los datos de acceso se guardan en este navegador para mantener la sesión disponible en futuras visitas.</div>
+      <div class="gate-actions"><button class="primary" type="submit">Guardar y continuar</button></div>
+    </form>
+  </div>
+
+  <main class="shell">
+    <section class="hero">
+      <div class="progress-wrap"><div class="progress-top"><div><span>Horas logradas</span><br><b id="totalHero">8 h</b></div><span id="rangeText">Jornada completa</span></div><div class="progress"><i id="progressBar"></i></div><div class="status-line"><span>Mínimo 6 h 30 min</span><span>Meta 8 h</span><span>Máximo 10 h 30 min</span></div></div>
+    </section>
+    <div class="layout">
+      <aside class="card controls-card"><div class="card-head"><div><h2>Controles del día</h2><small>En intervalos de 30 minutos</small></div><span>⚙</span></div><div class="controls">
+        <div class="selection"><div class="selection-title" id="selectionTitle">Horas para una tarea</div><div class="selection-sub" id="selectionSub">Selecciona el tiempo y luego una tarea</div><div class="counter"><b id="counter">1 h</b><div class="counter-actions"><button class="round" id="minus" aria-label="Restar media hora">−</button><button class="round" id="plus" aria-label="Sumar media hora">+</button></div></div></div>
+        <button class="primary" id="fullDay">Usar las horas disponibles</button>
+        <div class="ceremonies"><button class="chip" data-ceremony="Refinamiento">◇ Refinamiento</button><button class="chip" data-ceremony="Planning">▦ Planning</button><button class="chip" data-ceremony="Retrospectiva">↻ Retrospectiva</button><button class="chip" data-ceremony="Adicional">＋ Adicional</button></div>
+        <div class="extra" id="extraBox" hidden><input id="extraText" placeholder="Nombre de la actividad adicional"></div>
+        <div class="info"><strong>Registro fuera de la jornada</strong>Las horas que superen 8 h deben registrarse directamente en el sistema y comunicarse al responsable correspondiente.</div>
+        <button class="settings" id="settingsBtn">Cambiar datos de acceso</button>
+        <div class="today"><i class="dot"></i><span id="dateLabel"></span></div>
+      </div></aside>
+      <section class="card work"><div class="work-head"><div><h2>Tareas disponibles</h2><p id="issuesStatus">Consultando Jira…</p></div><div class="legend"><span><i class="green"></i>&lt; 4 h</span><span><i class="orange"></i>4–8 h</span><span><i class="red"></i>8 h o más</span></div></div>
+        <div class="projects" id="projects"><div class="issues-loading"><i class="spinner"></i><span>Cargando tareas desde Jira…</span></div></div>
+        <div class="history-nav"><button class="history-arrow" id="previousDay" aria-label="Ver día anterior">←</button><div class="footerbar"><div class="footer-main"><div><small id="summaryDate">Resumen de hoy</small><strong><span id="doneHours">8 h logradas</span> · <span id="missingHours">jornada completa</span></strong></div><div class="footer-actions"><button class="summary-toggle" id="summaryToggle">Ver detalle</button><button class="list-btn" id="listBtn">Listar para el team →</button></div></div></div><button class="history-arrow" id="nextDay" aria-label="Ver día siguiente">→</button></div>
+      </section>
+    </div>
+  </main>
+  <dialog class="dialog" id="summaryDialog"><div class="dialog-inner"><button class="dialog-close" id="summaryClose">×</button><h3>Detalle de horas de hoy</h3><p>Distribución de los registros realizados durante la jornada.</p><div id="summaryDialogList"></div></div></dialog>
+  <dialog class="dialog" id="linksDialog"><div class="dialog-inner"><button class="dialog-close" onclick="linksDialog.close()">×</button><h3>Registros de hoy</h3><p>Abre cada tarea para capturar el registro y compartirlo con tu team.</p><div id="linkList"></div></div></dialog>
+  <div class="toast" id="toast"></div>
+  <script>
+    const STORE='registro-diario-v1';
+    const ACCESS='registro-acceso-sesion';
+    document.title='Horas';
+    const todayKey=new Date().toLocaleDateString('sv-SE');
+    const defaultDay=()=>({selected:1,mode:'task',worklogs:[]});
+    const initialToday={selected:1,mode:'task',worklogs:[{key:'FU-13901',hours:4,slot:'Mañana',worklogId:'local-manana'},{key:'FU-13233',hours:4,slot:'Noche',worklogId:'local-noche'}]};
+    const taskNames={
+      'FU-13233':'Desarrollar propuestas color verde, amarillo, rojo y negro para aprobación PO de los tiempos de la bandeja',
+      'FU-13901':'Construir prototipos bandeja funcionario, evaluador y jefe'
+    };
+    let app=load(),viewDate=todayKey,state=app.days[viewDate];
+    function load(){
+      let saved=null,sessionCredentials=null;
+      try{saved=JSON.parse(localStorage.getItem(STORE));sessionCredentials=JSON.parse(sessionStorage.getItem(ACCESS))}catch(e){}
+      const credentials=saved?.credentials||sessionCredentials||null;
+      let loaded;
+      if(saved?.days)loaded={...saved,credentials};
+      else if(saved)loaded={credentials,days:{[saved.date||todayKey]:{selected:saved.selected||1,mode:saved.mode||'task',worklogs:saved.worklogs||[],manualWorklogIds:saved.manualWorklogIds||{}}}};
+      else loaded={credentials,days:{[todayKey]:structuredClone(initialToday)}};
+      loaded.days[todayKey]??=structuredClone(defaultDay());
+      if(credentials){localStorage.setItem(STORE,JSON.stringify(loaded));sessionStorage.removeItem(ACCESS)}
+      return loaded;
+    }
+    function save(){app.days[viewDate]=state;localStorage.setItem(STORE,JSON.stringify(app))}
+    const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+    const format=h=>Number.isInteger(h)?`${h} h`:`${Math.floor(h)} h 30 min`;
+    $('#dateLabel').textContent=new Intl.DateTimeFormat('es-PE',{weekday:'long',day:'numeric',month:'long'}).format(new Date());
+    if(app.credentials)$('#gate').classList.add('hidden');
+    $('#credentialsForm').addEventListener('submit',e=>{e.preventDefault();app.credentials={domain:$('#domain').value.replace(/\/$/,''),email:$('#email').value,token:$('#token').value};save();$('#gate').classList.add('hidden');toast('Conexión guardada en este navegador');loadAssignedIssues()});
+    $('#settingsBtn').onclick=()=>{$('#gate').classList.remove('hidden');if(app.credentials){$('#domain').value=app.credentials.domain;$('#email').value=app.credentials.email;$('#token').value=app.credentials.token}};
+    function total(){return state.worklogs.reduce((n,w)=>n+w.hours,0)}
+    function renderSummary(){const grouped=Object.values(state.worklogs.reduce((items,w)=>{items[w.key]??={key:w.key,hours:0};items[w.key].hours+=w.hours;return items},{}));$('#summaryDialogList').innerHTML=grouped.length?grouped.map(item=>`<div class="link-row"><div><span class="summary-key">${item.key}</span><br><small>${taskNames[item.key]||'Tarea registrada'}</small></div><strong>${format(item.hours)}</strong></div>`).join(''):'<div class="summary-empty">No hay horas registradas en este día.</div>'}
+    function dateFromKey(key){return new Date(`${key}T12:00:00`)}
+    function render(){const t=total(),remaining=Math.max(0,8-t),hardRemaining=Math.max(0,10.5-t),isToday=viewDate===todayKey,dateText=new Intl.DateTimeFormat('es-PE',{weekday:'long',day:'numeric',month:'long'}).format(dateFromKey(viewDate));$('#totalHero').textContent=format(t);$('#doneHours').textContent=`${format(t)} logradas`;$('#missingHours').textContent=remaining?`faltan ${format(remaining)}`:'jornada completa';$('#summaryDate').textContent=isToday?'Resumen de hoy':`Resumen del ${dateText}`;$('#nextDay').disabled=isToday;$('#progressBar').style.width=`${Math.min(100,t/8*100)}%`;$('#counter').textContent=format(state.selected);$('#plus').disabled=!isToday||state.selected>=hardRemaining;$('#minus').disabled=!isToday||state.selected<=.5;$('#fullDay').disabled=!isToday;$$('.chip, .insert').forEach(button=>button.disabled=!isToday);$('#rangeText').textContent=t<6.5?'Aún bajo el mínimo':t<8?'Dentro del mínimo':t<=10.5?(t===8?'Jornada completa':'Horas adicionales'):'Máximo superado';$$('.issue').forEach(el=>{const h=state.worklogs.filter(w=>w.key===el.dataset.key).reduce((n,w)=>n+w.hours,0);el.querySelector('.issue-hours').textContent=format(h);const light=el.querySelector('.traffic');light.className=`traffic ${h<4?'green':h<8?'orange':'red'}`});renderSummary()}
+    function moveDay(offset){save();const target=dateFromKey(viewDate);target.setDate(target.getDate()+offset);const key=target.toLocaleDateString('sv-SE');if(key>todayKey)return;viewDate=key;state=app.days[key]??=defaultDay();render()}
+    $('#previousDay').onclick=()=>moveDay(-1);$('#nextDay').onclick=()=>moveDay(1);
+    $('#plus').onclick=()=>{state.selected=Math.min(10.5-total(),state.selected+.5);save();render()};$('#minus').onclick=()=>{state.selected=Math.max(.5,state.selected-.5);save();render()};$('#fullDay').onclick=()=>{state.selected=Math.max(.5,8-total());save();render();toast(total()>=8?'La jornada de 8 h ya está completa':'Horas disponibles seleccionadas')};
+    $$('.chip').forEach(btn=>btn.onclick=()=>{$$('.chip').forEach(x=>x.classList.remove('active'));btn.classList.add('active');state.mode=btn.dataset.ceremony;state.selected=Math.min(1,Math.max(.5,10.5-total()));$('#selectionTitle').textContent=btn.dataset.ceremony;$('#selectionSub').textContent='Se insertará como actividad en la historia elegida';$('#extraBox').hidden=btn.dataset.ceremony!=='Adicional';save();render()});
+    $('#projects').addEventListener('click',event=>{const btn=event.target.closest('.insert');if(!btn)return;const key=btn.closest('.issue').dataset.key;if(total()+state.selected>10.5)return toast('Llegaste al máximo diario de 10 h 30 min');const label=state.mode==='task'?'Trabajo en tarea':state.mode==='Adicional'?($('#extraText').value.trim()||'Actividad adicional'):state.mode;state.worklogs.push({key,hours:state.selected,slot:label,worklogId:`local-${Date.now()}`});save();render();toast(`${format(state.selected)} preparadas para ${key}`)});
+    $('#summaryToggle').onclick=()=>$('#summaryDialog').showModal();
+    $('#summaryClose').onclick=()=>$('#summaryDialog').close();
+    function extensionRequest(payload,requestType='HORAS_GET_TODAY_RECORDS'){
+      return new Promise((resolve,reject)=>{
+        const requestId=crypto.randomUUID(),timer=setTimeout(()=>{window.removeEventListener('message',receive);reject(new Error('La extensión no respondió. Recárgala desde la configuración del navegador.'))},15000);
+        function receive(event){if(event.origin!==window.location.origin||event.data?.type!=='HORAS_EXTENSION_RESPONSE'||event.data.requestId!==requestId)return;clearTimeout(timer);window.removeEventListener('message',receive);const result=event.data.result;if(result?.ok)resolve(result.records||[]);else reject(new Error(result?.error||'No se pudo completar la consulta.'))}
+        window.addEventListener('message',receive);
+        window.postMessage({type:'HORAS_EXTENSION_REQUEST',requestId,payload,requestType},window.location.origin);
+      });
+    }
+    const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    function dueText(value){if(!value)return 'Sin vencimiento';return `Vence ${new Intl.DateTimeFormat('es-PE',{day:'numeric',month:'short',year:'numeric'}).format(dateFromKey(value))}`}
+    function showIssuesLoading(){
+      $('#issuesStatus').textContent='Consultando Jira…';
+      $('#projects').innerHTML='<div class="issues-loading"><i class="spinner"></i><span>Cargando tareas desde Jira…</span></div>';
+    }
+    function renderIssues(issues){
+      $('#issuesStatus').textContent=issues.length?`${issues.length} actividades sin completar · datos de Jira`:'No tienes actividades pendientes asignadas';
+      if(!issues.length){$('#projects').innerHTML='<div class="issues-error"><strong>Sin tareas disponibles</strong>Jira no devolvió actividades pendientes asignadas a tu usuario.</div>';return}
+      const grouped=Object.values(issues.reduce((groups,issue)=>{const id=issue.projectKey||'JIRA';groups[id]??={key:id,name:issue.projectName||'Proyecto',issues:[]};groups[id].issues.push(issue);return groups},{}));
+      grouped.forEach(group=>group.issues.forEach(issue=>{taskNames[issue.key]=issue.parentSummary?`${issue.parentSummary} · ${issue.summary}`:issue.summary}));
+      $('#projects').innerHTML=grouped.map(group=>`<div class="project"><div class="project-title"><i>${escapeHtml(group.key)}</i>${escapeHtml(group.name)}</div>${group.issues.map(issue=>`<article class="issue" data-key="${escapeHtml(issue.key)}"><div class="issue-main"><div><div class="issue-id">${escapeHtml(issue.key)}</div><div class="issue-name">${escapeHtml(taskNames[issue.key])}</div><div class="issue-meta">${escapeHtml(issue.status)} · ${escapeHtml(dueText(issue.dueDate))}</div></div><div class="hours"><i class="traffic green"></i><b class="issue-hours">0 h</b><button class="insert">Insertar</button></div></div></article>`).join('')}</div>`).join('');
+      render();
+    }
+    async function loadAssignedIssues(){
+      if(!app.credentials)return;
+      showIssuesLoading();
+      try{renderIssues(await extensionRequest(app.credentials,'HORAS_GET_ASSIGNED_ISSUES'))}
+      catch(error){$('#issuesStatus').textContent='No se pudo consultar Jira';$('#projects').innerHTML=`<div class="issues-error"><strong>Error al cargar las tareas</strong>${escapeHtml(error.message)}<br><button class="retry" id="retryIssues">Reintentar</button></div>`;$('#retryIssues').onclick=loadAssignedIssues}
+    }
+    async function getTodayWorklogs(){
+      if(!app.credentials)throw new Error('Primero debes guardar tus datos de acceso.');
+      const keys=[...new Set(state.worklogs.map(w=>w.key))];
+      return extensionRequest({...app.credentials,issueKeys:keys,date:viewDate});
+    }
+    function renderManualWorklogFallback(error){
+      const domain=app.credentials.domain;
+      const grouped=Object.values(state.worklogs.reduce((items,w)=>{items[w.key]??={key:w.key,hours:0};items[w.key].hours+=w.hours;return items},{}));
+      $('#linkList').innerHTML=`<div class="summary-empty"><strong>No se pudieron consultar los registros por el bloqueo de seguridad del navegador.</strong><br>${error.message}</div><div class="manual-help"><strong>Usar los IDs reales manualmente</strong><p>Pega el número del registro o el enlace completo.</p>${grouped.map(item=>`<div class="manual-worklog"><label>${item.key}</label><input data-key="${item.key}" placeholder="Ej.: 52554 o enlace completo" value="${state.manualWorklogIds?.[item.key]||''}"><button class="ghost build-real-link">Generar</button></div>`).join('')}</div>`;
+      $$('.build-real-link').forEach(button=>button.onclick=()=>{
+        const input=button.previousElementSibling,key=input.dataset.key,value=input.value.trim();
+        const match=value.match(/focusedWorklogId=(\d+)/i)||value.match(/^\s*(\d+)\s*$/);
+        if(!match)return toast('Ingresa un ID numérico o un enlace real');
+        const id=match[1];state.manualWorklogIds={...(state.manualWorklogIds||{}),[key]:id};save();
+        const url=`${domain}/browse/${key}?focusedWorklogId=${id}`;
+        navigator.clipboard.writeText(url).then(()=>toast(`Enlace real de ${key} copiado`)).catch(()=>{input.value=url;toast('Enlace generado')});
+      });
+    }
+    $('#listBtn').onclick=async()=>{
+      if(!app.credentials){$('#gate').classList.remove('hidden');return toast('Ingresa tus datos para obtener los IDs reales')}
+      const button=$('#listBtn'),original=button.textContent;button.disabled=true;button.textContent='Consultando…';
+      try{
+        const domain=app.credentials.domain,worklogs=await getTodayWorklogs();
+        $('#linkList').innerHTML=worklogs.length?worklogs.map(w=>{const url=`${domain}/browse/${w.key}?focusedWorklogId=${encodeURIComponent(w.id)}`;return `<div class="link-row"><div><a target="_blank" href="${url}">${w.key} ↗</a><br><small>${format(w.hours)} · Registro ${w.id}</small></div><button class="ghost copy-worklog" data-url="${url}">Copiar</button></div>`}).join(''):'<div class="summary-empty">No se encontraron registros tuyos creados hoy en estas tareas.</div>';
+        $$('.copy-worklog').forEach(copy=>copy.onclick=()=>navigator.clipboard.writeText(copy.dataset.url).then(()=>toast('Enlace real copiado')));
+        $('#linksDialog').showModal();
+      }catch(error){renderManualWorklogFallback(error);$('#linksDialog').showModal()}
+      finally{button.disabled=false;button.textContent=original}
+    };
+    function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}
+    function scheduleReminder(hour,minute,message){const now=new Date(),when=new Date();when.setHours(hour,minute,0,0);if(when<=now)return;setTimeout(()=>{if(Notification.permission==='granted')new Notification('Horas',{body:message});else toast(message)},when-now)}
+    if('Notification'in window&&Notification.permission==='default')Notification.requestPermission().catch(()=>{});scheduleReminder(12,30,'Hora de revisar el bloque de la mañana antes del almuerzo.');scheduleReminder(17,30,'Faltan 30 minutos para las 6. Revisa tus horas.');
+    render();
+    if(app.credentials)loadAssignedIssues();
+  </script>
+</body>
+</html>
