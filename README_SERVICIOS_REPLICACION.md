@@ -211,9 +211,9 @@ echo "=== 4. Compilando binarios de monoliths-llm ==="
 cd /home/user/monoliths-llm
 make -f Makefile.asm || true
 gcc -no-pie -s hotkey_listener_asm.s -lX11 -o hotkey_listener_asm || true
-gcc -no-pie -s ram_report_asm.s -o ram_report_asm || true
-gcc -no-pie -s bat_asm.s -o bat_asm || true
-gcc -no-pie -s timer_asm.s -o timer_asm || true
+gcc -nostdlib -static -s ram_report_asm.s -o ram_report_asm || true
+gcc -nostdlib -static -s bat_asm.s -o bat_asm || true
+gcc -nostdlib -static -s timer_asm.s -o timer_asm || true
 
 echo "=== 5. Instalando y arrancando servicios OpenRC ==="
 if [ -d "/etc/init.d" ]; then

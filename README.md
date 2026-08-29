@@ -183,9 +183,9 @@ Para garantizar que todos los servicios y scripts funcionen sin modificaciones d
 cd /home/user/monoliths-llm
 make -f Makefile.asm
 gcc -no-pie -s hotkey_listener_asm.s -lX11 -o hotkey_listener_asm
-gcc -no-pie -s ram_report_asm.s -o ram_report_asm
-gcc -no-pie -s bat_asm.s -o bat_asm
-gcc -no-pie -s timer_asm.s -o timer_asm
+gcc -nostdlib -static -s ram_report_asm.s -o ram_report_asm
+gcc -nostdlib -static -s bat_asm.s -o bat_asm
+gcc -nostdlib -static -s timer_asm.s -o timer_asm
 
 # 2. En monoliths-hm:
 cd /home/user/monoliths-hm
@@ -268,11 +268,11 @@ echo "=== 4. Compilando utilidades ASM de monoliths-llm ==="
 cd /home/user/monoliths-llm
 make -f Makefile.asm || true
 gcc -no-pie -s hotkey_listener_asm.s -lX11 -o hotkey_listener_asm || true
-gcc -no-pie -s ram_report_asm.s -o ram_report_asm || true
-gcc -no-pie -s bat_asm.s -o bat_asm || true
-gcc -no-pie -s timer_asm.s -o timer_asm || true
+gcc -nostdlib -static -s ram_report_asm.s -o ram_report_asm || true
+gcc -nostdlib -static -s bat_asm.s -o bat_asm || true
+gcc -nostdlib -static -s timer_asm.s -o timer_asm || true
 
-echo "=== 5. Instalando servicios OpenRC ==="
+echo "=== 5. Instalando servicios (OpenRC / systemd) ==="
 if [ -d "/etc/init.d" ]; then
     # Registro Diario Broadway (8085)
     sudo cp /home/user/monoliths-llm/registro-diario-broadway.openrc /etc/init.d/registro-diario-broadway
@@ -293,11 +293,44 @@ if [ -d "/etc/init.d" ]; then
         sudo rc-update add amd64gnu+linux-9099-service default
     fi
 
-    echo "=== 6. Iniciando servicios ==="
+    echo "=== 6. Iniciando servicios (OpenRC) ==="
     sudo rc-service registro-diario-broadway restart || true
     sudo rc-service my-shell-9097-service restart || true
     sudo rc-service amd64gnu+linux-9099-service restart || true
 fi
 
+# NOTA PARA SISTEMAS SYSTEMD (como esta máquina):
+# Si la máquina de destino utiliza systemd en lugar de OpenRC, crea los siguientes servicios:
+# 
+# /etc/systemd/system/registro-diario-broadway.service
+# ---------------------------------------------------
+# [Unit]
+# Description=Registro Diario Broadway Daemon
+# After=network.target
+# 
+# [Service]
+# Type=simple
+# User=user
+# ExecStart=/usr/bin/python3 /home/user/monoliths-llm/registro-diario-broadway-daemon.py
+# Restart=always
+# 
+# [Install]
+# WantedBy=multi-user.target
+# 
+# Habilitar y arrancar:
+# sudo systemctl daemon-reload
+# sudo systemctl enable --now registro-diario-broadway
+
 echo "=== ¡Configuración completada con éxito! ==="
 ```
+
+---
+
+## 📌 10. Archivos Faltantes a Transferir de la Otra Máquina
+Para homologar completamente el entorno en esta máquina, asegúrate de copiar los siguientes archivos desde la máquina origen:
+1. **Directorio `my-shell-9097`:**
+   - `/home/user/.local/lib/my-shell-9097/my_shell_9097.py`
+   - `/home/user/.local/lib/my-shell-9097/my-shell-9097-service.initd`
+2. **Directorio `assembly-dispatch-9099`:**
+   - `/home/user/.local/lib/assembly-dispatch-9099/assembly_dispatch_9099.py`
+   - `/home/user/.local/lib/assembly-dispatch-9099/amd64gnu+linux-9099-service.initd`
